@@ -113,6 +113,8 @@
     'wel.guard': '深度防护（AgathOS Guard）', 'wel.guardDesc': '实时防火墙和深度 Windows 日志。Windows 会请求一次管理员权限。',
     'wel.fix': '自动修复危险', 'wel.fixDesc': '默认关闭。你随时可以一键手动修复。',
     'wel.start': '启动 AgathOS', 'recommended': '推荐',
+    'mac.guard': "AgathOS Guard（实时防火墙和深度日志）仅适用于 Windows。在 Mac 上，AgathOS 使用 macOS 自带的工具进行监视，防火墙相关步骤会显示为需要你自己完成的事项。", 'wel.startupMac': "登录时启动",
+    'an.port.todoMac': "让服务器只在这台 Mac 上监听。Ollama：在“终端”中运行 launchctl setenv OLLAMA_HOST 127.0.0.1，然后重启 Ollama。LM Studio：关闭“Serve on Local Network”。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);

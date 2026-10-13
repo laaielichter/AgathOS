@@ -113,6 +113,8 @@
     'wel.guard': 'Deep protection (AgathOS Guard)', 'wel.guardDesc': 'Live firewall and deep Windows logging. Windows asks once for admin permission.',
     'wel.fix': 'Fix dangers automatically', 'wel.fixDesc': 'Off by default. You can always fix things by hand with one button.',
     'wel.start': 'Start AgathOS', 'recommended': 'recommended',
+    'mac.guard': "AgathOS Guard (live firewall and deep logging) is for Windows only. On a Mac, AgathOS watches with the tools built into macOS, and firewall steps show up as things to do yourself.", 'wel.startupMac': "Start when I log in",
+    'an.port.todoMac': "Make the server listen on this Mac only. Ollama: run launchctl setenv OLLAMA_HOST 127.0.0.1 in Terminal and restart Ollama. LM Studio: switch off \"Serve on Local Network\".",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);

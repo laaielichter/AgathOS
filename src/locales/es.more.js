@@ -113,6 +113,8 @@
     'wel.guard': 'Protección profunda (AgathOS Guard)', 'wel.guardDesc': 'Cortafuegos en vivo y registros profundos de Windows. Windows pide una vez permiso de administrador.',
     'wel.fix': 'Arreglar peligros automáticamente', 'wel.fixDesc': 'Desactivado por defecto. Siempre puedes arreglar las cosas a mano con un botón.',
     'wel.start': 'Iniciar AgathOS', 'recommended': 'recomendado',
+    'mac.guard': "AgathOS Guard (cortafuegos en vivo y registro profundo) es solo para Windows. En un Mac, AgathOS vigila con las herramientas de macOS, y los pasos de cortafuegos aparecen como cosas que haces tú.", 'wel.startupMac': "Iniciar al iniciar sesión",
+    'an.port.todoMac': "Haz que el servidor escuche solo en este Mac. Ollama: ejecuta launchctl setenv OLLAMA_HOST 127.0.0.1 en Terminal y reinicia Ollama. LM Studio: desactiva «Serve on Local Network».",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.es, d);

@@ -8,9 +8,13 @@ const crypto = require('crypto');
 const { spawn, execFile } = require('child_process');
 
 const IS_WIN = process.platform === 'win32';
+const IS_MAC = process.platform === 'darwin';
 const HOME = os.homedir();
-const APPDATA = process.env.APPDATA || path.join(HOME, 'AppData', 'Roaming');
-const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(HOME, 'AppData', 'Local');
+// On a Mac the apps keep their settings in ~/Library/Application Support, the same
+// folder names as %APPDATA% on Windows (Claude, Code\User, Cursor\User ...).
+const MAC_SUPPORT = path.join(HOME, 'Library', 'Application Support');
+const APPDATA = process.env.APPDATA || (IS_MAC ? MAC_SUPPORT : path.join(HOME, 'AppData', 'Roaming'));
+const LOCALAPPDATA = process.env.LOCALAPPDATA || (IS_MAC ? MAC_SUPPORT : path.join(HOME, 'AppData', 'Local'));
 
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
@@ -215,6 +219,6 @@ const ps = new PowerShell();
 const psq = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 
 module.exports = {
-  IS_WIN, HOME, APPDATA, LOCALAPPDATA, sha256, exists, statSafe, readText, readHead, readJsonLoose,
+  IS_WIN, IS_MAC, HOME, APPDATA, LOCALAPPDATA, sha256, exists, statSafe, readText, readHead, readJsonLoose,
   stripJsonComments, walk, expand, shortPath, execFileText, ps, psq, SKIP_DIRS,
 };

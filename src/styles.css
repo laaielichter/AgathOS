@@ -392,3 +392,7 @@ button, input, select { font: inherit; color: inherit; }
 /* ---------- simple mode: same app, fewer details ---------- */
 :root[data-mode="simple"] .adv { display: none !important; }
 :root[data-mode="simple"] .grid { grid-template-columns: 1fr; }
+
+/* ---------- macOS: room for the traffic lights ---------- */
+:root[data-platform="darwin"] .titlebar { padding-left: 86px; }
+:root[data-platform="darwin"][dir="rtl"] .titlebar { padding-left: 86px; padding-right: 16px; }

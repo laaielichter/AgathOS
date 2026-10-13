@@ -71,6 +71,7 @@ class Engine {
 
   // ---------- life cycle ----------
   async start() {
+    if (U.IS_MAC) await require('./mac').fixPath();
     this.firstRunDefaults();
     U.ps.start();
     this.event({ key: 'app.started', sev: 'calm', watcher: 'proc', params: {} }, true);
@@ -89,12 +90,12 @@ class Engine {
   firstRunDefaults() {
     const s = this.store.settings;
     if (!s.roots.length) {
-      const cands = ['Desktop', 'Documents', 'source\\repos', 'repos', 'projects', 'Projects', 'dev', 'code', 'workspace', 'git', 'GitHub', 'Downloads'];
-      s.roots = cands.map((c) => path.join(U.HOME, c)).filter(U.exists);
+      const cands = ['Desktop', 'Documents', 'source/repos', 'repos', 'projects', 'Projects', 'dev', 'Developer', 'code', 'workspace', 'git', 'GitHub', 'Downloads'];
+      s.roots = [...new Set(cands.map((c) => path.join(U.HOME, ...c.split('/'))).filter(U.exists))];
     }
     if (!s.modelDirs.length) {
-      const cands = ['.ollama\\models', '.cache\\huggingface\\hub', '.lmstudio\\models', '.cache\\lm-studio\\models', 'models', 'Downloads'];
-      s.modelDirs = cands.map((c) => path.join(U.HOME, c)).filter(U.exists);
+      const cands = ['.ollama/models', '.cache/huggingface/hub', '.lmstudio/models', '.cache/lm-studio/models', 'models', 'Downloads'];
+      s.modelDirs = cands.map((c) => path.join(U.HOME, ...c.split('/'))).filter(U.exists);
     }
     this.store.saveState();
   }
@@ -420,7 +421,7 @@ class Engine {
     // Frozen processes must be resumed before they can exit cleanly.
     if (this.paused.has(agentId)) await this.resumeAgent(agentId);
     for (const r of roots) {
-      const res = await pause.kill(r.proc.p, r.proc.n);
+      const res = await pause.kill(r.proc.p, r.proc.n, this.procs.treeOf(r.proc.p));
       if (!res.ok && this.guardState.running) await guard.procOp('kill', [r.proc.p]);
     }
     this.event({ key: 'pause.killed', sev: 'watch', watcher: 'proc', params: { name: this.agentName(agentId) }, agentId });

@@ -113,6 +113,8 @@
     'wel.guard': 'গভীর সুরক্ষা (AgathOS Guard)', 'wel.guardDesc': 'লাইভ ফায়ারওয়াল ও গভীর Windows লগ। Windows একবার অ্যাডমিন অনুমতি চাইবে।',
     'wel.fix': 'বিপদ স্বয়ংক্রিয়ভাবে ঠিক করুন', 'wel.fixDesc': 'শুরুতে বন্ধ। আপনি সবসময় এক বোতামে হাতে ঠিক করতে পারেন।',
     'wel.start': 'AgathOS চালু করুন', 'recommended': 'প্রস্তাবিত',
+    'mac.guard': "AgathOS Guard (লাইভ ফায়ারওয়াল আর গভীর লগিং) শুধু Windows-এর জন্য। Mac-এ AgathOS macOS-এর নিজস্ব টুল দিয়ে নজর রাখে, আর ফায়ারওয়ালের ধাপগুলো আপনার নিজে করার কাজ হিসেবে দেখায়।", 'wel.startupMac': "লগ ইন করলে চালু হবে",
+    'an.port.todoMac': "সার্ভারকে শুধু এই Mac-এ শুনতে দিন। Ollama: Terminal-এ launchctl setenv OLLAMA_HOST 127.0.0.1 চালান এবং Ollama আবার চালু করুন। LM Studio: \"Serve on Local Network\" বন্ধ করুন।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.bn, d);

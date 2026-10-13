@@ -15,6 +15,7 @@ const THEMES = {
   light: { color: '#F2F3F8', symbolColor: '#151A2E' },
 };
 
+const IS_MAC = process.platform === 'darwin';
 let win = null;
 let tray = null;
 let engine = null;
@@ -28,6 +29,7 @@ let trayLive = null;
 // Only one AgathOS at a time.
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 app.on('second-instance', () => showWindow());
+app.on('activate', () => showWindow());   // macOS: clicking the Dock icon
 // Must match the installer's appId, or Windows drops the notifications.
 app.setAppUserModelId(app.isPackaged ? 'io.agathos.app' : process.execPath);
 
@@ -42,11 +44,13 @@ function createWindow() {
     width: 1320, height: 860, minWidth: 1000, minHeight: 660,
     backgroundColor: theme.color, title: 'AgathOS',
     icon: ICON,
-    titleBarStyle: 'hidden', titleBarOverlay: { ...theme, height: 40 },
+    // Windows: own title bar with the system buttons drawn on top. Mac: the traffic lights in our title bar.
+    ...(IS_MAC ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 14, y: 13 } } : { titleBarStyle: 'hidden', titleBarOverlay: { ...theme, height: 40 } }),
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
-  win.once('ready-to-show', () => { if (!process.argv.includes('--hidden')) win.show(); });
+  const hidden = process.argv.includes('--hidden') || (IS_MAC && (() => { try { return app.getLoginItemSettings().wasOpenedAsHidden; } catch (_) { return false; } })());
+  win.once('ready-to-show', () => { if (!hidden) win.show(); });
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
   win.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://')) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
@@ -66,8 +70,15 @@ function showWindow(view) {
 // Windows gets the .ico with hand-made small sizes; elsewhere the PNG.
 const ICON = path.join(__dirname, 'src', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
 
+function trayImage() {
+  if (process.platform === 'win32') return nativeImage.createFromPath(ICON);
+  // macOS menu bar: a black "Template" image that the system tints for light and dark menu bars.
+  if (IS_MAC) { const t = nativeImage.createFromPath(path.join(__dirname, 'src', 'trayTemplate.png')); t.setTemplateImage(true); return t; }
+  return nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 });
+}
+
 function buildTray() {
-  const img = process.platform === 'win32' ? nativeImage.createFromPath(ICON) : nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 });
+  const img = trayImage();
   if (!tray) {
     tray = new Tray(img);
     tray.on('click', () => showWindow());
@@ -112,7 +123,7 @@ function applyOsSettings() {
   const s = store.settings;
   // Installed app: start AgathOS.exe itself. From source (npm start): electron.exe needs the app folder too.
   const args = app.isPackaged ? ['--hidden'] : [app.getAppPath(), '--hidden'];
-  try { app.setLoginItemSettings({ openAtLogin: !!s.startWithWindows, args }); } catch (_) {}
+  try { app.setLoginItemSettings(IS_MAC ? { openAtLogin: !!s.startWithWindows, openAsHidden: true } : { openAtLogin: !!s.startWithWindows, args }); } catch (_) {}
   globalShortcut.unregisterAll();
   if (s.hotkey) {
     globalShortcut.register('Control+Alt+Shift+P', () => {
@@ -167,7 +178,7 @@ function wireIpc() {
   h('rollback', () => engine.intent.rollbackBaseline());
   h('forget', () => { engine.intent.resetBaseline(); return true; });
   h('judgeModels', () => judge.models());
-  h('guardInstall', async () => { const ok = await guard.install(__dirname.replace(/app\.asar$/, 'app.asar.unpacked')); engine.guardState.installed = guard.installed(); engine.changed(true); return { ok }; });
+  h('guardInstall', async () => { if (process.platform !== 'win32') return { ok: false, unsupported: true }; const ok = await guard.install(__dirname.replace(/app\.asar$/, 'app.asar.unpacked')); engine.guardState.installed = guard.installed(); engine.changed(true); return { ok }; });
   h('guardUninstall', async () => { const ok = await guard.uninstall(); engine.guardState = { installed: guard.installed(), running: false, sysmon: false, elevated: false, seq: 0 }; engine.changed(true); return { ok }; });
   h('addFolder', async (kind) => {
     const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });

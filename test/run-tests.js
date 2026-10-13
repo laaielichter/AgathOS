@@ -131,6 +131,22 @@ ok(fsr.files.some((f) => f.path.endsWith('AGENTS.md') && f.state === 'alarm'), '
 ok(fsr.files.some((f) => f.kind === 'env' && f.reasons.some((r) => r.key === 'file.secret')), '.env secret found');
 ok(fsr.configs.some((c) => c.reasons.some((r) => r.key === 'config.autoApprove')), 'auto-approve in repo settings found');
 
+// ---------- macOS parsers (sample output of ps and lsof) ----------
+const mac = require('../core/mac');
+const psRows = mac.parsePs(
+  '  501     1 Tue Oct 13 17:48:00 2026     /Applications/Claude.app/Contents/MacOS/Claude\n  777   650 Tue Oct 13 17:50:12 2026     -zsh\n  812   777 Tue Oct 13 17:51:01 2026     /Users/a/.local/bin/claude\n',
+  '  501 /Applications/Claude.app/Contents/MacOS/Claude\n  777 -zsh\n  812 claude --dangerously-skip-permissions\n');
+ok(psRows.length === 3 && psRows[2].pp === 777 && psRows[2].c.includes('--dangerously') && psRows[1].n === 'zsh' && psRows[0].t > 0, 'mac: ps output is parsed');
+const lsofRows = mac.parseLsof('p501\ncollama\nf5\nn*:11434\nTST=LISTEN\nf9\nn127.0.0.1:52000->140.82.112.3:443\nTST=ESTABLISHED\np900\ncnode\nf3\nn[::1]:3000\nTST=LISTEN\n');
+ok(lsofRows.length === 3 && lsofRows[0].la === '0.0.0.0' && lsofRows[0].lp === 11434 && lsofRows[0].state === 'Listen' && lsofRows[1].ra === '140.82.112.3' && lsofRows[2].la === '::1', 'mac: lsof output is parsed');
+const net2 = require('../core/network');
+ok(net2.aiListeners(lsofRows, () => 'ollama').some((p) => p.port === 11434 && p.exposed), 'mac: Ollama on *:11434 is an open port');
+{
+  const C2 = require('../core/catalog');
+  const idf = (n, c, e) => (C2.AGENTS.find((a) => a.match(n, c, e)) || {}).id;
+  ok(idf('claude.exe', 'claude', '/applications/claude.app/contents/macos/claude') === 'claude-desktop' && idf('claude.exe', 'claude', '/users/a/.local/bin/claude') === 'claude-code', 'mac: Claude Desktop and Claude Code are told apart');
+}
+
 // ---------- engine smoke test ----------
 (async () => {
   const { Engine } = require('../core/engine');

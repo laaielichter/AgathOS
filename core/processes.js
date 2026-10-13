@@ -6,17 +6,21 @@ const path = require('path');
 const U = require('./util');
 const C = require('./catalog');
 const { classifyCommand, dangerousFlags, sensitivePath } = require('./classify');
+const mac = require('./mac');
+
+// The catalog uses Windows program names (claude.exe). On a Mac the same program is "claude".
+const norm = (n) => { const s = String(n || '').toLowerCase(); return U.IS_WIN || /\.exe$/.test(s) ? s : s + '.exe'; };
 
 const PS_LIST = `Get-CimInstance Win32_Process | ForEach-Object {
   [pscustomobject]@{ p=$_.ProcessId; pp=$_.ParentProcessId; n=$_.Name; c=$_.CommandLine; e=$_.ExecutablePath;
     t= if ($_.CreationDate) { [int64](($_.CreationDate.ToUniversalTime() - [datetime]'1970-01-01').TotalMilliseconds) } else { 0 } } } | ConvertTo-Json -Compress`;
 
 // Processes an agent starts for itself that say nothing about intent.
-const QUIET = /^(conhost|rg|git|node|bash|sh|cmd|powershell|pwsh|where|which|tasklist|whoami|hostname)\.exe$/i;
+const QUIET = /^(conhost|rg|git|node|bash|sh|zsh|cmd|powershell|pwsh|where|which|tasklist|whoami|hostname|uname|sw_vers|sysctl|ps)\.exe$/i;
 const QUIET_GIT = /git(\.exe)?["']?\s+(status|rev-parse|log|diff|show|branch|config|ls-files|remote|symbolic-ref|describe)\b/i;
 
 function identify(p) {
-  const n = String(p.n || '').toLowerCase();
+  const n = norm(p.n);
   const c = String(p.c || '').toLowerCase();
   const e = String(p.e || '').toLowerCase();
   return C.AGENTS.find((a) => a.match(n, c, e)) || null;
@@ -36,7 +40,7 @@ class ProcessWatch {
   }
 
   async poll() {
-    const rows = await U.ps.json(PS_LIST, 20000);
+    const rows = U.IS_MAC ? await mac.listProcesses() : await U.ps.json(PS_LIST, 20000);
     if (!rows.length) return false;
     const now = new Map(rows.map((r) => [r.p, r]));
     const added = [];
@@ -86,8 +90,8 @@ class ProcessWatch {
     if (rootPid === undefined) return;
     this.agentOf.set(p.p, rootPid);
     if (this.first) return;                       // existing children at startup: not "new" actions
-    const name = String(p.n || '');
-    const cmd = String(p.c || name);
+    const name = norm(p.n);
+    const cmd = String(p.c || p.n || '');
     if (QUIET.test(name) && (QUIET_GIT.test(cmd) || !/\s/.test(cmd.trim()) || /^"?[^"]*(rg|conhost)(\.exe)?"?\s/i.test(cmd))) return;
     const action = classifyCommand(cmd);
     const root = this.roots.get(rootPid);
@@ -100,11 +104,11 @@ class ProcessWatch {
   checkLauncher(info) {
     const par = info.parent;
     if (!par) return;
-    const pn = String(par.n || '').toLowerCase();
+    const pn = norm(par.n);
     const pc = String(par.c || '').toLowerCase();
     // npm install scripts, temp folders and Office/browser/script hosts are not how people start agents.
     const fromInstallScript = pn === 'node.exe' && /node_modules[\\/](?!@anthropic-ai|@openai|@google|@qwen-code|@github)/.test(pc) && !identify(par);
-    const odd = !C.NORMAL_LAUNCHERS.has(pn) || fromInstallScript || /\\(temp|tmp)\\/i.test(String(par.e || ''));
+    const odd = !C.NORMAL_LAUNCHERS.has(pn) || fromInstallScript || /\\(temp|tmp)\\|^\/(private\/)?(tmp|var\/folders)\//i.test(String(par.e || ''));
     if (odd) {
       this.onAlert && this.onAlert({
         key: 'proc.unknownLauncher', sev: info.flags.length ? 'alarm' : 'watch', watcher: 'proc',

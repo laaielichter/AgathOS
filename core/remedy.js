@@ -37,6 +37,11 @@ const DEFAULT_FIX = { auto: false, level: 'firm', minSev: 'alarm', custom: { ...
 const RANK = { calm: 0, watch: 1, alarm: 2 };
 const QSUFFIX = '.agathos-quarantine';
 
+// Without AgathOS Guard there is no firewall: "pause + cut internet" becomes "pause".
+function optionsFor(cat) {
+  return !U.IS_WIN && cat === 'agent' ? CATS.agent.filter((o) => o !== 'block') : CATS[cat];
+}
+
 function policy(fix) {
   const f = fix || DEFAULT_FIX;
   if (f.level !== 'custom') return PRESETS[f.level] || PRESETS.firm;
@@ -61,9 +66,10 @@ function plan(engine, fix, minSev = 'watch') {
   const add = (s) => {
     if (RANK[s.sev] < min) return;
     // Watch-level items get "off" by default: you decide. Danger gets the level's action.
-    const preset = s.cat === 'manual' ? 'guide' : pol[s.cat];
+    let preset = s.cat === 'manual' ? 'guide' : pol[s.cat];
+    if (s.cat === 'agent' && !optionsFor('agent').includes(preset)) preset = 'freeze';
     const action = s.cat === 'manual' ? 'guide' : (s.sev === 'alarm' || s.cat === 'hidden' || s.cat === 'port') ? preset : 'off';
-    steps.push({ ...s, action, preset, options: s.cat === 'manual' ? ['guide'] : CATS[s.cat] });
+    steps.push({ ...s, action, preset, options: s.cat === 'manual' ? ['guide'] : optionsFor(s.cat) });
   };
   const inv = engine.inventory;
   const snapAgents = engine.agentsView();
@@ -74,7 +80,8 @@ function plan(engine, fix, minSev = 'watch') {
   }
   for (const p of inv.ports) {
     if (!p.exposed) continue;
-    add({ id: `port:${p.port}`, cat: 'port', sev: 'alarm', name: `${p.product} · ${p.port}`, where: `${p.addr}:${p.port}`, reasons: [{ key: 'port.open', params: { product: p.product, addr: p.addr, port: p.port }, sev: 'alarm' }], target: { type: 'port', port: p.port }, needGuard: true });
+    // A firewall rule needs AgathOS Guard, which only exists on Windows. On a Mac it is a step for you.
+    add({ id: `port:${p.port}`, cat: U.IS_WIN ? 'port' : 'manual', sev: 'alarm', name: `${p.product} · ${p.port}`, where: `${p.addr}:${p.port}`, reasons: [{ key: 'port.open', params: { product: p.product, addr: p.addr, port: p.port }, sev: 'alarm' }], target: { type: 'port', port: p.port }, needGuard: true });
   }
   for (const m of inv.mcp) {
     if (m.state === 'calm' || m.approved) continue;
@@ -100,7 +107,7 @@ function plan(engine, fix, minSev = 'watch') {
   }
   for (const a of inv.autostarts) {
     if (a.state === 'calm' || engine.store.state.ignored[a.id]) continue;
-    if (a.kind === 'task') add({ id: `auto:${a.id}`, cat: 'auto', sev: a.state, name: a.name, where: a.command.slice(0, 160), reasons: a.reasons, target: { type: 'auto', id: a.id, name: a.name, taskPath: a.where } });
+    if (a.kind === 'task' || a.kind === 'launchd') add({ id: `auto:${a.id}`, cat: 'auto', sev: a.state, name: a.name, where: a.command.slice(0, 160), reasons: a.reasons, target: { type: 'auto', id: a.id, name: a.name, taskPath: a.where } });
     else add({ id: `manual:${a.id}`, cat: 'manual', sev: a.state, name: a.name, where: a.command.slice(0, 160), reasons: a.reasons, target: { type: 'auto', id: a.id } });
   }
   // Agents that run with safety switched off: only you can change how you start them.
@@ -334,6 +341,10 @@ function unquarantine(u) {
 
 // ---------- scheduled tasks ----------
 async function taskEnabled(name, taskPath, on) {
+  if (U.IS_MAC) {
+    const r = await require('./mac').launchAgentEnabled(name, taskPath, on);
+    return { ...r, undo: r.ok && !on ? { type: 'taskOn', name, taskPath } : undefined };
+  }
   if (!U.IS_WIN) return { ok: false, error: 'windows only' };
   const out = await U.ps.run(`try { ${on ? 'Enable' : 'Disable'}-ScheduledTask -TaskName ${U.psq(name)} -TaskPath ${U.psq(taskPath || '\\')} -ErrorAction Stop | Out-Null; 'AGATHOS_OK' } catch { 'AGATHOS_FAIL ' + $_.Exception.Message }`, 20000);
   const ok = /AGATHOS_OK/.test(out || '');

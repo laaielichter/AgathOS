@@ -7,10 +7,10 @@
 // root: true when the process itself is "the agent" (its children are its actions).
 const AGENTS = [
   { id: 'claude-code', name: 'Claude Code', kind: 'cli', root: true,
-    match: (n, c, exe) => (n === 'claude.exe' && !/anthropicclaude|\\claude\\app-/.test(exe)) || /@anthropic-ai[\\/]claude-code|claude-code[\\/]cli\.js/.test(c),
+    match: (n, c, exe) => (n === 'claude.exe' && !/anthropicclaude|\\claude\\app-|claude\.app\//.test(exe)) || /@anthropic-ai[\\/]claude-code|claude-code[\\/]cli\.js/.test(c),
     dirs: ['%USERPROFILE%\\.claude'], version: ['claude', ['--version']], transcripts: 'claude' },
   { id: 'claude-desktop', name: 'Claude Desktop', kind: 'desktop', root: false,
-    match: (n, c, exe) => n === 'claude.exe' && /anthropicclaude|\\claude\\app-/.test(exe),
+    match: (n, c, exe) => n === 'claude.exe' && /anthropicclaude|\\claude\\app-|claude\.app\//.test(exe),
     dirs: ['%APPDATA%\\Claude'] },
   { id: 'codex', name: 'Codex CLI', kind: 'cli', root: true,
     match: (n, c) => n === 'codex.exe' || /@openai[\\/]codex/.test(c),
@@ -92,7 +92,7 @@ const AGENTS = [
   { id: 'windsurf', name: 'Windsurf', kind: 'ide', root: false,
     match: (n) => n === 'windsurf.exe', dirs: ['%USERPROFILE%\\.codeium\\windsurf'] },
   { id: 'vscode', name: 'VS Code', kind: 'ide', root: false,
-    match: (n) => n === 'code.exe', dirs: ['%APPDATA%\\Code\\User'] },
+    match: (n, c, exe) => n === 'code.exe' || /visual studio code\.app\/contents\/macos\//.test(exe), dirs: ['%APPDATA%\\Code\\User'] },
   { id: 'antigravity', name: 'Antigravity', kind: 'ide', root: false,
     match: (n) => n === 'antigravity.exe', dirs: ['%USERPROFILE%\\.antigravity', '%APPDATA%\\Antigravity'] },
   { id: 'ollama', name: 'Ollama', kind: 'server', root: false,
@@ -112,6 +112,10 @@ const NORMAL_LAUNCHERS = new Set([
   'code.exe', 'cursor.exe', 'windsurf.exe', 'antigravity.exe', 'bash.exe', 'wsl.exe', 'wslhost.exe', 'mintty.exe',
   'alacritty.exe', 'wezterm-gui.exe', 'tabby.exe', 'hyper.exe', 'warp.exe', 'idea64.exe', 'pycharm64.exe',
   'webstorm64.exe', 'claude.exe', 'node.exe', 'sh.exe', 'zsh.exe', 'fish.exe', 'nu.exe', 'agathos.exe', 'electron.exe',
+  // macOS (names are compared as "<name>.exe")
+  'terminal.exe', 'iterm2.exe', 'login.exe', 'launchd.exe', 'tmux.exe', 'screen.exe', 'ghostty.exe', 'kitty.exe', 'stable.exe',
+  'code helper.exe', 'code helper (plugin).exe', 'cursor helper.exe', 'cursor helper (plugin).exe', 'windsurf helper (plugin).exe',
+  'zed.exe', 'sshd.exe', 'nvim.exe', 'vim.exe', 'emacs.exe', 'idea.exe', 'pycharm.exe', 'webstorm.exe',
 ]);
 
 // ---------- MCP configuration files ----------
@@ -212,7 +216,8 @@ const SENSITIVE_PATHS = [
   /[\\/]\.npmrc$/i, /[\\/]\.pypirc$/i, /[\\/]\.git-credentials$/i, /[\\/]\.netrc$/i, /\.env(\.[a-z]+)?$/i, /[\\/]\.config[\\/]gh[\\/]hosts\.yml/i,
   /google[\\/]chrome[\\/]user data/i, /microsoft[\\/]edge[\\/]user data/i, /mozilla[\\/]firefox[\\/]profiles/i, /brave-browser[\\/]user data/i,
   /login data/i, /[\\/]cookies$/i, /wallet/i, /metamask/i, /exodus/i, /electrum/i, /phantom/i, /keepass|\.kdbx$/i, /1password|bitwarden/i,
-  /[\\/]microsoft[\\/]credentials[\\/]/i, /[\\/]microsoft[\\/]protect[\\/]/i, /id_rsa|id_ed25519|id_ecdsa/i, /\.pem$|\.pfx$|\.p12$|\.key$/i,
+  /[\\/]microsoft[\\/]credentials[\\/]/i, /[\\/]microsoft[\\/]protect[\\/]/i, /\/library\/keychains\//i,
+  /application support\/(google\/chrome|bravesoftware|firefox|microsoft edge|arc)\//i, /\/library\/cookies\//i, /id_rsa|id_ed25519|id_ecdsa/i, /\.pem$|\.pfx$|\.p12$|\.key$/i,
 ];
 
 // Classify one command line into an action from the alphabet.
