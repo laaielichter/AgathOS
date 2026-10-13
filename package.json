@@ -1,0 +1,14 @@
+{
+  "name": "agathos-os",
+  "productName": "AgathOS",
+  "version": "0.1.0",
+  "description": "The good daemon for your local AI agents. Finds rogue agents, poisoned MCP servers and hidden instructions on Windows.",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^38.0.0"
+  }
+}

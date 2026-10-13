@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="nl" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgathOS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="titlebar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="-42 -42 84 84" aria-hidden="true">
+        <path d="M-35 35 L-35 -35 L35 -35 L35 35 L-21 35 L-21 -21 L21 -21 L21 21 L-7 21 L-7 -7 L7 -7" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="miter" stroke-linecap="square"/>
+      </svg>
+      <span class="brand-name">Agath<span class="brand-os">OS</span></span>
+      <span class="demo-pill" id="demoPill" data-i18n="demo"></span>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="sidebar" aria-label="Main menu">
+      <ul class="nav" id="nav">
+        <li><button class="nav-item is-active" data-view="overview"><span data-i18n="nav.overview"></span></button></li>
+        <li><button class="nav-item" data-view="agents"><span data-i18n="nav.agents"></span><span class="nav-count" id="countAgents"></span></button></li>
+        <li><button class="nav-item" data-view="mcp"><span data-i18n="nav.mcp"></span><span class="nav-count" id="countMcp"></span></button></li>
+        <li><button class="nav-item" data-view="files"><span data-i18n="nav.files"></span><span class="nav-count" id="countFiles"></span></button></li>
+        <li><button class="nav-item" data-view="log"><span data-i18n="nav.log"></span></button></li>
+      </ul>
+
+      <div class="sidebar-foot">
+        <button class="panic" id="panicBtn">
+          <span class="panic-dot" aria-hidden="true"></span>
+          <span data-i18n="panic"></span>
+        </button>
+        <div class="prefs">
+          <div class="seg" role="group" aria-label="Theme">
+            <button class="seg-btn" data-theme-set="dark" data-i18n="theme.dark"></button>
+            <button class="seg-btn" data-theme-set="light" data-i18n="theme.light"></button>
+          </div>
+          <div class="seg seg-langs" id="langSeg" role="group" aria-label="Language"></div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="main" id="main">
+      <!-- Overview -->
+      <section class="view is-active" id="view-overview">
+        <div class="hero">
+          <div class="ring-wrap">
+            <svg class="ring" id="ring" viewBox="-150 -150 300 300" role="img" aria-labelledby="ringTitle">
+              <title id="ringTitle"></title>
+              <circle class="ring-glow" r="112"/>
+              <g id="ringArcs"></g>
+              <circle class="ring-sweep" id="ringSweep" r="112"/>
+              <g class="ring-core" id="ringCore">
+                <path class="key-base" d="M-35 35 L-35 -35 L35 -35 L35 35 L-21 35 L-21 -21 L21 -21 L21 21 L-7 21 L-7 -7 L7 -7"/>
+                <path class="key-trace" d="M-35 35 L-35 -35 L35 -35 L35 35 L-21 35 L-21 -21 L21 -21 L21 21 L-7 21 L-7 -7 L7 -7" pathLength="100"/>
+              </g>
+            </svg>
+          </div>
+
+          <div class="hero-text">
+            <h1 class="status-line" id="statusLine"></h1>
+            <p class="status-sub" id="statusSub"></p>
+            <div class="hero-actions">
+              <button class="btn-primary" id="scanBtn"><span data-i18n="scan"></span></button>
+              <span class="last-scan" id="lastScan"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <section class="panel" aria-labelledby="watchersTitle">
+            <h2 class="panel-title" id="watchersTitle" data-i18n="watchers.title"></h2>
+            <ul class="watcher-list" id="watcherList"></ul>
+          </section>
+
+          <section class="panel" aria-labelledby="eventsTitle">
+            <h2 class="panel-title" id="eventsTitle" data-i18n="events.title"></h2>
+            <ol class="events" id="eventList"></ol>
+          </section>
+        </div>
+      </section>
+
+      <!-- List views -->
+      <section class="view" id="view-agents"><h1 class="view-title" data-i18n="nav.agents"></h1><p class="view-sub" data-i18n="agents.sub"></p><ul class="rows" id="agentRows"></ul></section>
+      <section class="view" id="view-mcp"><h1 class="view-title" data-i18n="nav.mcp"></h1><p class="view-sub" data-i18n="mcp.sub"></p><ul class="rows" id="mcpRows"></ul></section>
+      <section class="view" id="view-files"><h1 class="view-title" data-i18n="nav.files"></h1><p class="view-sub" data-i18n="files.sub"></p><ul class="rows" id="fileRows"></ul></section>
+      <section class="view" id="view-log"><h1 class="view-title" data-i18n="nav.log"></h1><p class="view-sub" data-i18n="log.sub"></p><ol class="events events-full" id="logRows"></ol></section>
+    </main>
+  </div>
+
+  <dialog class="modal" id="modal">
+    <h2 class="modal-title" id="modalTitle"></h2>
+    <p class="modal-body" id="modalBody"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="modalClose"></button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="demo-data.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
