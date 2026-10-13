@@ -13,7 +13,7 @@
     "dist:mac": "npx --yes electron-builder@26 --mac dmg --arm64 --x64"
   },
   "devDependencies": {
-    "electron": "^38.0.0"
+    "electron": "^44.7.0"
   },
   "agathos": {
     "updateRepo": "laaielichter/AgathOS"
