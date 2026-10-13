@@ -77,7 +77,13 @@ async function connections() {
   const r = await run('/usr/sbin/lsof', ['-nP', '-iTCP', '-sTCP:LISTEN,ESTABLISHED', '-F', 'pcnT'], 12000);
   return parseLsof(r.out);
 }
-function parseLsof(text) {
+// Outgoing connections and attempts (SYN_SENT) for the worm watch.
+async function attempts() {
+  if (!IS_MAC) return [];
+  const r = await run('/usr/sbin/lsof', ['-nP', '-iTCP', '-sTCP:SYN_SENT,ESTABLISHED', '-F', 'pcnT'], 6000);
+  return parseLsof(r.out, true).filter((x) => x.state !== 'Listen');
+}
+function parseLsof(text, withAttempts = false) {
   if (!text) return [];
   const rows = [];
   let pid = 0;
@@ -95,10 +101,10 @@ function parseLsof(text) {
       cur = { la: la.a, lp: la.p, ra: ra.a, rp: ra.p, state: rem ? 'Established' : 'Listen', pid, n: name };
       rows.push(cur);
     } else if (k === 'T' && cur && v.startsWith('ST=')) {
-      cur.state = /LISTEN/.test(v) ? 'Listen' : /ESTABLISHED/.test(v) ? 'Established' : v.slice(3);
+      cur.state = /LISTEN/.test(v) ? 'Listen' : /ESTABLISHED/.test(v) ? 'Established' : /SYN_SENT/.test(v) ? 'SynSent' : v.slice(3);
     }
   }
-  return rows.filter((x) => x.state === 'Listen' || x.state === 'Established');
+  return rows.filter((x) => x.state === 'Listen' || x.state === 'Established' || (withAttempts && x.state === 'SynSent'));
 }
 
 // ---------- stop button ----------
@@ -211,4 +217,4 @@ function shellExports(names) {
   return vals;
 }
 
-module.exports = { IS_MAC, fixPath, listProcesses, parsePs, parseLsof, connections, suspend, resume, kill, autostarts, launchAgentEnabled, signature, shellExports, SHELL_RC, splitAddr };
+module.exports = { IS_MAC, fixPath, listProcesses, parsePs, parseLsof, connections, attempts, suspend, resume, kill, autostarts, launchAgentEnabled, signature, shellExports, SHELL_RC, splitAddr };

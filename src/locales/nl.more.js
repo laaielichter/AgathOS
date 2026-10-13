@@ -248,6 +248,16 @@
     "set.quietTo": "tot",
     "notif.bundle": "{n} nieuwe meldingen",
     "notif.more": "Er wachten meer meldingen in AgathOS. Kijk als het jou uitkomt.",
+    // wormwacht, deel 1: netwerkscans
+    "worm.lanSweep": "{process} klopte binnen een minuut aan bij {hosts} apparaten in je netwerk (poorten {sample}). Zo zoekt een worm zijn volgende slachtoffer.",
+    "worm.portScan": "{process} probeerde binnen een minuut {ports} verschillende poorten op {host}. Zo zoekt een worm een weg naar binnen.",
+    "set.wormWatch": "Wormwacht: waarschuw als een programma je netwerk afzoekt",
+    "set.wormWatchDesc": "Kijkt elke paar seconden welke programma's aankloppen bij veel apparaten of poorten in je thuisnetwerk, zoals camera's, tv's en routers.",
+    "an.worm.simple": "Een programma op deze computer zoekt apparaten in je thuisnetwerk af, zoals een worm doet voordat hij zich verspreidt.",
+    "an.worm.maybe": "Een programma maakte in korte tijd contact met veel apparaten, of met veel poorten van één apparaat. Dat kan een netwerktool zijn die je zelf startte (zoals nmap of Fing), of malware of een ontspoorde agent die camera's, tv's of routers zoekt om in te breken.",
+    "an.worm.risk": "Een worm die een zwak apparaat vindt, kan het overnemen en zich van daaruit verspreiden, naar andere apparaten en andere huizen. Slimme tv's, camera's en routers hebben geen virusscanner, dus ze merken het zelden.",
+    "an.worm.todo": "Heb je zelf geen netwerktool gestart? Pauzeer of stop het programma, kijk waar het vandaan komt, en haal deze computer van het netwerk als je twijfelt.",
+    "an.worm.deep": "AgathOS leest elke drie seconden de open en halfopen TCP-verbindingen per proces (Get-NetTCPConnection op Windows, lsof op macOS, Sysmon-event 3 met AgathOS Guard). Het telt verschillende apparaten en poorten op privéadressen binnen één minuut. 20 apparaten, of 15 poorten op één apparaat, telt als een scan. Bekende netwerktools krijgen een waarschuwing in plaats van een alarm.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.nl, d);

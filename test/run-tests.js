@@ -44,6 +44,37 @@ ok(K.classifyTool('WebFetch', { url: 'https://x' }) === 'READ_UNTRUSTED', 'WebFe
 ok(K.classifyTool('Read', { file_path: 'C:/Users/a/.aws/credentials' }) === 'READ_SENSITIVE', 'Read credentials is private');
 ok(K.classifyTool('Edit', { file_path: 'C:/Users/a/.cursor/mcp.json' }) === 'MCP_CONFIG_CHANGE', 'editing mcp.json is a config change');
 
+// ---------- worm watch: network sweeps ----------
+{
+  const W = require('../core/worm');
+  const mac = require('../core/mac');
+  let clock = 1000000;
+  const got = [];
+  const w = new W.LanScanWatch({ now: () => clock, onAlert: (x) => got.push(x) });
+  const sweep = (name, pid, n, port = 80, base = '192.168.1.') => Array.from({ length: n }, (_, i) => ({ pid, n: name, ra: base + (i + 2), rp: port }));
+  w.observe(sweep('evil.exe', 900, 10));
+  ok(got.length === 0, 'worm: 10 devices is not a sweep');
+  clock += 3000;
+  w.observe(sweep('evil.exe', 900, 25));
+  ok(got.length === 1 && got[0].key === 'worm.lanSweep' && got[0].sev === 'alarm' && got[0].params.hosts === 25, 'worm: 25 devices in a minute is an alarm');
+  clock += 3000;
+  w.observe(sweep('evil.exe', 900, 30));
+  ok(got.length === 1, 'worm: no repeat alarm for the same program');
+  w.observe(sweep('nmap.exe', 901, 25));
+  ok(got.length === 2 && got[1].sev === 'watch', 'worm: a known network tool is a warning, not an alarm');
+  w.observe(Array.from({ length: 16 }, (_, i) => ({ pid: 902, n: 'x.exe', ra: '10.0.0.7', rp: 20 + i })));
+  ok(got.length === 3 && got[2].key === 'worm.portScan' && got[2].params.host === '10.0.0.7', 'worm: 16 ports on one device is a port scan');
+  w.observe(Array.from({ length: 40 }, (_, i) => ({ pid: 903, n: 'chrome.exe', ra: `52.1.2.${i}`, rp: 443 })));
+  ok(got.length === 3, 'worm: many internet servers is not a sweep');
+  const w2 = new W.LanScanWatch({ now: () => clock, onAlert: () => {} });
+  w2.observe(sweep('slow.exe', 904, 12));
+  clock += 61000;
+  ok(w2.observe(sweep('slow.exe', 904, 12, 80, '192.168.2.')).length === 0, 'worm: old knocks fall out of the one-minute window');
+  ok(!W.isLanTarget('239.255.255.250') && !W.isLanTarget('192.168.1.255') && !W.isLanTarget('8.8.8.8') && W.isLanTarget('192.168.1.20'), 'worm: only real home-network devices count');
+  const ls = mac.parseLsof('p77\ncworm\nn192.168.1.9:50000->192.168.1.40:22\nTST=SYN_SENT\n', true);
+  ok(ls.length === 1 && ls[0].state === 'SynSent' && ls[0].ra === '192.168.1.40' && ls[0].rp === 22, 'worm: macOS half-open connections are read');
+}
+
 // ---------- store hash chain ----------
 const sdir = path.join(tmp, 'store');
 const st = new Store(sdir);
@@ -248,6 +279,15 @@ ok(net2.aiListeners(lsofRows, () => 'ollama').some((p) => p.port === 11434 && p.
   ok(snapD.mcp.find((m) => m.name === 'mail').dismissed === mailKey && snapD.dismissed.length === 1, 'a dismissed finding is marked and listed');
   ok(eng.fixRestore(mailKey).ok && eng.fixPlan().some((x) => x.tkey === mailKey), 'show again brings it back');
   ok(typeof remedy2.fingerprint([{ key: 'a', sev: 'alarm' }]) === 'string', 'fingerprint works');
+  // worm watch end to end: half-open knocks from the network module become one event
+  const netMod = require('../core/network');
+  const realAttempts = netMod.attempts;
+  netMod.attempts = async () => Array.from({ length: 30 }, (_, i) => ({ pid: 4242, ra: `192.168.50.${i + 2}`, rp: 554, state: 'SynSent' }));
+  eng.procs.procs.set(4242, { p: 4242, n: 'worm.exe' });
+  await eng.pollWorm();
+  netMod.attempts = realAttempts;
+  const wev = est.events.filter((e) => e.key === 'worm.lanSweep');
+  ok(wev.length === 1 && wev[0].sev === 'alarm' && wev[0].params.process === 'worm.exe' && /camera/.test(wev[0].params.kinds), 'engine: a network sweep becomes one worm alarm with the program name');
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
   fs.rmSync(tmp, { recursive: true, force: true });

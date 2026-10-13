@@ -36,7 +36,7 @@ words, predicts the next step from the actions it sees, and limits the damage.
 |---|---|
 | Gatekeeper | MCP servers in every app's config: known-bad packages, unpinned versions, inline secrets, plain-http servers. Approve a server and AgathOS pins it; any later change (a "rug pull") is an alarm. Also "approve everything" settings (`chat.tools.autoApprove`, `bypassPermissions`, Codex `approval_policy = "never"`). |
 | File watcher | Mass deletion in your project folders (freezes the agents automatically, reversible). Model files: walks pickle opcodes itself and lists every import, inside PyTorch zips too; unreadable files count as suspicious. safetensors and GGUF are green. |
-| Network watcher | AI servers listening on the network instead of only on this PC. Outgoing connections and DNS lookups of agent child processes. |
+| Network watcher | AI servers listening on the network instead of only on this PC. Outgoing connections and DNS lookups of agent child processes. **Worm watch:** any program that knocks on 20+ devices or 15+ ports of one device in your home network within a minute (cameras, TVs, routers), the first move of a self-spreading worm. Test it safely with `node test/lan-scan-sim.js`. |
 | Key watcher | API keys in `.env` files, configs and MCP definitions. `ANTHROPIC_BASE_URL` / `OPENAI_BASE_URL` pointing somewhere unexpected. |
 | Trap watcher | Invisible characters (zero-width, bidi overrides, Unicode Tags) in `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, skills and rules. Hidden Tag text is decoded and shown. Attack phrases ("ignore previous instructions", `curl … | bash`). |
 | Process watcher | Every running agent with an ID card: PID, who started it, signature, dangerous flags (`--dangerously-skip-permissions`, `--yolo`, `--trust-all-tools`), child processes, the task it was given, what it is doing now. Agents started by npm install scripts or temp folders are flagged. |
@@ -179,6 +179,7 @@ Browsers are refused.
 | Agents, MCP servers, instruction files, keys, models | yes | yes |
 | Live process watching, intent engine, honesty check | yes | yes (`ps`) |
 | Open AI ports and connections | yes | yes (`lsof`) |
+| Worm watch (network sweeps) | yes | yes (`lsof`) |
 | Freeze, resume, stop an agent | yes | yes (signals) |
 | Autostart check and "turn off" | scheduled tasks | LaunchAgents (`launchctl`) |
 | Signature check | Authenticode | `codesign` |

@@ -26,6 +26,19 @@ async function connections() {
   return rows;
 }
 
+// Outgoing connections and connection attempts (half-open, SynSent) to the home
+// network only. Used by the worm watch every few seconds, so the output stays small.
+const PS_ATTEMPTS = `Get-NetTCPConnection -State SynSent,Established -ErrorAction SilentlyContinue |
+  Where-Object { $_.RemoteAddress -match '^(10\\.|192\\.168\\.|172\\.(1[6-9]|2\\d|3[01])\\.|169\\.254\\.)' } |
+  ForEach-Object { [pscustomobject]@{ ra=$_.RemoteAddress; rp=$_.RemotePort; s="$($_.State)"; p=$_.OwningProcess } } | ConvertTo-Json -Compress`;
+
+async function attempts() {
+  if (U.IS_MAC) return mac.attempts();
+  if (!U.IS_WIN) return [];
+  const rows = await U.ps.json(PS_ATTEMPTS, 8000);
+  return rows.map((r) => ({ ra: r.ra, rp: r.rp, state: r.s, pid: r.p }));
+}
+
 const isLoopback = (a) => /^(127\.|::1$|0:0:0:0:0:0:0:1$)/.test(a);
 const isAny = (a) => a === '0.0.0.0' || a === '::' || a === '0:0:0:0:0:0:0:0';
 const isPrivate = (a) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|fe80:|fc|fd)/i.test(a);
@@ -60,4 +73,4 @@ function aiListeners(conns, procName) {
   return [...byPort.values()];
 }
 
-module.exports = { connections, aiListeners, isLoopback, isAny, isPrivate };
+module.exports = { connections, attempts, aiListeners, isLoopback, isAny, isPrivate };

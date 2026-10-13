@@ -18,6 +18,7 @@ const { IntentEngine, thresholds } = require('./intent');
 const { classifyTool } = require('./classify');
 const remedy = require('./remedy');
 const { DownloadGuard } = require('./dlguard');
+const { LanScanWatch } = require('./worm');
 
 const WATCHERS = ['gate', 'files', 'net', 'keys', 'traps', 'proc'];
 const RANK = { calm: 0, watch: 1, alarm: 2 };
@@ -62,6 +63,7 @@ class Engine {
       startedAt: this.startedAt,
       onAction: (a) => { this.intent.addAction(a); if (!a.historic) this.maybeJudge(a.agentId); },
     });
+    this.worm = new LanScanWatch({ onAlert: (a) => this.wormAlert(a) });
     this.downloads = new DownloadGuard({ onFinding: (f) => this.downloadFinding(f) });
     this.files = new FileWatch({
       threshold: store.settings.massDeleteThreshold,
@@ -115,6 +117,7 @@ class Engine {
       every(8000, async () => { this.transcripts.poll(); });
       every(60000, async () => { this.intent.tick(); this.intent.honestyCheck(this.transcripts.recent()); this.changed(); });
       every(2500, () => this.pollGuard());
+      if (s.wormWatch !== false) every(3000, () => this.pollWorm());
       this.files.start(this.configPaths(), s.roots);
       if (s.downloadGuard) this.downloads.start(); else this.downloads.stop();
     } else {
@@ -247,6 +250,21 @@ class Engine {
     this.changed();
   }
 
+  // Worm watch: a program that knocks on many devices or ports of your home network.
+  async pollWorm() {
+    const rows = await net.attempts();
+    if (!rows.length) return;
+    this.worm.observe(rows, (pid) => { const p = this.procs.procs.get(pid); return p ? p.n : null; });
+  }
+
+  wormAlert(a) {
+    const root = this.procs.agentOf.get(a.pid);
+    const info = root !== undefined ? this.procs.roots.get(root) : null;
+    const agentId = info ? info.agent.id : null;
+    if (agentId) this.intent.addSignal(agentId, { key: a.key, params: a.params, sev: a.sev, points: a.sev === 'alarm' ? 45 : 25 });
+    this.event({ ...a, agentId });
+  }
+
   async pollGuard() {
     if (!this.guardState.installed && !guard.installed()) return;
     this.guardState.installed = true;
@@ -288,6 +306,7 @@ class Engine {
         this.intent.addAction({ agentId: info.agent.id, action: 'NET_NEW', source: 'dns', detail: `${path.basename(String(e.image || '')) || e.pid} → ${e.name}`, pid: e.pid });
       }
     } else if (e.type === 'net' && e.pid) {
+      if (e.ip && this.store.settings.wormWatch !== false) this.worm.observe([{ pid: e.pid, ra: e.ip, rp: e.port, n: path.basename(String(e.image || '')) }]);
       if (e.host) this.guardEvent({ type: 'dns', pid: e.pid, name: e.host, image: e.image, ts: e.ts });
     } else if (e.type === 'del' && e.pid) {
       const root = this.procs.agentOf.get(e.pid);
