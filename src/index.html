@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="nl" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'">
@@ -14,95 +14,95 @@
         <path d="M-35 35 L-35 -35 L35 -35 L35 35 L-21 35 L-21 -21 L21 -21 L21 21 L-7 21 L-7 -7 L7 -7" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="miter" stroke-linecap="square"/>
       </svg>
       <span class="brand-name">Agath<span class="brand-os">OS</span></span>
-      <span class="demo-pill" id="demoPill" data-i18n="demo"></span>
+      <span class="live-pill" id="livePill"><span class="live-dot" id="liveDot"></span><span id="liveText"></span></span>
+      <span class="guard-pill" id="guardPill" hidden>Guard</span>
     </div>
   </header>
 
   <div class="shell">
     <nav class="sidebar" aria-label="Main menu">
-      <ul class="nav" id="nav">
-        <li><button class="nav-item is-active" data-view="overview"><span data-i18n="nav.overview"></span></button></li>
-        <li><button class="nav-item" data-view="agents"><span data-i18n="nav.agents"></span><span class="nav-count" id="countAgents"></span></button></li>
-        <li><button class="nav-item" data-view="mcp"><span data-i18n="nav.mcp"></span><span class="nav-count" id="countMcp"></span></button></li>
-        <li><button class="nav-item" data-view="files"><span data-i18n="nav.files"></span><span class="nav-count" id="countFiles"></span></button></li>
-        <li><button class="nav-item" data-view="log"><span data-i18n="nav.log"></span></button></li>
-      </ul>
-
+      <ul class="nav" id="nav"></ul>
       <div class="sidebar-foot">
-        <button class="panic" id="panicBtn">
+        <button class="panic" id="panicBtn" type="button">
+          <span class="panic-fill" aria-hidden="true"></span>
           <span class="panic-dot" aria-hidden="true"></span>
-          <span data-i18n="panic"></span>
+          <span class="panic-label" id="panicLabel"></span>
         </button>
         <div class="prefs">
-          <div class="seg" role="group" aria-label="Theme">
-            <button class="seg-btn" data-theme-set="dark" data-i18n="theme.dark"></button>
-            <button class="seg-btn" data-theme-set="light" data-i18n="theme.light"></button>
-          </div>
-          <div class="seg seg-langs" id="langSeg" role="group" aria-label="Language"></div>
+          <div class="seg" id="themeSeg" role="group" aria-label="Theme"></div>
+          <select class="lang-select" id="langSel" aria-label="Language"></select>
         </div>
       </div>
     </nav>
 
     <main class="main" id="main">
-      <!-- Overview -->
       <section class="view is-active" id="view-overview">
         <div class="hero">
           <div class="ring-wrap">
             <svg class="ring" id="ring" viewBox="-150 -150 300 300" role="img" aria-labelledby="ringTitle">
               <title id="ringTitle"></title>
               <circle class="ring-glow" r="112"/>
+              <g id="ringRipples"></g>
               <g id="ringArcs"></g>
-              <circle class="ring-sweep" id="ringSweep" r="112"/>
-              <g class="ring-core" id="ringCore">
-                <path class="key-base" d="M-35 35 L-35 -35 L35 -35 L35 35 L-21 35 L-21 -21 L21 -21 L21 21 L-7 21 L-7 -7 L7 -7"/>
+              <g class="ring-pointer" id="ringPointer"><circle cx="0" cy="-112" r="9"/></g>
+              <g class="ring-core">
+                <path class="key-base" id="keyBase" d="M-35 35 L-35 -35 L35 -35 L35 35 L-21 35 L-21 -21 L21 -21 L21 21 L-7 21 L-7 -7 L7 -7" pathLength="100"/>
                 <path class="key-trace" d="M-35 35 L-35 -35 L35 -35 L35 35 L-21 35 L-21 -21 L21 -21 L21 21 L-7 21 L-7 -7 L7 -7" pathLength="100"/>
               </g>
             </svg>
           </div>
-
           <div class="hero-text">
             <h1 class="status-line" id="statusLine"></h1>
             <p class="status-sub" id="statusSub"></p>
             <div class="hero-actions">
-              <button class="btn-primary" id="scanBtn"><span data-i18n="scan"></span></button>
+              <button class="btn-primary" id="scanBtn" type="button"></button>
               <span class="last-scan" id="lastScan"></span>
             </div>
           </div>
         </div>
-
+        <section class="live" aria-labelledby="liveTitle">
+          <h2 class="panel-title" id="liveTitle"></h2>
+          <div class="live-cards" id="liveCards"></div>
+        </section>
         <div class="grid">
           <section class="panel" aria-labelledby="watchersTitle">
-            <h2 class="panel-title" id="watchersTitle" data-i18n="watchers.title"></h2>
+            <h2 class="panel-title" id="watchersTitle"></h2>
             <ul class="watcher-list" id="watcherList"></ul>
           </section>
-
           <section class="panel" aria-labelledby="eventsTitle">
-            <h2 class="panel-title" id="eventsTitle" data-i18n="events.title"></h2>
+            <h2 class="panel-title" id="eventsTitle"></h2>
             <ol class="events" id="eventList"></ol>
           </section>
         </div>
       </section>
 
-      <!-- List views -->
-      <section class="view" id="view-agents"><h1 class="view-title" data-i18n="nav.agents"></h1><p class="view-sub" data-i18n="agents.sub"></p><ul class="rows" id="agentRows"></ul></section>
-      <section class="view" id="view-mcp"><h1 class="view-title" data-i18n="nav.mcp"></h1><p class="view-sub" data-i18n="mcp.sub"></p><ul class="rows" id="mcpRows"></ul></section>
-      <section class="view" id="view-files"><h1 class="view-title" data-i18n="nav.files"></h1><p class="view-sub" data-i18n="files.sub"></p><ul class="rows" id="fileRows"></ul></section>
-      <section class="view" id="view-log"><h1 class="view-title" data-i18n="nav.log"></h1><p class="view-sub" data-i18n="log.sub"></p><ol class="events events-full" id="logRows"></ol></section>
+      <section class="view" id="view-agents"><header class="view-head"><h1 class="view-title" data-t="nav.agents"></h1><p class="view-sub" data-t="agents.sub"></p></header><div class="cards" id="agentCards"></div></section>
+      <section class="view" id="view-mcp"><header class="view-head"><h1 class="view-title" data-t="nav.mcp"></h1><p class="view-sub" data-t="mcp.sub"></p></header><ul class="rows" id="mcpRows"></ul></section>
+      <section class="view" id="view-files"><header class="view-head"><h1 class="view-title" data-t="nav.files"></h1><p class="view-sub" data-t="files.sub"></p></header><div class="tabs" id="fileTabs" role="tablist"></div><ul class="rows" id="fileRows"></ul></section>
+      <section class="view" id="view-models"><header class="view-head"><h1 class="view-title" data-t="nav.models"></h1><p class="view-sub" data-t="models.sub"></p></header><ul class="rows" id="modelRows"></ul></section>
+      <section class="view" id="view-network"><header class="view-head"><h1 class="view-title" data-t="nav.network"></h1><p class="view-sub" data-t="network.sub"></p></header><div id="networkBody"></div></section>
+      <section class="view" id="view-log"><header class="view-head"><h1 class="view-title" data-t="nav.log"></h1><p class="view-sub" data-t="log.sub"></p></header><ol class="events events-full" id="logRows"></ol></section>
+      <section class="view" id="view-settings"><header class="view-head"><h1 class="view-title" data-t="nav.settings"></h1><p class="view-sub" data-t="settings.sub"></p></header><div id="settingsBody"></div></section>
     </main>
   </div>
 
   <dialog class="modal" id="modal">
     <h2 class="modal-title" id="modalTitle"></h2>
     <p class="modal-body" id="modalBody"></p>
-    <div class="modal-actions">
-      <button class="btn-ghost" id="modalClose"></button>
-    </div>
+    <div class="modal-actions"><button class="btn-ghost" id="modalClose" type="button"></button></div>
   </dialog>
-
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="demo-data.js"></script>
   <script src="i18n.js"></script>
+  <script src="locales/hi.js"></script>
+  <script src="locales/ar.js"></script>
+  <script src="locales/bn.js"></script>
+  <script src="locales/pt.js"></script>
+  <script src="locales/ru.js"></script>
+  <script src="locales/id.js"></script>
+  <script src="locales/ja.js"></script>
+  <script src="locales/ko.js"></script>
+  <script src="mock.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
