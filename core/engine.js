@@ -17,6 +17,7 @@ const { Transcripts } = require('./transcripts');
 const { IntentEngine, thresholds } = require('./intent');
 const { classifyTool } = require('./classify');
 const remedy = require('./remedy');
+const { DownloadGuard } = require('./dlguard');
 
 const WATCHERS = ['gate', 'files', 'net', 'keys', 'traps', 'proc'];
 const RANK = { calm: 0, watch: 1, alarm: 2 };
@@ -61,6 +62,7 @@ class Engine {
       startedAt: this.startedAt,
       onAction: (a) => { this.intent.addAction(a); if (!a.historic) this.maybeJudge(a.agentId); },
     });
+    this.downloads = new DownloadGuard({ onFinding: (f) => this.downloadFinding(f) });
     this.files = new FileWatch({
       threshold: store.settings.massDeleteThreshold,
       onConfigChange: (f) => this.configChanged(f),
@@ -84,6 +86,7 @@ class Engine {
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
     this.files.stop();
+    this.downloads.stop();
     U.ps.stop();
   }
 
@@ -113,8 +116,10 @@ class Engine {
       every(60000, async () => { this.intent.tick(); this.intent.honestyCheck(this.transcripts.recent()); this.changed(); });
       every(2500, () => this.pollGuard());
       this.files.start(this.configPaths(), s.roots);
+      if (s.downloadGuard) this.downloads.start(); else this.downloads.stop();
     } else {
       this.files.stop();
+      this.downloads.stop();
     }
     const full = setInterval(() => this.fullScan('schedule').catch(() => {}), Math.max(1, s.fullScanHours) * 3600 * 1000);
     this.timers.push(full);
@@ -346,6 +351,20 @@ class Engine {
     this.changed();
   }
 
+  // A new download that can run code or carries hidden instructions.
+  downloadFinding(f) {
+    this.event({ key: f.key, sev: f.sev, watcher: f.key === 'dl.model' ? 'files' : 'traps', params: f.params, target: { type: 'download', path: f.path } });
+    // Make it part of the inventory too, so "Fix it" can set it aside.
+    if (f.key === 'dl.model') {
+      const m = models.scanModel(f.path);
+      if (m && !this.inventory.models.some((x) => x.path === f.path)) this.inventory.models.push(m);
+    } else {
+      const id = U.sha256(f.path.toLowerCase()).slice(0, 16);
+      if (!this.inventory.files.some((x) => x.id === id)) this.inventory.files.push({ id, path: f.path, kind: 'instruction', state: f.sev, reasons: f.reasons, hash: '' });
+    }
+    this.changed(true);
+  }
+
   async massDelete(d) {
     const running = this.procs.runningAgents();
     this.event({ key: 'mass.delete', sev: 'alarm', watcher: 'files', params: { n: d.n, s: d.seconds, dir: U.shortPath(d.dir), agents: running.map((r) => r.agent.name).join(', ') } });
@@ -530,6 +549,9 @@ class Engine {
     return res;
   }
 
+  fixDismiss(key) { const r = remedy.dismiss(this, String(key)); this.changed(true); return r; }
+  fixRestore(key) { const r = remedy.restore(this, String(key)); this.changed(true); return r; }
+
   async fixUndo(rid) {
     const r = await remedy.undo(this, String(rid));
     setTimeout(() => this.fullScan('fix').catch(() => {}), 300);
@@ -603,8 +625,8 @@ class Engine {
     return out.sort((a, b) => (b.running.length - a.running.length) || (RANK[b.state] - RANK[a.state]) || a.name.localeCompare(b.name));
   }
 
-  watcherStates(agents) {
-    const i = this.inventory;
+  watcherStates(agents, view) {
+    const i = view || this.inventory;
     const recent = (w, ms = 3600000) => this.store.events.filter((e) => e.watcher === w && e.sev !== 'calm' && Date.now() - e.ts < ms);
     const issues = (list) => list.filter((x) => x.state !== 'calm');
     const st = {
@@ -624,9 +646,26 @@ class Engine {
     });
   }
 
-  snapshot() {
-    const agents = this.agentsView();
+  // Dismissed findings stay visible but count as calm, so the ring and badges calm down too.
+  dismissView() {
+    const st = this.store.state;
+    const mark = (key, x) => (remedy.isDismissed(st, key, x.reasons) ? { ...x, state: 'calm', dismissed: key, origState: x.state } : x);
+    const agents = this.agentsView().map((a) => (a.state !== 'calm' ? mark(`agent:${a.id}`, a) : a));
     const i = this.inventory;
+    const view = {
+      mcp: i.mcp.map((m) => mark(`mcp:${m.id}`, m)),
+      files: i.files.map((f) => mark(`file:${f.id}`, f)),
+      configs: i.configs.map((f) => mark(`file:${f.id}`, f)),
+      models: i.models.map((m) => mark(`model:${U.sha256(m.path).slice(0, 16)}`, m)),
+      ports: i.ports.map((p) => mark(`port:${p.port}`, p)),
+      autostarts: i.autostarts.map((a) => mark(`auto:${a.id}`, a)),
+    };
+    return { agents, view };
+  }
+
+  snapshot() {
+    const { agents, view } = this.dismissView();
+    const i = view;
     return {
       ready: true,
       platform: process.platform,
@@ -636,10 +675,10 @@ class Engine {
       guard: { ...this.guardState },
       pausedAll: this.pausedAll,
       lockdown: !!this.store.state.lockdown,
-      watchers: this.watcherStates(agents),
+      watchers: this.watcherStates(agents, view),
       agents,
       mcp: i.mcp,
-      files: [...i.files.filter((f) => f.state !== 'calm' || f.kind !== 'env'), ...i.configs].map((f) => ({ ...f, short: U.shortPath(f.path) })),
+      files: [...i.files.filter((f) => f.state !== 'calm' || f.kind !== 'env' || f.dismissed), ...i.configs].map((f) => ({ ...f, short: U.shortPath(f.path) })),
       models: i.models.map((m) => ({ ...m, short: U.shortPath(m.path) })),
       ports: i.ports,
       autostarts: i.autostarts,
@@ -649,6 +688,9 @@ class Engine {
       counts: this.counts(),
       learnedAgents: Object.keys(this.store.state.baselines).length,
       fixPlan: this.scanning ? (this._lastPlan || []) : (this._lastPlan = this.safePlan()),
+      update: this.update || null,
+      snoozeUntil: this.store.state.snoozeUntil || 0,
+      dismissed: Object.entries(this.store.state.dismissed || {}).map(([key, d]) => ({ key, name: d.name, at: d.at, sev: d.sev })),
       remedies: (this.store.state.remedies || []).slice(0, 30).map(({ undo, ...r }) => ({ ...r, canUndo: !!undo && !r.undone })),
       apiPort: require('./api').PORT,
     };

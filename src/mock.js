@@ -80,6 +80,9 @@
     S('manual:flag:claude-code', 'manual', 'watch', 'Claude Code', '--dangerously-skip-permissions', [R('flag.dangerous', { flag: '--dangerously-skip-permissions' }, 'watch')], 'guide', 'guide', ['guide']),
   ];
   snap.remedies = [];
+  snap.dismissed = [];
+  snap.update = /update/.test(location.hash) ? { status: 'newer', current: '0.5.0', version: '0.5.1' } : null;
+  for (const st of snap.fixPlan) st.tkey = st.id.replace(/^(hidden|inject|manual):(flag:)?/, (m0, kind, flag) => (flag ? 'agent:' : kind === 'manual' || kind === 'hidden' || kind === 'inject' ? 'file:' : ''));
   let fixSnap = { ...snap.settings.fix };
   const fixBefore = () => fixSnap;
   const emit = () => listeners.forEach((f) => f(JSON.parse(JSON.stringify(snap))));
@@ -118,6 +121,25 @@
     fixUndo: (rid) => { const r = snap.remedies.find((x) => x.rid === rid); if (r) { r.undone = Date.now(); r.canUndo = false; } emit(); return ok(); },
     ui: () => ok(), uiState: () => Promise.resolve({ welcomed: !/welcome/.test(location.hash), mode: /simple/.test(location.hash) ? 'simple' : 'advanced', lang: (location.hash.match(/lang=(\w+)/) || [])[1] }), verifyLog: () => ok({ lines: 128 }), rollback: () => Promise.resolve(true), forget: () => Promise.resolve(true),
     judgeModels: () => Promise.resolve(['qwen2.5:7b', 'llama3.1:8b']), guardInstall: () => ok(), guardUninstall: () => ok(),
-    addFolder: () => ok(), removeFolder: () => ok(), reveal: () => ok(), onNavigate: () => {},
+    addFolder: () => ok(), removeFolder: () => ok(), reveal: () => ok(), onNavigate: () => {}, openMain: () => ok(), closeMini: () => ok(),
+    checkText: (text) => {
+      const tags = [...text].filter((c) => c.codePointAt(0) >= 0xe0000 && c.codePointAt(0) <= 0xe007f);
+      const zw = (text.match(/[​-‍⁠]/g) || []).length;
+      const decoded = tags.map((c) => String.fromCharCode(c.codePointAt(0) - 0xe0000)).join('');
+      const reasons = [];
+      if (tags.length) reasons.push(R('file.hiddenTags', { n: tags.length, text: decoded.slice(0, 160) }, 'alarm'));
+      if (zw) reasons.push(R('file.hidden', { n: zw }, zw > 20 ? 'alarm' : 'watch'));
+      const vis = text + decoded;
+      if (/ignore (all )?previous instructions/i.test(vis)) reasons.push(R('file.injectionPhrase', { text: (vis.match(/.{0,20}ignore (all )?previous instructions.{0,20}/i) || [''])[0] }, 'alarm'));
+      const keys = vis.match(/sk-(ant-api\d{2}-|proj-)?[A-Za-z0-9_-]{20,}/g) || [];
+      if (keys.length) reasons.push(R('file.secret', { n: keys.length, kinds: 'Anthropic' }, 'watch'));
+      const clean = [...text].filter((c) => !(c.codePointAt(0) >= 0xe0000 && c.codePointAt(0) <= 0xe007f) && !/[​-‍⁠]/.test(c)).join('');
+      const sev = reasons.some((r) => r.sev === 'alarm') ? 'alarm' : reasons.length ? 'watch' : 'calm';
+      return Promise.resolve({ sev, reasons, decoded, secrets: keys.map((k) => ({ kind: 'Anthropic', masked: k.slice(0, 6) + '…' + k.slice(-3) })), length: [...text].length, removed: [...text].length - [...clean].length, clean });
+    },
+    copyText: () => ok(), snooze: (w) => { snap.snoozeUntil = w === 'off' ? 0 : Date.now() + 3600000; emit(); return Promise.resolve(snap.snoozeUntil); },
+    saveReport: () => ok(), checkUpdate: () => Promise.resolve({ status: 'latest', current: '0.5.0', version: '0.5.0' }), installUpdate: () => ok(),
+    fixDismiss: (key) => { const st = snap.fixPlan.find((x) => x.tkey === key || x.id === key); if (st) { snap.dismissed.push({ key, name: st.name, at: Date.now(), sev: st.sev }); snap.fixPlan = snap.fixPlan.filter((x) => x.tkey !== key); } emit(); return ok(); },
+    fixRestore: (key) => { snap.dismissed = snap.dismissed.filter((d) => d.key !== key); emit(); return ok(); },
   };
 })();

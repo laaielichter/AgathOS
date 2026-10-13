@@ -56,6 +56,25 @@ function policy(fix) {
 const HIDDEN_KEYS = new Set(['file.hiddenTags', 'file.hidden', 'file.bidi']);
 const MANUAL_FILE_KEYS = new Set(['file.secret', 'config.autoApprove', 'config.baseUrl', 'config.repoHooks']);
 
+// ---------- dismiss ----------
+// "Dismiss" = you looked at it and accept it. The finding stops counting until it changes:
+// the fingerprint is the set of reasons, so a new kind of problem brings it back.
+const fingerprint = (reasons) => U.sha256(JSON.stringify((reasons || []).map((r) => `${r.key}|${r.sev}`).sort())).slice(0, 16);
+function targetKey(t) {
+  if (!t) return null;
+  if (t.type === 'agent') return `agent:${t.id}`;
+  if (t.type === 'port') return `port:${t.port}`;
+  if (t.type === 'mcp') return `mcp:${t.id}`;
+  if (t.type === 'file') return `file:${t.id}`;
+  if (t.type === 'model') return `model:${U.sha256(String(t.path)).slice(0, 16)}`;
+  if (t.type === 'auto') return `auto:${t.id}`;
+  return null;
+}
+function isDismissed(state, key, reasons) {
+  const d = state.dismissed && key && state.dismissed[key];
+  return !!d && d.fp === fingerprint(reasons);
+}
+
 // ---------- plan ----------
 // Builds the list of steps from the engine's current findings.
 // sev filter: 'watch' = everything that is not calm (the button), 'alarm' = only danger (auto mode).
@@ -63,8 +82,12 @@ function plan(engine, fix, minSev = 'watch') {
   const pol = policy(fix);
   const steps = [];
   const min = RANK[minSev] || 1;
+  const dismissed = engine.store.state.dismissed || {};
   const add = (s) => {
     if (RANK[s.sev] < min) return;
+    s.tkey = targetKey(s.target);
+    s.fp = fingerprint(s.reasons);
+    if (s.tkey && dismissed[s.tkey] && dismissed[s.tkey].fp === itemFp(s.tkey)) return;
     // Watch-level items get "off" by default: you decide. Danger gets the level's action.
     let preset = s.cat === 'manual' ? 'guide' : pol[s.cat];
     if (s.cat === 'agent' && !optionsFor('agent').includes(preset)) preset = 'freeze';
@@ -73,6 +96,7 @@ function plan(engine, fix, minSev = 'watch') {
   };
   const inv = engine.inventory;
   const snapAgents = engine.agentsView();
+  const itemFp = (key) => fingerprint(itemReasons(engine, key, snapAgents));
 
   for (const a of snapAgents) {
     if (!a.running.length || a.state !== 'alarm') continue;
@@ -117,6 +141,39 @@ function plan(engine, fix, minSev = 'watch') {
   }
   steps.sort((x, y) => (RANK[y.sev] - RANK[x.sev]) || (x.cat === 'manual') - (y.cat === 'manual'));
   return steps;
+}
+
+// All reasons of the item behind a target key (one file can give several steps).
+function itemReasons(engine, key, agents) {
+  const [kind, ...rest] = String(key).split(':');
+  const id = rest.join(':');
+  const inv = engine.inventory;
+  if (kind === 'agent') { const a = (agents || engine.agentsView()).find((x) => x.id === id); return a ? a.reasons : []; }
+  if (kind === 'port') { const p = inv.ports.find((x) => String(x.port) === id); return p ? p.reasons : []; }
+  if (kind === 'mcp') { const m = inv.mcp.find((x) => x.id === id); return m ? m.reasons : []; }
+  if (kind === 'file') { const f = [...inv.files, ...inv.configs].find((x) => x.id === id); return f ? f.reasons : []; }
+  if (kind === 'model') { const m = inv.models.find((x) => U.sha256(x.path).slice(0, 16) === id); return m ? m.reasons : []; }
+  if (kind === 'auto') { const a = inv.autostarts.find((x) => x.id === id); return a ? a.reasons : []; }
+  return [];
+}
+
+function dismiss(engine, key) {
+  const steps = plan(engine, engine.store.settings.fix, 'watch');
+  const step = steps.find((x) => x.tkey === key);
+  if (!step) return { ok: false };
+  engine.store.state.dismissed = engine.store.state.dismissed || {};
+  engine.store.state.dismissed[key] = { fp: fingerprint(itemReasons(engine, key)), at: Date.now(), name: step.name, sev: step.sev };
+  engine.store.saveState();
+  engine.event({ key: 'fix.dismissEv', sev: 'calm', watcher: watcherOf(step.cat), params: { name: step.name } });
+  return { ok: true };
+}
+function restore(engine, key) {
+  const d = engine.store.state.dismissed && engine.store.state.dismissed[key];
+  if (!d) return { ok: false };
+  delete engine.store.state.dismissed[key];
+  engine.store.saveState();
+  engine.event({ key: 'fix.restoreEv', sev: 'calm', watcher: 'gate', params: { name: d.name } });
+  return { ok: true };
 }
 
 const worstOf = (reasons) => reasons.reduce((a, r) => (RANK[r.sev] > RANK[a] ? r.sev : a), 'calm');
@@ -375,4 +432,4 @@ async function auto(engine) {
   }
 }
 
-module.exports = { CATS, PRESETS, LEVELS, DEFAULT_FIX, QSUFFIX, policy, plan, apply, undo, auto, locate, cutTomlServer, cleanFile, quarantine, disableMcp, restoreMcp, restoreFile, unquarantine };
+module.exports = { fingerprint, targetKey, isDismissed, itemReasons, dismiss, restore, CATS, PRESETS, LEVELS, DEFAULT_FIX, QSUFFIX, policy, plan, apply, undo, auto, locate, cutTomlServer, cleanFile, quarantine, disableMcp, restoreMcp, restoreFile, unquarantine };
