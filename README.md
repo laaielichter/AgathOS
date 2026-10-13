@@ -97,7 +97,14 @@ version for you.
 **Download guard.** New files in Downloads are checked the moment they land: models that can
 run code, and rules files or prompts with hidden instructions.
 
-**Pause notifications** for an hour or until tomorrow; danger still comes through.
+**Calm notifications.** No notification circus: by default only danger pops up (attention goes to
+the log and the tray dot), what happens at the same time comes as one notification, the same
+finding is not repeated within 6 hours, at most 3 per hour, and nothing pops up while the
+AgathOS window is open. Set quiet hours, or pause notifications for an hour or until tomorrow.
+Danger that needs you right now (mass deletion, data leaving, a malicious MCP server) always
+comes through. Windows Focus and macOS Focus are respected as well.
+
+**Every window can be closed** with its X, with Esc, or with a click next to it.
 
 **Safety report.** One HTML page with all findings, agents, fixes and the last 24 hours, to
 keep or share (Log > Save report).

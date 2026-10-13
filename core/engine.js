@@ -572,9 +572,8 @@ class Engine {
   // ---------- events ----------
   event(e, quiet = false) {
     const full = this.store.append({ key: e.key, sev: e.sev || 'calm', watcher: e.watcher || 'proc', params: e.params || {}, agentId: e.agentId || null, pid: e.pid || null, target: e.target || null });
-    if (!quiet && (full.sev === 'alarm' || (full.sev === 'watch' && this.store.settings.notify !== 'log'))) {
-      if (this.store.settings.notify !== 'log') this.notify(full);
-    }
+    // Whether it pops up is decided by the notifier (level, repeats, bundling, limit, quiet hours).
+    if (!quiet && full.sev !== 'calm') this.notify(full);
     if (full.sev === 'alarm') this.autoFix();
     this.changed();
     return full;

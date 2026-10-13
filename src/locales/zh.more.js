@@ -237,6 +237,17 @@
     "upd.downloading": "正在下载 {v}…",
     "upd.failed": "更新未完成：下载内容与其校验和不符，或无法启动。没有任何更改。",
     "upd.event": "有可用更新：AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "AgathOS 让通知保持安静：同时发生的事合并成一条，同一条 6 小时内不重复，每小时最多 3 条，窗口打开时不弹出。需要你立即处理的危险始终会提醒。",
+    "set.notifyLevel": "弹出提醒",
+    "set.notifyLevel.alarm": "仅危险",
+    "set.notifyLevel.watch": "危险和注意",
+    "set.quiet": "免打扰时段",
+    "set.quietDesc": "在这段时间内，只有需要你立即处理的危险才会提醒。",
+    "set.quietFrom": "从",
+    "set.quietTo": "到",
+    "notif.bundle": "{n} 条新提醒",
+    "notif.more": "AgathOS 中还有更多提醒，方便时再看。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);

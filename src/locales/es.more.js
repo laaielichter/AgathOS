@@ -237,6 +237,17 @@
     "upd.downloading": "Descargando {v}…",
     "upd.failed": "La actualización no se completó: la descarga no coincidía con su suma de comprobación o no pudo iniciarse. No se cambió nada.",
     "upd.event": "Actualización disponible: AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "AgathOS mantiene las notificaciones tranquilas: lo que pasa a la vez llega en un solo aviso, el mismo aviso no se repite en 6 horas, como máximo 3 por hora y ninguno mientras la ventana está abierta. Un peligro que te necesita ahora siempre llega.",
+    "set.notifyLevel": "Avisos para",
+    "set.notifyLevel.alarm": "Solo peligro",
+    "set.notifyLevel.watch": "Peligro y atención",
+    "set.quiet": "Horas de silencio",
+    "set.quietDesc": "En estas horas solo llega un peligro que te necesita ahora.",
+    "set.quietFrom": "de",
+    "set.quietTo": "a",
+    "notif.bundle": "{n} avisos nuevos",
+    "notif.more": "Hay más avisos esperando en AgathOS. Míralos cuando te venga bien.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.es, d);

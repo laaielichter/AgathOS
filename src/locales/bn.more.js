@@ -237,6 +237,17 @@
     "upd.downloading": "{v} ডাউনলোড হচ্ছে…",
     "upd.failed": "আপডেট হয়নি: ডাউনলোডটি তার চেকসামের সঙ্গে মেলেনি বা চালু হতে পারেনি। কিছুই বদলায়নি।",
     "upd.event": "আপডেট পাওয়া যাচ্ছে: AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "AgathOS বিজ্ঞপ্তি শান্ত রাখে: একসাথে যা ঘটে তা একটি বিজ্ঞপ্তিতে আসে, একই বিজ্ঞপ্তি ৬ ঘণ্টার মধ্যে আবার আসে না, ঘণ্টায় সর্বোচ্চ ৩টি, আর উইন্ডো খোলা থাকলে কোনোটিই না। যে বিপদে এখনই আপনাকে দরকার, তা সবসময় আসে।",
+    "set.notifyLevel": "পপ-আপ যার জন্য",
+    "set.notifyLevel.alarm": "শুধু বিপদ",
+    "set.notifyLevel.watch": "বিপদ ও মনোযোগ",
+    "set.quiet": "শান্ত সময়",
+    "set.quietDesc": "এই সময়ে শুধু সেই বিপদ আসবে যাতে এখনই আপনাকে দরকার।",
+    "set.quietFrom": "থেকে",
+    "set.quietTo": "পর্যন্ত",
+    "notif.bundle": "{n}টি নতুন বিজ্ঞপ্তি",
+    "notif.more": "AgathOS-এ আরও বিজ্ঞপ্তি অপেক্ষা করছে। সুবিধামতো দেখে নিন।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.bn, d);

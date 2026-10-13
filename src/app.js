@@ -876,6 +876,8 @@
     const models = (judgeModels && judgeModels.length ? judgeModels : [s.judge.model]);
     const judgeSel = h('select', { onchange: (e) => save({ judge: { model: e.target.value } }) }, models.map((m) => h('option', { value: m, selected: s.judge.model === m, text: m })));
     const fix = s.fix || { auto: false, level: 'firm', minSev: 'alarm', custom: {} };
+    const q = s.quietHours || { on: false, from: '22:00', to: '08:00' };
+    const timeInput = (value, onSet) => h('input', { type: 'time', value, onchange: (e) => { if (/^\d{2}:\d{2}$/.test(e.target.value)) onSet(e.target.value); } });
     const CATS = { agent: ['off', 'freeze', 'block', 'kill'], port: ['off', 'localOnly'], mcp: ['off', 'disable'], hidden: ['off', 'clean'], inject: ['off', 'quarantine'], model: ['off', 'quarantine'], auto: ['off', 'disableTask'] };
     const fixLevel = h('div', { class: 'seg' }, ['gentle', 'firm', 'max', 'custom'].map((l) => h('button', { class: `seg-btn${fix.level === l ? ' is-active' : ''}`, type: 'button', text: t('fix.level.' + l), onclick: () => save({ fix: { level: l } }) })));
     const fixMin = h('select', { onchange: (e) => save({ fix: { minSev: e.target.value } }) }, ['alarm', 'watch'].map((n) => h('option', { value: n, selected: fix.minSev === n, text: t('set.fixMin.' + n) })));
@@ -893,7 +895,14 @@
         setRow(t('set.fixMin'), fixMin),
         ...custom),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.notify') }),
+        h('p', { class: 'set-note', text: t('set.smartDesc') }),
         setRow(t('set.notify'), notifySel),
+        setRow(t('set.notifyLevel'), h('div', { class: 'seg' }, ['alarm', 'watch'].map((l) => h('button', {
+          class: `seg-btn${(s.notifyLevel || 'alarm') === l ? ' is-active' : ''}`, type: 'button', text: t('set.notifyLevel.' + l), onclick: () => save({ notifyLevel: l }) })))),
+        setRow(t('set.quiet'), [
+          ...(q.on ? [h('span', { class: 'set-label', text: t('set.quietFrom') }), timeInput(q.from, (v) => save({ quietHours: { ...q, from: v } })),
+            h('span', { class: 'set-label', text: t('set.quietTo') }), timeInput(q.to, (v) => save({ quietHours: { ...q, to: v } }))] : []),
+          sw(q.on, () => save({ quietHours: { ...q, on: !q.on } }))], t('set.quietDesc')),
         setRow(t('set.snooze'), h('div', { class: 'seg' },
           [['off', t('set.snoozeOff')], ['1h', t('set.snooze1h')], ['tomorrow', t('set.snoozeTomorrow')]].map(([k, label]) => h('button', {
             class: `seg-btn${k === 'off' && !(snap.snoozeUntil > Date.now()) ? ' is-active' : ''}`, type: 'button', text: label,

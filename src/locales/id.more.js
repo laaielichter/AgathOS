@@ -237,6 +237,17 @@
     "upd.downloading": "Mengunduh {v}…",
     "upd.failed": "Pembaruan gagal: unduhan tidak cocok dengan checksum-nya atau tidak bisa dimulai. Tidak ada yang diubah.",
     "upd.event": "Pembaruan tersedia: AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "AgathOS menjaga notifikasi tetap tenang: yang terjadi bersamaan digabung jadi satu, notifikasi yang sama tidak muncul lagi dalam 6 jam, paling banyak 3 per jam, dan tidak ada saat jendela terbuka. Bahaya yang butuh Anda sekarang selalu muncul.",
+    "set.notifyLevel": "Pop-up untuk",
+    "set.notifyLevel.alarm": "Hanya bahaya",
+    "set.notifyLevel.watch": "Bahaya dan perhatian",
+    "set.quiet": "Jam tenang",
+    "set.quietDesc": "Pada jam ini hanya bahaya yang butuh Anda sekarang yang muncul.",
+    "set.quietFrom": "dari",
+    "set.quietTo": "sampai",
+    "notif.bundle": "{n} notifikasi baru",
+    "notif.more": "Masih ada notifikasi lain di AgathOS. Buka saat Anda sempat.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);

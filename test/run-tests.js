@@ -171,6 +171,35 @@ ok(net2.aiListeners(lsofRows, () => 'ollama').some((p) => p.port === 11434 && p.
   ok(/<html/.test(html) && /&lt;b&gt;x&lt;\/b&gt;/.test(html) && !/<script/i.test(html), 'report: one HTML page, names escaped, no scripts');
 }
 
+// ---------- calm notifications ----------
+{
+  const { Notifier, inQuietHours } = require('../core/notifier');
+  let clockNow = Date.parse('2026-10-13T14:00:00');
+  const shown = [];
+  const st = { notify: 'notify', notifyLevel: 'alarm', quietHours: { on: false, from: '22:00', to: '08:00' } };
+  let focused = false;
+  const n = new Notifier({ show: (list, o) => shown.push({ n: list.length, ...o }), settings: () => st, snoozed: () => false, windowFocused: () => focused, now: () => clockNow });
+  const ev = (key, sev, extra = {}) => ({ key, sev, params: {}, ...extra });
+  ok(n.push(ev('mcp.added', 'watch')) === 'below level', 'notify: attention does not pop up by default');
+  ok(n.push(ev('fix.applied', 'alarm')) === 'never', 'notify: own fixes never pop up');
+  n.push(ev('port.open', 'alarm', { target: { type: 'port', port: 1 } }));
+  n.push(ev('port.open', 'alarm', { target: { type: 'port', port: 2 } }));
+  ok(n.push(ev('port.open', 'alarm', { target: { type: 'port', port: 1 } })) === 'repeat', 'notify: the same finding is not repeated');
+  n.flush();
+  ok(shown.length === 1 && shown[0].n === 2 && shown[0].sound, 'notify: a burst becomes one notification');
+  for (let i = 3; i < 9; i++) { n.push(ev('port.open', 'alarm', { target: { type: 'port', port: i } })); n.flush(); }
+  ok(shown.length === 4 && shown[3].overflow, 'notify: at most 3 per hour, then one "more in AgathOS"');
+  n.push(ev('mass.delete', 'alarm', { params: { dir: 'x' } }));
+  ok(shown.length === 5 && !shown[4].overflow, 'notify: critical danger always comes through');
+  focused = true;
+  clockNow += 2 * 3600 * 1000;
+  ok(n.push(ev('port.open', 'alarm', { target: { type: 'port', port: 99 } })) === 'window open', 'notify: no pop-up while the window is open');
+  focused = false;
+  ok(inQuietHours({ on: true, from: '22:00', to: '08:00' }, new Date('2026-10-13T23:30:00')) && !inQuietHours({ on: true, from: '22:00', to: '08:00' }, new Date('2026-10-13T12:00:00')), 'quiet hours across midnight');
+  st.quietHours = { on: true, from: '00:00', to: '23:59' };
+  ok(n.push(ev('port.open', 'alarm', { target: { type: 'port', port: 100 } })) === 'quiet', 'notify: quiet hours hold back normal danger');
+}
+
 // ---------- engine smoke test ----------
 (async () => {
   const { Engine } = require('../core/engine');

@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   roots: [],                  // project folders to watch (filled on first start)
   modelDirs: [],              // model folders to scan (filled on first start)
   notify: 'notify',           // log | notify | ask
+  notifyLevel: 'alarm',       // pop-ups for: alarm (danger only) | watch (danger and attention)
+  quietHours: { on: false, from: '22:00', to: '08:00' },   // only critical danger comes through
   autoFreezeOnMassDelete: true,
   massDeleteThreshold: 40,    // files deleted within 10 s
   portCheck: true,

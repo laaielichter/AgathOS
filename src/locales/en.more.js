@@ -237,6 +237,17 @@
     "upd.downloading": "Downloading {v}…",
     "upd.failed": "The update did not go through: the download did not match its checksum or could not start. Nothing was changed.",
     "upd.event": "Update available: AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "AgathOS keeps notifications calm: it bundles what happens at the same time, never repeats the same finding within 6 hours, shows at most 3 per hour and stays quiet while its window is open. Danger that needs you right now always comes through.",
+    "set.notifyLevel": "Pop-ups for",
+    "set.notifyLevel.alarm": "Danger only",
+    "set.notifyLevel.watch": "Danger and attention",
+    "set.quiet": "Quiet hours",
+    "set.quietDesc": "During these hours only danger that needs you right now comes through.",
+    "set.quietFrom": "from",
+    "set.quietTo": "to",
+    "notif.bundle": "{n} new findings",
+    "notif.more": "More findings are waiting in AgathOS. Open it when it suits you.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);
