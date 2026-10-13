@@ -196,6 +196,10 @@ All 14 languages are complete. Native speakers: corrections are very welcome, th
 `node test/run-tests.js` runs the scanners, the intent engine, the honesty check, the
 log chain and the fix/undo steps on any OS.
 
+## Security
+
+Found a weakness in AgathOS itself? Please report it privately, see [SECURITY.md](SECURITY.md).
+
 ## Support
 
 AgathOS is free and open source. If it saves you or your agent time, a gift is welcome but never expected. SOL and
