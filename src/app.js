@@ -75,6 +75,16 @@
     if (!$('modal').open) $('modal').showModal();
   }
   $('modalClose').addEventListener('click', () => $('modal').close());
+  // Every window on top can be closed: the X, Esc, or a click next to it.
+  for (const d of document.querySelectorAll('dialog')) {
+    const x = d.querySelector('.dlg-x');
+    if (x) x.addEventListener('click', () => d.close());
+    d.addEventListener('click', (e) => {
+      if (e.target !== d) return;
+      const r = d.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close();
+    });
+  }
   let toastTimer;
   function toast(msg) {
     const n = $('toast');
@@ -126,6 +136,7 @@
     document.documentElement.dataset.mode = mode;
     document.documentElement.dataset.platform = platform();
     document.querySelectorAll('[data-t]').forEach((n) => { n.textContent = t(n.dataset.t); });
+    document.querySelectorAll('.dlg-x').forEach((n) => { n.setAttribute('aria-label', t('close')); n.title = t('close'); });
     const realtime = !!(snap && snap.settings.realtime);
     const live = realtime && (snap.platform === 'win32' || snap.platform === 'darwin' || snap.demo);
     const pill = $('livePill');
@@ -999,7 +1010,12 @@
           (v) => (v === 'off' ? t('off') : t('fix.level.' + v))), wel.fix ? t(`fix.level.${wel.level}Desc`) : t('wel.fixDesc'))),
       h('div', { class: 'sheet-foot' }, h('button', { class: 'btn-primary', type: 'button', text: t('wel.start'), onclick: finishWelcome })));
   }
-  $('welcome').addEventListener('cancel', (e) => { if (!welcomed) e.preventDefault(); });
+  // Closing the welcome screen (X, Esc or a click next to it) keeps the safe defaults.
+  $('welcome').addEventListener('close', () => {
+    if (welcomed) return;
+    welcomed = true;
+    setUi({ mode: wel.mode, welcomed: true });
+  });
   async function finishWelcome() {
     $('welcome').close();
     const first = !welcomed;

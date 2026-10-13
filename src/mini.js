@@ -104,8 +104,11 @@
           h('span', { class: `mini-score state-text ${a.state}`, text: a.paused ? '❚❚' : String(a.score) })))));
     }
     $('miniOpen').textContent = t('tray.open');
+    $('miniClose').title = t('close');
+    $('miniClose').setAttribute('aria-label', t('close'));
   }
   $('miniOpen').addEventListener('click', () => A.openMain());
+  $('miniClose').addEventListener('click', () => A.closeMini());
 
   A.onUpdate((s) => { snap = s; render(); });
   if (A.onNavigate) A.onNavigate((v) => { if (v === 'refresh') loadUi(); });
