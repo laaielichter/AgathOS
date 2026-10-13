@@ -643,6 +643,8 @@
   if (typeof module !== 'undefined' && module.exports) {
     // Main process: load the other languages from src/locales/.
     for (const c of LOCALE_FILES) { try { I18N[c] = require(`./locales/${c}.js`); } catch (_) { /* missing file: English fallback */ } }
+    // Newer texts (fix it, analysis, welcome screen) live in locales/<code>.more.js.
+    for (const l of LANGS) { try { Object.assign(I18N[l.code] || (I18N[l.code] = {}), require(`./locales/${l.code}.more.js`)); } catch (_) {} }
     module.exports = api;
   } else {
     // Window: each locales/<code>.js script adds itself to window.I18N.

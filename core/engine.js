@@ -16,12 +16,17 @@ const { FileWatch } = require('./watchfs');
 const { Transcripts } = require('./transcripts');
 const { IntentEngine, thresholds } = require('./intent');
 const { classifyTool } = require('./classify');
+const remedy = require('./remedy');
 
 const WATCHERS = ['gate', 'files', 'net', 'keys', 'traps', 'proc'];
 const RANK = { calm: 0, watch: 1, alarm: 2 };
 const worst = (list) => list.reduce((a, b) => (RANK[b] > RANK[a] ? b : a), 'calm');
 // Domains that agents normally talk to themselves. A child process calling them is fine too.
-const AI_API = /(^|\.)(anthropic\.com|claude\.ai|openai\.com|chatgpt\.com|googleapis\.com|google\.com|gstatic\.com|github\.com|githubusercontent\.com|npmjs\.org|npmjs\.com|pypi\.org|pythonhosted\.org|microsoft\.com|visualstudio\.com|vscode-cdn\.net|cursor\.sh|cursor\.com|codeium\.com|windsurf\.com|sentry\.io|statsig\.com|segment\.io|ollama\.com|huggingface\.co|hf\.co|amazonaws\.com|cloudfront\.net|azure\.com|windows\.net|akamaized\.net)$/i;
+const AI_API = new RegExp(`(^|\\.)(${[...C.AI_PROVIDER_HOSTS, 'claude.ai', 'chatgpt.com', 'google.com', 'gstatic.com', 'github.com', 'githubusercontent.com',
+  'npmjs.org', 'npmjs.com', 'pypi.org', 'pythonhosted.org', 'microsoft.com', 'visualstudio.com', 'vscode-cdn.net', 'cursor.sh', 'cursor.com',
+  'codeium.com', 'windsurf.com', 'sentry.io', 'statsig.com', 'segment.io', 'cloudfront.net', 'windows.net', 'akamaized.net', 'kiro.dev',
+  'ampcode.com', 'sourcegraph.com', 'factory.ai', 'augmentcode.com', 'zed.dev', 'trae.ai', 'charm.sh']
+  .map((h) => h.replace(/\./g, '\\.')).join('|')})$`, 'i');
 
 class Engine {
   constructor(store, { appDir, onUpdate, notify }) {
@@ -159,6 +164,7 @@ class Engine {
     if (this.store.settings.realtime) this.files.start(this.configPaths(), this.store.settings.roots);
     this.event({ key: 'scan.done', sev: 'calm', watcher: 'gate', params: this.counts() }, true);
     this.changed(true);
+    if (reason !== 'fix') this.autoFix();
     return true;
   }
 
@@ -513,12 +519,40 @@ class Engine {
     return { decision: 'allow', action };
   }
 
+  // ---------- fix it ----------
+  fixPlan() { return remedy.plan(this, this.store.settings.fix, 'watch'); }
+
+  async fixApply(picks) {
+    const res = await remedy.apply(this, picks, this.store.settings.fix, { source: 'user' });
+    // Look again so the window shows what is left.
+    setTimeout(() => this.fullScan('fix').catch(() => {}), 300);
+    return res;
+  }
+
+  async fixUndo(rid) {
+    const r = await remedy.undo(this, String(rid));
+    setTimeout(() => this.fullScan('fix').catch(() => {}), 300);
+    return r;
+  }
+
+  // Auto mode: debounced, so a burst of alarms becomes one round of fixes.
+  autoFix() {
+    const f = this.store.settings.fix;
+    if (!f || !f.auto || this.scanning) return;
+    clearTimeout(this.autoTimer);
+    this.autoTimer = setTimeout(async () => {
+      const res = await remedy.auto(this).catch(() => []);
+      if (res.some((r) => r.ok)) setTimeout(() => this.fullScan('fix').catch(() => {}), 500);
+    }, 1500);
+  }
+
   // ---------- events ----------
   event(e, quiet = false) {
     const full = this.store.append({ key: e.key, sev: e.sev || 'calm', watcher: e.watcher || 'proc', params: e.params || {}, agentId: e.agentId || null, pid: e.pid || null, target: e.target || null });
     if (!quiet && (full.sev === 'alarm' || (full.sev === 'watch' && this.store.settings.notify !== 'log'))) {
       if (this.store.settings.notify !== 'log') this.notify(full);
     }
+    if (full.sev === 'alarm') this.autoFix();
     this.changed();
     return full;
   }
@@ -613,8 +647,14 @@ class Engine {
       chainOk: this.store.chainOk,
       counts: this.counts(),
       learnedAgents: Object.keys(this.store.state.baselines).length,
+      fixPlan: this.scanning ? (this._lastPlan || []) : (this._lastPlan = this.safePlan()),
+      remedies: (this.store.state.remedies || []).slice(0, 30).map(({ undo, ...r }) => ({ ...r, canUndo: !!undo && !r.undone })),
       apiPort: require('./api').PORT,
     };
+  }
+
+  safePlan() {
+    try { return remedy.plan(this, this.store.settings.fix, 'watch').map(({ target, ...s }) => ({ ...s, target: target && target.path ? { type: target.type, path: target.path } : target })); } catch (_) { return []; }
   }
 
   publicStatus() {

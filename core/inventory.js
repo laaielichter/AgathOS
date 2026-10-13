@@ -48,7 +48,13 @@ function serversFromJson(json) {
   const add = (obj) => { if (obj && typeof obj === 'object') Object.assign(out, obj); };
   add(json.mcpServers);
   add(json.servers);
-  if (json.mcp && typeof json.mcp === 'object') add(json.mcp.servers);
+  add(json['amp.mcpServers']);   // Amp
+  add(json.context_servers);     // Zed
+  if (json.mcp && typeof json.mcp === 'object') {
+    if (json.mcp.servers) add(json.mcp.servers);
+    // opencode, Crush and Grok CLI: "mcp": { "<name>": { command | url ... } }
+    else for (const [n, v] of Object.entries(json.mcp)) if (v && typeof v === 'object' && (v.command || v.url || v.type)) out[n] = v;
+  }
   if (json['mcp.servers']) add(json['mcp.servers']);
   // Claude Code keeps per-project servers in ~/.claude.json -> projects[path].mcpServers
   if (json.projects && typeof json.projects === 'object') {
@@ -76,10 +82,13 @@ function pkgFrom(command, args) {
 
 function analyseServer(name, def, app, file, store) {
   const transport = def.url || def.serverUrl || def.httpUrl ? 'http' : 'stdio';
-  const command = def.command || '';
-  const args = Array.isArray(def.args) ? def.args.map(String) : [];
+  // Formats differ per tool: command as string (most), as array (opencode/Crush) or as {path,args} (Zed).
+  let command = def.command || '';
+  let args = Array.isArray(def.args) ? def.args.map(String) : [];
+  if (Array.isArray(command)) { args = command.slice(1).map(String).concat(args); command = String(command[0] || ''); }
+  else if (command && typeof command === 'object') { args = (Array.isArray(command.args) ? command.args.map(String) : []).concat(args); command = String(command.path || ''); }
   const url = def.url || def.serverUrl || def.httpUrl || '';
-  const env = def.env || {};
+  const env = def.env || def.environment || (def.command && def.command.env) || {};
   const headers = def.headers || {};
   const definition = JSON.stringify({ command, args, url, envKeys: Object.keys(env).sort(), headerKeys: Object.keys(headers).sort() });
   const id = U.sha256(`${app}|${file}|${name}`).slice(0, 16);
@@ -175,6 +184,17 @@ function isInstructionFile(full, name) {
   return false;
 }
 
+// Project-level MCP files: .cursor/mcp.json, .vscode/mcp.json, .kiro/settings/mcp.json, .grok/settings.json, .gemini/settings.json …
+function isProjectMcp(f) {
+  return /[\\/]\.(cursor|vscode|kiro[\\/]settings|roo|trae|windsurf|factory|kimi)[\\/]mcp\.json$/i.test(f) ||
+    /[\\/]\.grok[\\/]settings\.json$/i.test(f) || /[\\/](opencode|crush)\.json$/i.test(f);
+}
+function projectName(f) {
+  const parts = f.split(/[\\/]/);
+  const i = parts.findIndex((p) => p.startsWith('.') && p.length > 1 && p !== '.mcp.json');
+  return i > 0 ? parts[i - 1] : path.basename(path.dirname(f));
+}
+
 function scanFiles(roots, store) {
   const files = [];
   const configs = [];
@@ -201,14 +221,14 @@ function scanFiles(roots, store) {
       maxDepth: 6, maxFiles: 60000,
       filter: (full, name) => {
         const n = name.toLowerCase();
-        return isInstructionFile(full, name) || /^\.env(\..+)?$/.test(n) || n === '.mcp.json' ||
+        return isInstructionFile(full, name) || /^\.env(\..+)?$/.test(n) || n === '.mcp.json' || isProjectMcp(full) ||
           (/[\\/]\.(claude|vscode|cursor|gemini|codex)[\\/]/i.test(full) && /\.(json|toml)$/.test(n));
       },
     });
     for (const f of found) {
       const n = path.basename(f).toLowerCase();
       if (/^\.env(\..+)?$/.test(n)) { if (!/\.example$|\.sample$|\.template$/.test(n)) check(f, 'env'); continue; }
-      if (n === '.mcp.json') { projectMcp.push({ app: `Project ${path.basename(path.dirname(f))}`, path: f, format: 'json' }); continue; }
+      if (n === '.mcp.json' || isProjectMcp(f)) { projectMcp.push({ app: `Project ${projectName(f)}`, path: f, format: 'json' }); continue; }
       if (/\.(json|toml)$/.test(n) && !isInstructionFile(f, path.basename(f))) {
         const r = scanConfigText(f, U.readText(f) || '', 'Project');
         if (r) configs.push({ id: U.sha256(f.toLowerCase()).slice(0, 16), ...r });
@@ -312,6 +332,6 @@ $b = @(Get-ScheduledTask | Where-Object { $_.State -ne 'Disabled' -and $_.TaskPa
 }
 
 module.exports = {
-  scanMcp, scanFiles, scanGlobalConfigs, envBaseUrls, installedAgents, exeVersion, signature, autostarts,
+  isProjectMcp, scanMcp, scanFiles, scanGlobalConfigs, envBaseUrls, installedAgents, exeVersion, signature, autostarts,
   parseTomlMcp, serversFromJson, analyseServer, pkgFrom, cmpVersion, scanConfigText,
 };

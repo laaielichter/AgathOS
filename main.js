@@ -23,11 +23,13 @@ let quitting = false;
 let apiServer = null;
 let uiLang = 'en';
 let trayPaused = null;
+let trayLive = null;
 
 // Only one AgathOS at a time.
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 app.on('second-instance', () => showWindow());
-app.setAppUserModelId('AgathOS');
+// Must match the installer's appId, or Windows drops the notifications.
+app.setAppUserModelId(app.isPackaged ? 'io.agathos.app' : process.execPath);
 
 const tt = (key, params = {}) => {
   const s = (I18N[uiLang] && I18N[uiLang][key]) || I18N.en[key] || key;
@@ -39,7 +41,7 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1320, height: 860, minWidth: 1000, minHeight: 660,
     backgroundColor: theme.color, title: 'AgathOS',
-    icon: path.join(__dirname, 'src', 'icon.png'),
+    icon: ICON,
     titleBarStyle: 'hidden', titleBarOverlay: { ...theme, height: 40 },
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
@@ -61,8 +63,11 @@ function showWindow(view) {
   if (view) win.webContents.send('agathos:navigate', view);
 }
 
+// Windows gets the .ico with hand-made small sizes; elsewhere the PNG.
+const ICON = path.join(__dirname, 'src', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
+
 function buildTray() {
-  const img = nativeImage.createFromPath(path.join(__dirname, 'src', 'icon.png')).resize({ width: 16, height: 16 });
+  const img = process.platform === 'win32' ? nativeImage.createFromPath(ICON) : nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 });
   if (!tray) {
     tray = new Tray(img);
     tray.on('click', () => showWindow());
@@ -71,6 +76,7 @@ function buildTray() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: tt('tray.open'), click: () => showWindow() },
     { label: tt('tray.scan'), click: () => engine.fullScan('tray') },
+    { label: tt('tray.live'), type: 'checkbox', checked: !!(store && store.settings.realtime), click: (item) => setLive(item.checked) },
     { type: 'separator' },
     engine && engine.pausedAll
       ? { label: tt('tray.resume'), click: () => engine.resumeAll() }
@@ -80,8 +86,18 @@ function buildTray() {
   ]));
 }
 
+// The live scanner switch (window, tray and API all end up here).
+function setLive(on) {
+  store.updateSettings({ realtime: !!on });
+  engine.applySchedule();
+  applyOsSettings();
+  engine.changed(true);
+}
+
 function eventText(e) {
-  return tt(e.key, e.params || {}).replace(/\s+/g, ' ').trim();
+  const p = { ...(e.params || {}) };
+  if (p.fix) p.fix = tt('fixact.' + p.fix);
+  return tt(e.key, p).replace(/\s+/g, ' ').trim();
 }
 
 function notify(e) {
@@ -94,7 +110,9 @@ function notify(e) {
 
 function applyOsSettings() {
   const s = store.settings;
-  try { app.setLoginItemSettings({ openAtLogin: !!s.startWithWindows, args: ['--hidden'] }); } catch (_) {}
+  // Installed app: start AgathOS.exe itself. From source (npm start): electron.exe needs the app folder too.
+  const args = app.isPackaged ? ['--hidden'] : [app.getAppPath(), '--hidden'];
+  try { app.setLoginItemSettings({ openAtLogin: !!s.startWithWindows, args }); } catch (_) {}
   globalShortcut.unregisterAll();
   if (s.hotkey) {
     globalShortcut.register('Control+Alt+Shift+P', () => {
@@ -125,6 +143,9 @@ function wireIpc() {
   h('localOnly', (port, on) => engine.localOnly(Number(port), on !== false));
   h('lockdown', (on) => engine.lockdown(!!on));
   h('trust', (target) => engine.trust(target));
+  h('fixPlan', () => engine.fixPlan());
+  h('fixApply', (picks) => engine.fixApply(Array.isArray(picks) ? picks.slice(0, 200).map((p) => ({ id: String(p && p.id), action: String(p && p.action) })) : []));
+  h('fixUndo', (rid) => engine.fixUndo(String(rid)));
   h('settings', (patch) => {
     const s = store.updateSettings(patch || {});
     engine.applySchedule();
@@ -146,7 +167,7 @@ function wireIpc() {
   h('rollback', () => engine.intent.rollbackBaseline());
   h('forget', () => { engine.intent.resetBaseline(); return true; });
   h('judgeModels', () => judge.models());
-  h('guardInstall', async () => { const ok = await guard.install(__dirname); engine.guardState.installed = guard.installed(); engine.changed(true); return { ok }; });
+  h('guardInstall', async () => { const ok = await guard.install(__dirname.replace(/app\.asar$/, 'app.asar.unpacked')); engine.guardState.installed = guard.installed(); engine.changed(true); return { ok }; });
   h('guardUninstall', async () => { const ok = await guard.uninstall(); engine.guardState = { installed: guard.installed(), running: false, sysmon: false, elevated: false, seq: 0 }; engine.changed(true); return { ok }; });
   h('addFolder', async (kind) => {
     const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
@@ -173,7 +194,7 @@ app.whenReady().then(async () => {
     appDir: __dirname,
     onUpdate: (snap) => {
       if (win && !win.isDestroyed()) win.webContents.send('agathos:update', snap);
-      if (tray && snap.pausedAll !== trayPaused) { trayPaused = snap.pausedAll; buildTray(); }
+      if (tray && (snap.pausedAll !== trayPaused || snap.settings.realtime !== trayLive)) { trayPaused = snap.pausedAll; trayLive = snap.settings.realtime; buildTray(); }
     },
     notify,
   });

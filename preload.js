@@ -5,7 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const call = (name) => (...args) => ipcRenderer.invoke(`agathos:${name}`, ...args);
 
 contextBridge.exposeInMainWorld('agathos', {
-  version: '0.2.0',
+  version: '0.3.0',
   platform: process.platform,
   snapshot: call('snapshot'),
   scan: call('scan'),
@@ -18,6 +18,9 @@ contextBridge.exposeInMainWorld('agathos', {
   localOnly: call('localOnly'),
   lockdown: call('lockdown'),
   trust: call('trust'),
+  fixPlan: call('fixPlan'),
+  fixApply: call('fixApply'),
+  fixUndo: call('fixUndo'),
   settings: call('settings'),
   ui: call('ui'),
   uiState: call('uiState'),

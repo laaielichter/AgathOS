@@ -55,9 +55,19 @@ function snippet(text, index, len) {
 }
 
 // ---------- Secrets ----------
+// Order matters: specific prefixes first, so a key gets the right provider name.
 const SECRET_PATTERNS = [
   { kind: 'Anthropic', re: /\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{20,}/g },
-  { kind: 'OpenAI', re: /\bsk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{32,}/g },
+  { kind: 'OpenRouter', re: /\bsk-or-v1-[a-f0-9]{48,}/g },
+  { kind: 'xAI (Grok)', re: /\bxai-[A-Za-z0-9]{40,}/g },
+  { kind: 'Groq', re: /\bgsk_[A-Za-z0-9]{40,}/g },
+  { kind: 'Perplexity', re: /\bpplx-[A-Za-z0-9]{40,}/g },
+  { kind: 'Cerebras', re: /\bcsk-[A-Za-z0-9]{30,}/g },
+  { kind: 'Replicate', re: /\br8_[A-Za-z0-9]{30,}/g },
+  { kind: 'Fireworks', re: /\bfw_[A-Za-z0-9]{20,}/g },
+  { kind: 'LangSmith', re: /\blsv2_(?:pt|sk)_[A-Za-z0-9_]{30,}/g },
+  { kind: 'ElevenLabs', re: /\bsk_[a-f0-9]{48}\b/g },
+  { kind: 'OpenAI / DeepSeek', re: /\bsk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{32,}/g },
   { kind: 'GitHub', re: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}\b|\bgithub_pat_[A-Za-z0-9_]{60,}/g },
   { kind: 'AWS', re: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g },
   { kind: 'Google', re: /\bAIza[0-9A-Za-z_-]{35}\b/g },
@@ -71,12 +81,22 @@ const SECRET_PATTERNS = [
   { kind: 'Discord webhook', re: /https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+/g },
 ];
 
+// Providers without a recognisable key prefix are found by their variable name.
+const NAMED_KEY = /\b(XAI|GROK|MISTRAL|CODESTRAL|TOGETHER|COHERE|CO|DEEPSEEK|MOONSHOT|KIMI|ZHIPU|ZAI|DASHSCOPE|QWEN|AZURE_OPENAI|FIREWORKS|CEREBRAS|PERPLEXITY|OPENROUTER|GROQ|REPLICATE|HF|HUGGINGFACE|HUGGING_FACE_HUB|NVIDIA|SAMBANOVA|NOVITA|AI21|VOYAGE|JINA|ELEVENLABS|ANTHROPIC|OPENAI|GEMINI|GOOGLE)_(?:API_)?(?:KEY|TOKEN)\s*[=:]\s*["']?([A-Za-z0-9_\-.]{20,})/g;
+const NAMED_LABEL = { XAI: 'xAI (Grok)', GROK: 'xAI (Grok)', CO: 'Cohere', CODESTRAL: 'Mistral', ZAI: 'Zhipu / Z.ai', HF: 'Hugging Face', HUGGINGFACE: 'Hugging Face', HUGGING_FACE_HUB: 'Hugging Face', AZURE_OPENAI: 'Azure OpenAI' };
+
 function findSecrets(text) {
   if (!text) return [];
   const found = [];
   for (const p of SECRET_PATTERNS) {
     const m = text.match(p.re);
     if (m) for (const v of m) found.push({ kind: p.kind, masked: mask(v) });
+  }
+  for (const m of text.matchAll(NAMED_KEY)) {
+    const v = m[2];
+    if (/^(your|xxx|change|placeholder|example|<)/i.test(v) || /^\$\{?/.test(v)) continue;
+    const name = m[1].toUpperCase();
+    found.push({ kind: NAMED_LABEL[name] || name.charAt(0) + name.slice(1).toLowerCase(), masked: mask(v) });
   }
   return dedupe(found);
 }

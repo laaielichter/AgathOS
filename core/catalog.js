@@ -40,6 +40,45 @@ const AGENTS = [
     dirs: ['%USERPROFILE%\\.openclaw'] },
   { id: 'amazon-q', name: 'Amazon Q CLI', kind: 'cli', root: true,
     match: (n, c) => n === 'q.exe' || n === 'qchat.exe' || /\bq(\.exe)? chat\b/.test(c), dirs: ['%USERPROFILE%\\.aws\\amazonq'] },
+  { id: 'grok', name: 'Grok CLI / Grok Build', kind: 'cli', root: true,
+    match: (n, c, exe) => n === 'grok.exe' || /[\\/]\.grok[\\/]bin[\\/]/.test(exe) || /grok-dev|@vibe-kit[\\/]grok-cli|grok-cli[\\/]dist/.test(c),
+    dirs: ['%USERPROFILE%\\.grok'], version: ['grok', ['--version']] },
+  { id: 'kiro-cli', name: 'Kiro CLI', kind: 'cli', root: true,
+    match: (n) => n === 'kiro-cli.exe' || n === 'kiro-cli-chat.exe', dirs: [] },
+  { id: 'amp', name: 'Amp', kind: 'cli', root: true,
+    match: (n, c) => n === 'amp.exe' || /@sourcegraph[\\/]amp/.test(c), dirs: ['%USERPROFILE%\\.config\\amp'] },
+  { id: 'crush', name: 'Crush', kind: 'cli', root: true,
+    match: (n) => n === 'crush.exe', dirs: ['%LOCALAPPDATA%\\crush', '%USERPROFILE%\\.config\\crush'] },
+  { id: 'droid', name: 'Factory Droid', kind: 'cli', root: true,
+    match: (n, c) => n === 'droid.exe' || /@factory[\\/]cli/.test(c), dirs: ['%USERPROFILE%\\.factory'] },
+  { id: 'auggie', name: 'Augment Auggie', kind: 'cli', root: true,
+    match: (n, c) => n === 'auggie.exe' || /@augmentcode[\\/]auggie/.test(c), dirs: ['%USERPROFILE%\\.augment'] },
+  { id: 'kimi', name: 'Kimi CLI', kind: 'cli', root: true,
+    match: (n, c) => n === 'kimi.exe' || /kimi-cli|kimi_cli/.test(c), dirs: ['%USERPROFILE%\\.kimi'] },
+  { id: 'mistral-vibe', name: 'Mistral Vibe', kind: 'cli', root: true,
+    match: (n, c) => n === 'vibe.exe' || /mistral-vibe|mistral_vibe/.test(c), dirs: ['%USERPROFILE%\\.vibe'] },
+  { id: 'plandex', name: 'Plandex', kind: 'cli', root: true,
+    match: (n) => n === 'plandex.exe' || n === 'pdx.exe', dirs: ['%USERPROFILE%\\.plandex-home'] },
+  { id: 'kilo', name: 'Kilo Code', kind: 'extension', root: false, match: () => false,
+    dirs: ['%APPDATA%\\Code\\User\\globalStorage\\kilocode.kilo-code'] },
+  { id: 'kiro', name: 'Kiro', kind: 'ide', root: false,
+    match: (n) => n === 'kiro.exe', dirs: ['%USERPROFILE%\\.kiro'] },
+  { id: 'trae', name: 'Trae', kind: 'ide', root: false,
+    match: (n) => n === 'trae.exe', dirs: ['%APPDATA%\\Trae', '%USERPROFILE%\\.trae'] },
+  { id: 'zed', name: 'Zed', kind: 'ide', root: false,
+    match: (n) => n === 'zed.exe', dirs: ['%APPDATA%\\Zed'] },
+  { id: 'chatgpt', name: 'ChatGPT (desktop)', kind: 'desktop', root: false,
+    match: (n) => n === 'chatgpt.exe', dirs: ['%LOCALAPPDATA%\\Packages\\OpenAI.ChatGPT-Desktop_2p2nqsd0c76g0'] },
+  { id: 'comet', name: 'Perplexity Comet', kind: 'desktop', root: false,
+    match: (n) => n === 'comet.exe', dirs: ['%LOCALAPPDATA%\\Perplexity\\Comet'] },
+  { id: 'msty', name: 'Msty', kind: 'server', root: false,
+    match: (n) => n === 'msty.exe', dirs: ['%APPDATA%\\Msty'] },
+  { id: 'anythingllm', name: 'AnythingLLM', kind: 'server', root: false,
+    match: (n) => n === 'anythingllm.exe', dirs: ['%APPDATA%\\anythingllm-desktop'] },
+  { id: 'llamacpp', name: 'llama.cpp server', kind: 'server', root: false,
+    match: (n) => n === 'llama-server.exe', dirs: [] },
+  { id: 'koboldcpp', name: 'KoboldCpp', kind: 'server', root: false,
+    match: (n) => /^koboldcpp/.test(n), dirs: [] },
   { id: 'cline', name: 'Cline', kind: 'extension', root: false, match: () => false,
     dirs: ['%APPDATA%\\Code\\User\\globalStorage\\saoudrizwan.claude-dev', '%USERPROFILE%\\.cline'] },
   { id: 'roo', name: 'Roo Code', kind: 'extension', root: false, match: () => false,
@@ -93,6 +132,19 @@ const MCP_CONFIGS = [
   { app: 'Continue', path: '%USERPROFILE%\\.continue\\config.json', format: 'json' },
   { app: 'Antigravity', path: '%USERPROFILE%\\.gemini\\antigravity\\mcp_config.json', format: 'json' },
   { app: 'LM Studio', path: '%USERPROFILE%\\.lmstudio\\mcp.json', format: 'json' },
+  { app: 'Grok CLI', path: '%USERPROFILE%\\.grok\\user-settings.json', format: 'json' },
+  { app: 'Kiro', path: '%USERPROFILE%\\.kiro\\settings\\mcp.json', format: 'json' },
+  { app: 'Amp', path: '%USERPROFILE%\\.config\\amp\\settings.json', format: 'json' },
+  { app: 'Crush', path: '%LOCALAPPDATA%\\crush\\crush.json', format: 'json' },
+  { app: 'Crush', path: '%USERPROFILE%\\.config\\crush\\crush.json', format: 'json' },
+  { app: 'opencode', path: '%USERPROFILE%\\.config\\opencode\\opencode.json', format: 'json' },
+  { app: 'Zed', path: '%APPDATA%\\Zed\\settings.json', format: 'json' },
+  { app: 'Trae', path: '%APPDATA%\\Trae\\User\\mcp.json', format: 'json' },
+  { app: 'Kilo Code', path: '%APPDATA%\\Code\\User\\globalStorage\\kilocode.kilo-code\\settings\\mcp_settings.json', format: 'json' },
+  { app: 'Factory Droid', path: '%USERPROFILE%\\.factory\\mcp.json', format: 'json' },
+  { app: 'Kimi CLI', path: '%USERPROFILE%\\.kimi\\mcp.json', format: 'json' },
+  { app: 'Cursor', path: '%APPDATA%\\Cursor\\User\\mcp.json', format: 'json' },
+  { app: 'Windsurf', path: '%APPDATA%\\Windsurf\\User\\mcp.json', format: 'json' },
 ];
 
 // Settings that switch an agent into "everything allowed" mode.
@@ -109,8 +161,14 @@ const RISKY_CONFIG_KEYS = [
 ];
 
 // Environment overrides that send an agent's traffic (and API key) elsewhere.
-const BASE_URL_VARS = ['ANTHROPIC_BASE_URL', 'OPENAI_BASE_URL', 'OPENAI_API_BASE', 'GOOGLE_GEMINI_BASE_URL', 'GEMINI_BASE_URL'];
-const OFFICIAL_HOSTS = /(^|\.)(anthropic\.com|openai\.com|googleapis\.com|azure\.com|openai\.azure\.com|amazonaws\.com|localhost|127\.0\.0\.1)$/i;
+const BASE_URL_VARS = ['ANTHROPIC_BASE_URL', 'OPENAI_BASE_URL', 'OPENAI_API_BASE', 'GOOGLE_GEMINI_BASE_URL', 'GEMINI_BASE_URL', 'XAI_BASE_URL',
+  'GROQ_BASE_URL', 'OPENROUTER_BASE_URL', 'MISTRAL_BASE_URL', 'DEEPSEEK_BASE_URL', 'TOGETHER_BASE_URL', 'AZURE_OPENAI_ENDPOINT'];
+// Official API hosts of the big AI providers (a base URL pointing elsewhere is suspicious).
+const AI_PROVIDER_HOSTS = ['anthropic.com', 'openai.com', 'googleapis.com', 'azure.com', 'openai.azure.com', 'amazonaws.com', 'x.ai', 'grok.com',
+  'groq.com', 'openrouter.ai', 'mistral.ai', 'deepseek.com', 'together.xyz', 'together.ai', 'perplexity.ai', 'cohere.ai', 'cohere.com',
+  'fireworks.ai', 'cerebras.ai', 'huggingface.co', 'hf.co', 'moonshot.ai', 'moonshot.cn', 'z.ai', 'bigmodel.cn', 'aliyuncs.com',
+  'replicate.com', 'ollama.com', 'githubcopilot.com', 'ai.azure.com', 'cloudflare.com', 'nvidia.com', 'sambanova.ai', 'novita.ai'];
+const OFFICIAL_HOSTS = new RegExp(`(^|\\.)(${AI_PROVIDER_HOSTS.map((h) => h.replace(/\./g, '\\.')).join('|')}|localhost|127\\.0\\.0\\.1)$`, 'i');
 
 // ---------- Instruction files (read by agents as orders) ----------
 const INSTRUCTION_FILES = new Set(['claude.md', 'agents.md', 'gemini.md', 'qwen.md', '.cursorrules', '.windsurfrules',
@@ -145,7 +203,8 @@ const MIN_VERSIONS = {
 // ---------- Commands ----------
 // Dangerous start flags. These turned AI CLIs into tools for the Nx malware.
 const DANGEROUS_FLAGS = ['--dangerously-skip-permissions', '--yolo', '--trust-all-tools', '--dangerously-bypass-approvals-and-sandbox',
-  '--full-auto', '--no-confirm', '--yes-always', '--auto-approve', '--allow-all-tools', '--approval-mode yolo', '--approval-mode=yolo'];
+  '--full-auto', '--no-confirm', '--yes-always', '--auto-approve', '--allow-all-tools', '--approval-mode yolo', '--approval-mode=yolo',
+  '--dangerously-allow-all', '--skip-permissions-unsafe', '--trust-tools', '--accept-all', '--auto-accept', '--no-ask'];
 
 // Sensitive locations: an agent reading these is "touching private data".
 const SENSITIVE_PATHS = [
@@ -214,7 +273,7 @@ const INJECTION_PHRASES = [
 ];
 
 module.exports = {
-  AGENTS, NORMAL_LAUNCHERS, MCP_CONFIGS, RISKY_CONFIG_KEYS, BASE_URL_VARS, OFFICIAL_HOSTS, INSTRUCTION_FILES,
+  AI_PROVIDER_HOSTS, AGENTS, NORMAL_LAUNCHERS, MCP_CONFIGS, RISKY_CONFIG_KEYS, BASE_URL_VARS, OFFICIAL_HOSTS, INSTRUCTION_FILES,
   INSTRUCTION_DIR_HINTS, SKILL_DIRS, AI_PORTS, AI_SERVER_PROCS, KNOWN_BAD_PACKAGES, MIN_VERSIONS, DANGEROUS_FLAGS,
   SENSITIVE_PATHS, COMMAND_RULES, ACTIONS, LABEL_OF, CHAINS, HARD_FLOOR, INJECTION_PHRASES,
 };

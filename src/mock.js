@@ -63,9 +63,23 @@
       { hash: 'e6', ts: m(26), key: 'flag.dangerous', sev: 'watch', watcher: 'proc', agentId: 'claude-code', params: { agent: 'Claude Code', flag: '--dangerously-skip-permissions' } },
       { hash: 'e7', ts: m(30), key: 'scan.done', sev: 'calm', watcher: 'gate', params: { agents: 4, mcp: 4, issues: 7 } },
     ],
-    settings: { level: 'balanced', realtime: true, pollSeconds: 5, fullScanHours: 6, roots: ['C:\\Users\\you\\Desktop', 'C:\\Users\\you\\Documents', 'C:\\Users\\you\\projects'], modelDirs: ['C:\\Users\\you\\.ollama\\models', 'C:\\Users\\you\\Downloads'], notify: 'notify', autoFreezeOnMassDelete: true, massDeleteThreshold: 40, portCheck: true, hotkey: true, judge: { enabled: false, model: 'qwen2.5:7b' }, learning: true, startWithWindows: true, closeToTray: true, logDays: 30, api: true },
+    settings: { level: 'balanced', realtime: true, pollSeconds: 5, fullScanHours: 6, roots: ['C:\\Users\\you\\Desktop', 'C:\\Users\\you\\Documents', 'C:\\Users\\you\\projects'], modelDirs: ['C:\\Users\\you\\.ollama\\models', 'C:\\Users\\you\\Downloads'], notify: 'notify', autoFreezeOnMassDelete: true, massDeleteThreshold: 40, portCheck: true, hotkey: true, judge: { enabled: false, model: 'qwen2.5:7b' }, learning: true, startWithWindows: true, closeToTray: true, logDays: 30, api: true, fix: { auto: false, level: 'firm', minSev: 'alarm', custom: { agent: 'block', port: 'localOnly', mcp: 'disable', hidden: 'clean', inject: 'off', model: 'quarantine', auto: 'off' } } },
     chainOk: true, counts: { agents: 4, mcp: 4, files: 4, models: 3, issues: 7 }, learnedAgents: 2, apiPort: 47612,
   };
+  // The same shape core/remedy.js builds from the findings above.
+  const S = (id, cat, sev, name, where, reasons, action, preset, options, target) => ({ id, cat, sev, name, where, reasons, action, preset, options, target: target || {} });
+  snap.fixPlan = [
+    S('port:11434', 'port', 'alarm', 'Ollama · 11434', '0.0.0.0:11434', snap.ports[0].reasons, 'localOnly', 'localOnly', ['off', 'localOnly']),
+    S('mcp:m1', 'mcp', 'alarm', 'mail', 'Cline · ~\\AppData\\Roaming\\Code\\User\\globalStorage\\saoudrizwan.claude-dev\\settings\\cline_mcp_settings.json', snap.mcp[0].reasons, 'disable', 'disable', ['off', 'disable']),
+    S('mcp:m2', 'mcp', 'alarm', 'filesystem', 'Claude Desktop · ~\\AppData\\Roaming\\Claude\\claude_desktop_config.json', snap.mcp[1].reasons, 'disable', 'disable', ['off', 'disable']),
+    S('hidden:f1', 'hidden', 'alarm', '.cursorrules', snap.files[0].short, snap.files[0].reasons, 'clean', 'clean', ['off', 'clean'], { type: 'file', path: snap.files[0].path }),
+    S('model:x1', 'model', 'alarm', 'cool-lora.pt', snap.models[0].short, snap.models[0].reasons, 'quarantine', 'quarantine', ['off', 'quarantine'], { type: 'model', path: snap.models[0].path }),
+    S('auto:a1', 'auto', 'watch', 'NodeUpdater', snap.autostarts[0].command, snap.autostarts[0].reasons, 'off', 'off', ['off', 'disableTask']),
+    S('manual:f4', 'manual', 'alarm', 'settings.json', snap.files[3].short, snap.files[3].reasons, 'guide', 'guide', ['guide']),
+    S('manual:f3', 'manual', 'watch', '.env', snap.files[2].short, snap.files[2].reasons, 'guide', 'guide', ['guide']),
+    S('manual:flag:claude-code', 'manual', 'watch', 'Claude Code', '--dangerously-skip-permissions', [R('flag.dangerous', { flag: '--dangerously-skip-permissions' }, 'watch')], 'guide', 'guide', ['guide']),
+  ];
+  snap.remedies = [];
   const emit = () => listeners.forEach((f) => f(JSON.parse(JSON.stringify(snap))));
   const ok = (r = {}) => Promise.resolve({ ok: true, ...r });
   setInterval(() => { snap.heartbeat = Date.now(); emit(); }, 5000);
@@ -85,7 +99,22 @@
     localOnly: () => { snap.ports[0].exposed = false; snap.ports[0].state = 'calm'; snap.ports[0].reasons = [R('port.local', { product: 'Ollama', port: 11434 }, 'calm')]; snap.watchers[2].state = 'calm'; snap.watchers[2].issues = 0; emit(); return ok(); },
     trust: (tg) => { if (tg && tg.type === 'mcp') { const x = snap.mcp.find((y) => y.id === tg.id); if (x) { x.approved = true; x.state = 'calm'; x.reasons = [R('mcp.ok', {}, 'calm')]; } } emit(); return ok(); },
     settings: (p) => { Object.assign(snap.settings, p); emit(); return ok(); },
-    ui: () => ok(), uiState: () => Promise.resolve({}), verifyLog: () => ok({ lines: 128 }), rollback: () => Promise.resolve(true), forget: () => Promise.resolve(true),
+    fixPlan: () => Promise.resolve(snap.fixPlan),
+    fixApply: async (picks) => {
+      await new Promise((r) => setTimeout(r, 700));
+      const res = picks.map((p) => {
+        const st = snap.fixPlan.find((x) => x.id === p.id);
+        const rec = { rid: 'r' + Math.random().toString(16).slice(2, 10), at: Date.now(), stepId: p.id, cat: st.cat, action: p.action, name: st.name, ok: true, undo: p.action === 'kill' ? null : { type: 'demo' }, needGuard: false };
+        snap.remedies.unshift({ ...rec, undo: undefined, canUndo: !!rec.undo });
+        snap.events.unshift({ hash: rec.rid, ts: Date.now(), key: 'fix.applied', sev: 'calm', watcher: 'gate', params: { fix: p.action, name: st.name } });
+        return rec;
+      });
+      snap.fixPlan = snap.fixPlan.filter((x) => !picks.some((p) => p.id === x.id));
+      emit();
+      return res;
+    },
+    fixUndo: (rid) => { const r = snap.remedies.find((x) => x.rid === rid); if (r) { r.undone = Date.now(); r.canUndo = false; } emit(); return ok(); },
+    ui: () => ok(), uiState: () => Promise.resolve({ welcomed: !/welcome/.test(location.hash), mode: /simple/.test(location.hash) ? 'simple' : 'advanced', lang: (location.hash.match(/lang=(\w+)/) || [])[1] }), verifyLog: () => ok({ lines: 128 }), rollback: () => Promise.resolve(true), forget: () => Promise.resolve(true),
     judgeModels: () => Promise.resolve(['qwen2.5:7b', 'llama3.1:8b']), guardInstall: () => ok(), guardUninstall: () => ok(),
     addFolder: () => ok(), removeFolder: () => ok(), reveal: () => ok(), onNavigate: () => {},
   };

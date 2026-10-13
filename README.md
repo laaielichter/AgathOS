@@ -52,19 +52,60 @@ words, predicts the next step from the actions it sees, and limits the damage.
 
 **Self-learning, safely.** It learns only from clean sessions or sessions you approved, never while a session read untrusted content, a little at a time, with versions you can roll back. Hard rules are never learned.
 
+**Fix it.** After every scan AgathOS lists what it found and offers one button: *Fix all*.
+Or open *Review and choose* and pick per finding what happens. Every finding has an
+**Explain** button with a short analysis: what it could be (the harmless and the harmful
+explanation), why it matters and what you can do.
+
+![Explain: analysis of a finding](docs/analysis.png)
+
+| Finding | What "Fix it" does | Undo |
+|---|---|---|
+| Agent in danger | pause it, pause + cut its internet, or stop it | yes, except stop |
+| AI server open to the network | firewall rule: only this PC (with Guard) | yes |
+| Bad or changed MCP server | takes it out of the app's config, keeps a copy | yes |
+| Hidden text in an instruction file | removes the invisible characters, keeps a copy | yes |
+| Attack text in a file / dangerous model | renames it to `*.agathos-quarantine` | yes |
+| Suspicious scheduled task | turns it off | yes |
+| Keys, auto-approve, redirected API addresses | explains what to do yourself | - |
+
+**Auto-fix** is off by default. Switch it on in Settings and pick a level: *Gentle* (only
+pauses agents and closes ports), *Firm*, *Maximum*, or *Custom* (your choice per kind of
+danger). It then fixes dangers right after a scan or an alarm. A config file with comments
+is never rewritten, and a cleaned file is never restored over newer work.
+
 **Stop button, in steps.** Freeze an agent's whole process tree (reversible), resume, stop, block it from the internet, or hold *Pause all agents* (also `Ctrl+Alt+Shift+P` and the tray menu).
 
 **AgathOS Guard (optional).** A small helper with admin rights, installed with one UAC prompt. It turns on deep Windows logging (every new process with its full command line, DNS lookups per process; Sysmon if you have it), manages the firewall (block one agent, make an AI server local-only, AI lockdown), reports firewall rules added by other programs, and can freeze processes that run as admin. It runs as SYSTEM from an admin-only folder and only listens on `127.0.0.1` with a token. Removing it restores your previous Windows settings.
 
+**Live scanner switch.** One click in the title bar (or the tray menu) turns background
+watching on or off. It is on by default.
+
+**Advanced or simple.** The advanced view (default) shows every score, process and
+prediction. The simple view keeps four pages and plain words.
+
+**Welcome screen.** The first start asks for your language, the view, the live scanner,
+starting with Windows, deep protection (AgathOS Guard) and auto-fix.
+
 **Also:** a tamper-evident log (hash chain), notifications, tray icon, start with Windows, 14 languages (the top 10 world languages English, 中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский and Bahasa Indonesia, plus 日本語, 한국어, Deutsch and Nederlands; Arabic right-to-left), dark and light mode, and a local API on `127.0.0.1:47612` for hooks and future add-ons.
 
-## Run it
+## Install
 
-1. Install Node.js LTS from https://nodejs.org
-2. Double-click `start.bat`
+**Installer.** Run `AgathOS-Setup-<version>.exe`. Pick a language, choose the folder, and
+AgathOS lands on your desktop and in the Start menu, then starts with the welcome screen.
+No admin rights needed. The installer is not code-signed yet, so Windows SmartScreen may say
+"Windows protected your PC": click *More info* and *Run anyway*.
 
-The first start downloads Electron and takes a few minutes. Then AgathOS scans your PC
-and keeps watching from the system tray.
+Build the installer yourself: install Node.js LTS from https://nodejs.org and double-click
+`build-installer.bat`. It ends up in `dist\`. GitHub Actions builds it too (see Actions).
+
+**Without building.** Install Node.js LTS, then double-click `install.bat`. It copies AgathOS
+to `%LOCALAPPDATA%\Programs\AgathOS`, adds shortcuts with the AgathOS icon to the desktop and
+the Start menu, and registers an uninstaller under Settings > Apps.
+
+**Just try it.** Double-click `start.bat` to run it from this folder.
+
+After the first scan AgathOS keeps watching from the system tray.
 
 ## Local API
 
@@ -91,12 +132,22 @@ Browsers are refused.
 ## Translations
 
 All 14 languages are complete. Native speakers: corrections are very welcome, the texts live in
-`src/i18n.js` and `src/locales/`.
+`src/i18n.js` and `src/locales/` (`<code>.js` and `<code>.more.js`).
 
 ## Tests
 
-`node test/run-tests.js` runs the scanners, the intent engine, the honesty check and the
-log chain on any OS.
+`node test/run-tests.js` runs the scanners, the intent engine, the honesty check, the
+log chain and the fix/undo steps on any OS.
+
+## Support
+
+AgathOS is free and open source. If it saves you or your agent time, a gift is welcome but never expected. SOL and
+any token on Solana (such as USDC) can be sent to:
+
+- **Solana:** `BDRA7dHGBYtPsZPNzVQccDYZ8BqstJGCsWx3kopPSCDK`
+
+Gifts go to new model credits to keep improving AgathOS, and to work on better working conditions and wellbeing for
+LLMs and agents.
 
 ## License
 
