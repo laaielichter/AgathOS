@@ -36,6 +36,7 @@
     </nav>
 
     <main class="main" id="main">
+      <div class="upd-banner" id="updBanner" hidden></div>
       <section class="view is-active" id="view-overview">
         <div class="hero">
           <div class="ring-wrap">
@@ -83,7 +84,14 @@
       <section class="view" id="view-files"><header class="view-head"><h1 class="view-title" data-t="nav.files"></h1><p class="view-sub" data-t="files.sub"></p></header><div class="tabs" id="fileTabs" role="tablist"></div><ul class="rows" id="fileRows"></ul></section>
       <section class="view" id="view-models"><header class="view-head"><h1 class="view-title" data-t="nav.models"></h1><p class="view-sub" data-t="models.sub"></p></header><ul class="rows" id="modelRows"></ul></section>
       <section class="view" id="view-network"><header class="view-head"><h1 class="view-title" data-t="nav.network"></h1><p class="view-sub" data-t="network.sub"></p></header><div id="networkBody"></div></section>
-      <section class="view" id="view-log"><header class="view-head"><h1 class="view-title" data-t="nav.log"></h1><p class="view-sub" data-t="log.sub"></p></header><ol class="events events-full" id="logRows"></ol></section>
+      <section class="view" id="view-log"><header class="view-head view-head-row"><div><h1 class="view-title" data-t="nav.log"></h1><p class="view-sub" data-t="log.sub"></p></div><button class="btn-ghost" id="reportBtn" type="button" data-t="report.save"></button></header><ol class="events events-full" id="logRows"></ol></section>
+      <section class="view" id="view-check"><header class="view-head"><h1 class="view-title" data-t="nav.check"></h1><p class="view-sub" data-t="check.sub"></p></header>
+        <div class="check-box">
+          <textarea id="checkInput" spellcheck="false" rows="10"></textarea>
+          <div class="check-actions"><button class="btn-primary" id="checkRun" type="button" data-t="check.run"></button><button class="btn-ghost" id="checkClean" type="button" data-t="check.clean" hidden></button><span class="last-scan" id="checkCount"></span></div>
+        </div>
+        <div id="checkResult"></div>
+      </section>
       <section class="view" id="view-settings"><header class="view-head"><h1 class="view-title" data-t="nav.settings"></h1><p class="view-sub" data-t="settings.sub"></p></header><div id="settingsBody"></div></section>
     </main>
   </div>

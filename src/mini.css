@@ -1,0 +1,39 @@
+/* AgathOS - the mini pop-up above the tray icon. Uses the tokens from styles.css. */
+body.mini { overflow: hidden; display: flex; flex-direction: column; height: 100vh; border: 1px solid var(--line); border-radius: 10px; }
+.mini-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid var(--line); -webkit-app-region: drag; user-select: none; }
+.mini-head .brand-name { font-size: 16px; }
+.mini-head .live-pill { margin-left: auto; -webkit-app-region: no-drag; }
+[dir="rtl"] .mini-head .live-pill { margin-left: 0; margin-right: auto; }
+.mini-body { flex: 1; padding: 14px 16px 6px; overflow: auto; display: grid; align-content: start; gap: 10px; }
+/* Six segments = the six watchers; same colours and causes as the big ring. */
+.mini-bar { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.seg-w { height: 6px; border-radius: 3px; background: var(--calm); transition: background .6s ease; }
+.seg-w.watch { background: var(--watch); }
+.seg-w.alarm { background: var(--alarm); animation: segPulse 2.2s ease-in-out infinite; }
+.seg-w.paused { background: var(--ice); opacity: .6; }
+.seg-w.pending { background: var(--line); }
+.seg-w.is-scanning { background: var(--gold); }
+@keyframes segPulse { 50% { opacity: .55; } }
+.mini-status { font-family: var(--serif); font-weight: 400; font-size: 22px; line-height: 1.2; margin: 4px 0 0; }
+.mini-status.alarm { color: var(--alarm); }
+.mini-status.watch { color: var(--watch); }
+.mini-sub { color: var(--dim); font-size: 12px; margin: -4px 0 2px; }
+.mini-actions { display: grid; gap: 8px; }
+.mini-actions .wide { width: 100%; padding: 10px 14px; }
+.mini-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mini-row .btn-ghost { padding: 8px 10px; font-size: 13px; }
+.btn-ghost.danger { border-color: color-mix(in srgb, var(--alarm) 55%, transparent); color: var(--alarm); }
+.btn-ghost.ice { border-color: color-mix(in srgb, var(--ice) 55%, transparent); color: var(--ice); }
+.mini-title { font-size: 12px; color: var(--dim); font-weight: 600; margin: 6px 0 4px; }
+.mini-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mini-empty { color: var(--dim); font-size: 12px; }
+.mini-agent-btn { width: 100%; display: grid; grid-template-columns: 1fr 80px 28px; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; cursor: pointer; text-align: start; }
+.mini-agent-btn:hover { border-color: var(--dim); }
+.mini-agent.alarm .mini-agent-btn { border-color: color-mix(in srgb, var(--alarm) 55%, transparent); }
+.mini-agent.paused .mini-agent-btn { border-color: color-mix(in srgb, var(--ice) 55%, transparent); }
+.mini-agent-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-meter { height: 5px; border-radius: 3px; background: var(--raised); overflow: hidden; }
+.mini-meter .meter-fill { display: block; height: 100%; }
+.mini-score { text-align: end; font-variant-numeric: tabular-nums; font-size: 12px; }
+.mini-foot { padding: 10px 16px 14px; border-top: 1px solid var(--line); }
+.mini-open { width: 100%; }

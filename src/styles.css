@@ -396,3 +396,32 @@ button, input, select { font: inherit; color: inherit; }
 /* ---------- macOS: room for the traffic lights ---------- */
 :root[data-platform="darwin"] .titlebar { padding-left: 86px; }
 :root[data-platform="darwin"][dir="rtl"] .titlebar { padding-left: 86px; padding-right: 16px; }
+
+/* ---------- analysis: simple and in depth ---------- */
+.an-tabs { min-width: 200px; }
+.an-simple { font-size: 17px; line-height: 1.5; margin: 14px 0 4px; }
+.an-ev { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 13px; }
+.an-ev dt { color: var(--dim); }
+.an-ev dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.mono, .an-ev dd.mono { font-family: var(--mono); font-size: 12px; }
+.an-meta { display: flex; gap: 28px; flex-wrap: wrap; margin-top: 16px; }
+.an-meta h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--gold); margin: 0 0 6px; font-weight: 600; }
+.an-conf { font-size: 12px; border-radius: 999px; padding: 2px 10px; border: 1px solid var(--line); }
+.an-conf.high { color: var(--alarm); border-color: color-mix(in srgb, var(--alarm) 55%, transparent); }
+.an-conf.medium { color: var(--watch); border-color: color-mix(in srgb, var(--watch) 55%, transparent); }
+.an-conf.low { color: var(--dim); }
+.an-steps { margin: 0; padding-inline-start: 20px; display: grid; gap: 6px; }
+.an-sec .reasons .code { margin-top: 4px; }
+
+/* ---------- check text, update banner, report ---------- */
+.view-head-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.check-box { display: grid; gap: 10px; margin-bottom: 18px; }
+.check-box textarea { width: 100%; min-height: 200px; resize: vertical; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-family: var(--mono); font-size: 13px; line-height: 1.5; }
+.check-box textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.check-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.check-ok { color: var(--calm); background: var(--panel); border: 1px solid color-mix(in srgb, var(--calm) 40%, transparent); border-radius: 12px; padding: 14px 18px; }
+.check-out.alarm { border-color: color-mix(in srgb, var(--alarm) 55%, transparent); }
+.check-out.watch { border-color: color-mix(in srgb, var(--watch) 50%, transparent); }
+.upd-banner { display: flex; align-items: center; gap: 12px; margin: 8px 0 4px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--gold) 8%, var(--panel)); max-width: 1200px; flex-wrap: wrap; }
+.upd-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+.upd-banner > span:nth-child(2) { flex: 1; }

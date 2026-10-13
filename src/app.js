@@ -4,7 +4,7 @@
   const A = window.agathos;
   const $ = (id) => document.getElementById(id);
   const WATCHERS = ['gate', 'files', 'net', 'keys', 'traps', 'proc'];
-  const VIEWS = ['overview', 'agents', 'mcp', 'files', 'models', 'network', 'log', 'settings'];
+  const VIEWS = ['overview', 'agents', 'mcp', 'files', 'models', 'network', 'check', 'log', 'settings'];
   const RANK = { calm: 0, watch: 1, alarm: 2 };
 
   let snap = null;
@@ -16,7 +16,7 @@
   let mode = 'advanced';          // advanced (default) | simple
   let welcomed = true;
   let fresh = false;              // a scan just finished with findings: the fix panel pulses once
-  const SIMPLE_VIEWS = ['overview', 'agents', 'log', 'settings'];
+  const SIMPLE_VIEWS = ['overview', 'agents', 'check', 'log', 'settings'];
   let lastBeat = 0;
   const seenEvents = new Set();
   let firstEvents = true;
@@ -61,11 +61,11 @@
       else if (k === 'style') { for (const decl of String(v).split(';')) { const i = decl.indexOf(':'); if (i > 0) n.style.setProperty(decl.slice(0, i).trim(), decl.slice(i + 1).trim()); } }
       else n.setAttribute(k, v === true ? '' : v);
     }
-    for (const k of kids.flat()) if (k != null && k !== false) n.appendChild(typeof k === 'string' ? document.createTextNode(k) : k);
+    for (const k of kids.flat(Infinity)) if (k != null && k !== false) n.appendChild(typeof k === 'string' ? document.createTextNode(k) : k);
     return n;
   }
   const svg = (tag, attrs) => { const n = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); return n; };
-  const fill = (el, ...kids) => { el.textContent = ''; for (const k of kids.flat()) if (k) el.appendChild(k); };
+  const fill = (el, ...kids) => { el.textContent = ''; for (const k of kids.flat(Infinity)) if (k) el.appendChild(k); };
 
   // ---------- modal / toast ----------
   function modal(title, body) {
@@ -113,7 +113,11 @@
     $('main').scrollTop = 0;
     render();
   }
-  if (A.onNavigate) A.onNavigate((v) => show(v));
+  if (A.onNavigate) A.onNavigate((v) => {
+    // From the mini pop-up: "Fix all" opens the overview with the fix dialog.
+    if (v === 'fix') { show('overview'); if (snap) openFix(planOf().some((x) => x.cat !== 'manual' && x.action !== 'off') ? 'all' : 'choose'); return; }
+    show(v);
+  });
 
   // ---------- chrome ----------
   function renderChrome() {
@@ -380,6 +384,61 @@
   const stepAction = (s) => (s.cat === 'manual' ? 'guide' : s.action !== 'off' ? s.action : s.preset);
   const sec = (title, ...kids) => h('div', { class: 'an-sec' }, h('h3', { text: title }), ...kids);
 
+  // How sure AgathOS is per kind of finding, and the matching public technique IDs
+  // (MITRE ATT&CK for classic attacks, MITRE ATLAS for attacks on AI systems).
+  const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', tamper: 'high',
+    inject: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
+    chain: 'low', odd: 'low', generic: 'low' };
+  const MITRE = { hidden: 'AML.T0051.001 · T1027', inject: 'AML.T0051.001', secret: 'T1552.001', mcpBad: 'T1195.002 · AML.T0053', supply: 'T1195.002 · T1195.001',
+    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', model: 'AML.T0010.003 · T1204.002', port: 'T1133',
+    destroy: 'T1485', persist: 'T1053.005 · T1543.001 · T1547.001', cred: 'T1555 · T1552', secOff: 'T1562.001 · T1562.004', exfil: 'AML.T0057 · T1567 · T1041',
+    chain: 'AML.T0051 · T1059', tamper: 'T1070' };
+  let anLevel = null;     // 'simple' | 'deep'; follows the view until you pick a tab
+
+  // Evidence rows for the item behind a fix step (or an inventory item).
+  function detailsFor(key) {
+    if (!snap || !key) return [];
+    const [kind, ...rest] = String(key).split(':');
+    const id = rest.join(':');
+    const out = [];
+    const add = (label, value) => { if (value != null && value !== '') out.push([label, String(value)]); };
+    if (kind === 'mcp') {
+      const m = snap.mcp.find((x) => x.id === id);
+      if (m) { add(t('ev.app'), m.app); if (m.transport === 'http') add(t('ev.url'), m.url); else add(t('ev.command'), [m.command, ...(m.args || [])].join(' ')); add(t('ev.file'), m.file); }
+    } else if (kind === 'file') {
+      const f = snap.files.find((x) => x.id === id);
+      if (f) add(t('ev.file'), f.path);
+    } else if (kind === 'model') {
+      const m = snap.models.find((x) => planOf().some((s) => s.tkey === key && s.target && s.target.path === x.path)) || null;
+      if (m) { add(t('ev.file'), m.path); add(t('ev.format'), m.format); add(t('ev.size'), `${(m.size / 1048576).toFixed(1)} MB`); }
+    } else if (kind === 'port') {
+      const p = snap.ports.find((x) => String(x.port) === id);
+      if (p) { add(t('ev.address'), `${p.addr}:${p.port}`); add(t('ev.process'), `${p.process || '?'} · PID ${p.pid}`); }
+    } else if (kind === 'auto') {
+      const a = snap.autostarts.find((x) => x.id === id);
+      if (a) { add(t('ev.command'), a.command); add(t('ev.where'), a.where); }
+    } else if (kind === 'agent') {
+      const a = snap.agents.find((x) => x.id === id);
+      const r = a && a.running[0];
+      if (a) {
+        if (r) { add('PID', r.pid); add(t('card.parent'), r.parent); add(t('card.signer'), r.signer ? (r.signer.valid ? r.signer.signer : `${t('card.unsigned')} (${r.signer.status})`) : ''); add(t('ev.command'), r.cmd); }
+        add(t('card.task'), a.task);
+        const on = ['untrusted', 'private', 'exit'].filter((k) => a.labels && a.labels[k]).map((k) => t('label.' + k));
+        if (on.length) add(t('card.labels'), on.join(' + '));
+        if (a.prediction) add(t('card.next'), `${t('act.' + a.prediction.action)} · ${Math.round(a.prediction.p * 100)}%`);
+        add(t('card.score'), a.score);
+        if (a.actions && a.actions.length) add(t('card.recent'), a.actions.slice(0, 6).map((x) => `${clock(x.ts)} ${t('act.' + x.action)} ${x.detail || ''}`).join('\n'));
+      }
+    }
+    return out;
+  }
+  const keyOfItem = (kind, x) => (kind === 'model' ? (planOf().find((s) => s.target && s.target.path === x.path) || {}).tkey : `${kind}:${kind === 'port' ? x.port : x.id}`);
+
+  function rawParams(r) {
+    const p = Object.entries(r.params || {}).filter(([, v]) => v != null && v !== '' && String(v).length < 300);
+    return p.length ? p.map(([k, v]) => `${k}: ${v}`).join('\n') : '';
+  }
+
   function analyse(item, step) {
     const all = item.reasons || [];
     const reasons = all.filter((r) => r.sev !== 'calm').length ? all.filter((r) => r.sev !== 'calm') : all;
@@ -388,17 +447,40 @@
     const sev = item.sev || worst(reasons.map((r) => r.sev));
     const act = step ? stepAction(step) : null;
     const canFix = step && act && act !== 'off' && act !== 'guide';
-    fill($('anBody'),
-      h('div', { class: 'sheet-head' }, h('div', null,
-        h('h2', { class: 'modal-title', text: item.name || t('an.title') }),
-        h('span', { class: `an-sev ${sev}`, text: t('an.sev.' + sev) }))),
-      item.where ? h('div', { class: 'code', text: item.where }) : null,
-      sec(t('an.seen'), reasonList(reasons)),
+    const key = (step && step.tkey) || item.key || null;
+    const level = anLevel || (mode === 'simple' ? 'simple' : 'deep');
+    const conf = cats.map((c) => CONF[c] || 'low').reduce((a, b) => ({ high: 3, medium: 2, low: 1 }[b] > { high: 3, medium: 2, low: 1 }[a] ? b : a), 'low');
+    const todo = (c) => t(c === 'port' && isMac() ? 'an.port.todoMac' : `an.${c}.todo`);
+    const tabs = h('div', { class: 'seg an-tabs', role: 'tablist' }, ['simple', 'deep'].map((l) => h('button', {
+      class: `seg-btn${level === l ? ' is-active' : ''}`, type: 'button', role: 'tab', 'aria-selected': level === l ? 'true' : 'false',
+      text: t('an.tab.' + l), onclick: () => { anLevel = l; analyse(item, step); } })));
+    const details = item.details || detailsFor(key);
+    const body = level === 'simple' ? [
+      h('p', { class: 'an-simple', text: cats.map((c) => t(`an.${c}.simple`)).join(' ') }),
+      sec(t('an.todo'), cats.map((c) => h('p', { text: todo(c) }))),
+      act ? sec(t('an.fix'), h('p', { text: t('fixdesc.' + act) })) : null,
+    ] : [
+      sec(t('an.seen'), h('ul', { class: 'reasons' }, reasons.map((r) => h('li', null, h('span', { class: `dot ${r.sev}` }),
+        h('div', null, h('div', { text: tp(r.key, r.params) }), rawParams(r) ? h('div', { class: 'code', text: rawParams(r) }) : null))))),
+      details.length ? sec(t('an.evidence'), h('dl', { class: 'an-ev' }, details.map(([k, v]) => [h('dt', { text: k }), h('dd', { class: k === t('ev.command') || k === t('card.recent') ? 'mono' : '', text: v })]))) : null,
+      sec(t('an.how'), cats.map((c) => h('p', { text: t(`an.${c}.deep`) }))),
       sec(t('an.maybe'), cats.map((c) => h('p', { text: t(`an.${c}.maybe`) }))),
       sec(t('an.risk'), cats.map((c) => h('p', { text: t(`an.${c}.risk`) }))),
-      sec(t('an.todo'), cats.map((c) => h('p', { text: t(c === 'port' && isMac() ? 'an.port.todoMac' : `an.${c}.todo`) }))),
-      act ? sec(t('an.fix'), h('p', { text: t('fixdesc.' + act) })) : null,
+      h('div', { class: 'an-meta' },
+        h('div', null, h('h3', { text: t('an.confidence') }), h('span', { class: `an-conf ${conf}`, text: t('an.conf.' + conf) })),
+        cats.some((c) => MITRE[c]) ? h('div', null, h('h3', { text: t('an.mitre') }), h('span', { class: 'mono', text: cats.map((c) => MITRE[c]).filter(Boolean).join(' · ') })) : null),
+      sec(t('an.steps'), h('ol', { class: 'an-steps' }, cats.map((c) => h('li', { text: todo(c) })), act && act !== 'guide' ? h('li', { text: `${t('fix.title')}: ${t('fixact.' + act)}. ${t('fixdesc.' + act)}` }) : null)),
+    ];
+    fill($('anBody'),
+      h('div', { class: 'sheet-head' },
+        h('div', null, h('h2', { class: 'modal-title', text: item.name || t('an.title') }), h('span', { class: `an-sev ${sev}`, text: t('an.sev.' + sev) })),
+        tabs),
+      item.where ? h('div', { class: 'code', text: item.where }) : null,
+      ...body,
       h('div', { class: 'sheet-foot' },
+        key && A.fixDismiss ? h('button', { class: 'btn-ghost', type: 'button', text: t('fix.dismiss'), title: t('fix.dismissHint'),
+          onclick: async () => { $('anDlg').close(); const r = await A.fixDismiss(key); if (r && r.ok) { toast(t('fix.dismissed', { name: item.name || '' })); dropRow(key); } } }) : null,
+        h('span', { class: 'grow' }),
         canFix ? h('button', { class: `btn-primary${act === 'kill' ? ' danger' : ''}`, type: 'button', text: `${t('fix.title')}: ${t('fixact.' + act)}`,
           onclick: async () => {
             $('anDlg').close();
@@ -407,7 +489,13 @@
             toast(r && r.ok ? `${t('fix.ok')}: ${step.name}` : `${t('fix.fail')}: ${step.name}${r ? ' · ' + failText(r) : ''}`);
           } }) : null,
         h('button', { class: 'btn-ghost', type: 'button', text: t('close'), onclick: () => $('anDlg').close() })));
-    if (!$('anDlg').open) $('anDlg').showModal();
+    if (!$('anDlg').open) { $('anDlg').showModal(); $('anBody').scrollTop = 0; }
+  }
+  // After a dismiss inside the fix dialog: take the row out.
+  function dropRow(key) {
+    if (!$('fixDlg').open || fixResults) return;
+    fixRows = fixRows.filter((s) => s.tkey !== key);
+    renderFixDlg();
   }
 
   // An event in the log: use the inventory item it points at when there is one.
@@ -436,7 +524,14 @@
       if (a) { where = a.name; merge(a.reasons); }
       step = stepBy([`agent:${e.agentId}`, `manual:flag:${e.agentId}`]);
     }
-    analyse({ name, where, sev: e.sev, reasons }, step);
+    const key = (step && step.tkey) || (tg.type === 'mcp' || tg.type === 'file' || tg.type === 'auto' ? `${tg.type}:${tg.id}` : tg.type === 'port' ? `port:${tg.port}` : e.agentId ? `agent:${e.agentId}` : null);
+    analyse({ name, where, sev: e.sev, reasons, key }, step);
+  }
+
+  async function restoreKey(key) {
+    const r = await A.fixRestore(key);
+    if (r && r.ok) toast(t('fix.restore'));
+    if ($('fixDlg').open && fixMode === 'dismissed') { fixRows = fixRows.filter((x) => x.key !== key); renderFixDlg(); }
   }
 
   function failText(r) {
@@ -477,6 +572,8 @@
         h('span', null, h('b', { text: s.name }), ` · ${firstReason(s)}`),
         btn(t('fix.why'), () => analyse(s, s))))));
     }
+    const dis = snap.dismissed || [];
+    if (dis.length) kids[1].appendChild(h('button', { class: 'link', type: 'button', text: t('fix.dismissedList', { n: dis.length }), onclick: () => openFix('dismissed') }));
     const recent = (snap.remedies || []).filter((r) => Date.now() - r.at < 86400000 && !r.undone).slice(0, 3);
     if (recent.length) {
       kids.push(h('div', null, h('div', { class: 'field-label', text: t('fix.recent') }), h('ul', { class: 'fix-recent' }, recent.map((r) => h('li', null,
@@ -513,7 +610,7 @@
     fixMode = m;
     fixResults = null;
     const plan = planOf();
-    fixRows = m === 'all' ? plan.filter((s) => s.cat !== 'manual' && s.action !== 'off') : plan;
+    fixRows = m === 'dismissed' ? (snap.dismissed || []).slice() : m === 'all' ? plan.filter((s) => s.cat !== 'manual' && s.action !== 'off') : plan;
     fixSel = {};
     for (const s of plan) fixSel[s.id] = s.action;
     renderFixDlg();
@@ -525,6 +622,16 @@
     const sub = fixResults ? t('fix.results')
       : fixMode === 'all' ? t('fix.allConfirm', { n: chosen.length, level: t('fix.level.' + level) })
         : `${t('fix.level')}: ${t('fix.level.' + level)} · ${t(`fix.level.${level}Desc`)}`;
+    if (fixMode === 'dismissed') {
+      fill($('fixBody'),
+        h('div', { class: 'sheet-head' }, h('div', null, h('h2', { class: 'modal-title', text: t('fix.dismissedList', { n: fixRows.length }) }), h('p', { class: 'sheet-sub', text: t('fix.dismissHint') }))),
+        fixRows.length ? h('ul', { class: 'steps' }, fixRows.map((d) => h('li', { class: 'step' }, h('span', { class: `dot ${d.sev || 'watch'}` }),
+          h('div', null, h('div', { class: 'step-name', text: d.name }), h('div', { class: 'step-why', text: new Date(d.at).toLocaleString(lang) })),
+          h('div', { class: 'step-ctl' }, btn(t('fix.restore'), () => restoreKey(d.key)))))) : h('p', { class: 'sheet-sub', text: t('fix.none') }),
+        h('div', { class: 'sheet-foot' }, h('button', { class: 'btn-ghost', type: 'button', text: t('close'), onclick: () => $('fixDlg').close() })));
+      return;
+    }
+    const dismissBtn = (s) => (s.tkey && A.fixDismiss ? btn(t('fix.dismiss'), async () => { const r = await A.fixDismiss(s.tkey); if (r && r.ok) { toast(t('fix.dismissed', { name: s.name })); dropRow(s.tkey); } }) : null);
     const rows = fixRows.map((s) => {
       const res = fixResults && fixResults.find((r) => r.stepId === s.id);
       const cls = `step${res ? (res.ok ? ' done' : ' failed') : ''}`;
@@ -532,12 +639,12 @@
       if (fixResults) {
         ctl = [res && res.ok && res.undo && !res.undone ? btn(t('fix.undo'), () => undoFix(res.rid)) : null, btn(t('fix.why'), () => analyse(s, s))];
       } else if (s.cat === 'manual') {
-        ctl = [h('span', { class: 'manual', text: t('fix.manual') }), btn(t('fix.why'), () => analyse(s, s))];
+        ctl = [h('span', { class: 'manual', text: t('fix.manual') }), btn(t('fix.why'), () => analyse(s, s)), dismissBtn(s)];
       } else if (fixMode === 'all') {
-        ctl = [h('span', { class: 'manual', text: t('fixact.' + fixSel[s.id]) }), btn(t('fix.why'), () => analyse(s, s))];
+        ctl = [h('span', { class: 'manual', text: t('fixact.' + fixSel[s.id]) }), btn(t('fix.why'), () => analyse(s, s)), dismissBtn(s)];
       } else {
         ctl = [h('select', { 'aria-label': s.name, onchange: (e) => { fixSel[s.id] = e.target.value; renderFixDlg(); } },
-          s.options.map((o) => h('option', { value: o, selected: fixSel[s.id] === o, text: t('fixact.' + o) }))), btn(t('fix.why'), () => analyse(s, s))];
+          s.options.map((o) => h('option', { value: o, selected: fixSel[s.id] === o, text: t('fixact.' + o) }))), btn(t('fix.why'), () => analyse(s, s)), dismissBtn(s)];
       }
       const why = res ? (res.ok ? `${t('fix.ok')}: ${t('fixact.' + res.action)}${res.needGuard ? ' · ' + t('fix.needGuard') : ''}${res.undone ? ' · ' + t('fix.undone') : ''}` : `${t('fix.fail')}: ${failText(res)}`)
         : [firstReason(s), s.where].filter(Boolean).join(' · ');
@@ -605,7 +712,7 @@
       }
       if (!run0 && a.dirs.length) body.push(field(t('card.where'), h('div', { class: 'field-value', text: a.dirs.join(', ') })));
       const btns = [];
-      if (a.state !== 'calm') btns.push(btn(t('fix.why'), () => analyse({ name: a.name, where: run0 ? `PID ${run0.pid}` : '', sev: a.state, reasons: a.reasons }, stepBy([`agent:${a.id}`, `manual:flag:${a.id}`]))));
+      if (a.state !== 'calm') btns.push(btn(t('fix.why'), () => analyse({ name: a.name, where: run0 ? `PID ${run0.pid}` : '', sev: a.state, reasons: a.reasons, key: `agent:${a.id}` }, stepBy([`agent:${a.id}`, `manual:flag:${a.id}`]))));
       if (run0) {
         btns.push(a.paused ? h('button', { class: 'btn-small ice', type: 'button', text: t('btn.resume'), onclick: () => run(A.resume(a.id)) })
           : h('button', { class: 'btn-small ice', type: 'button', text: t('btn.freeze'), onclick: () => run(A.freeze(a.id)) }));
@@ -630,15 +737,17 @@
       h('div', null,
         h('div', { class: 'row-why' }, (x.reasons || []).map((r) => h('span', { class: `r ${r.sev}`, text: tp(r.key, r.params) }))),
         h('div', { class: 'row-actions' },
-          x.state !== 'calm' ? btn(t('fix.why'), () => analyse({ name: opts.name(x), where: opts.where(x), sev: x.state, reasons: x.reasons }, opts.step ? opts.step(x) : null)) : null,
-          opts.actions ? opts.actions(x) : null)),
-      h('span', { class: `state-text ${x.state}`, text: t('state.' + x.state) }))));
+          x.dismissed ? [h('span', { class: 'chip', text: t('fix.dismissedChip') }), btn(t('fix.restore'), () => restoreKey(x.dismissed)),
+            btn(t('fix.why'), () => analyse({ name: opts.name(x), where: opts.where(x), sev: x.origState, reasons: x.reasons, key: x.dismissed }, null))] : null,
+          !x.dismissed && x.state !== 'calm' ? btn(t('fix.why'), () => { const st = opts.step ? opts.step(x) : null; analyse({ name: opts.name(x), where: opts.where(x), sev: x.state, reasons: x.reasons, key: (st && st.tkey) || (opts.key ? opts.key(x) : null) }, st); }) : null,
+          opts.actions && !x.dismissed ? opts.actions(x) : null)),
+      h('span', { class: `state-text ${x.state}`, text: x.dismissed ? t('fix.dismissedChip') : t('state.' + x.state) }))));
   }
   const btn = (label, fn, cls = '') => h('button', { class: `btn-small ${cls}`, type: 'button', text: label, onclick: fn });
 
   function renderMcp() {
     rowList($('mcpRows'), snap ? snap.mcp : [], {
-      step: (m) => stepBy([`mcp:${m.id}`]),
+      step: (m) => stepBy([`mcp:${m.id}`]), key: (m) => `mcp:${m.id}`,
       name: (m) => m.name,
       where: (m) => `${t('mcp.in', { app: m.app })} · ${m.transport === 'http' ? m.url : [m.command, ...(m.args || [])].join(' ')}`.slice(0, 200),
       actions: (m) => [
@@ -662,13 +771,13 @@
     }));
     if (fileTab === 'auto') {
       rowList($('fileRows'), groups.auto, {
-        name: (a) => a.name, where: (a) => a.command.slice(0, 200), step: (a) => stepBy([`auto:${a.id}`, `manual:${a.id}`]),
+        name: (a) => a.name, where: (a) => a.command.slice(0, 200), step: (a) => stepBy([`auto:${a.id}`, `manual:${a.id}`]), key: (a) => `auto:${a.id}`,
         actions: (a) => (a.state !== 'calm' ? [btn(t('btn.ignore'), () => run(A.trust({ type: 'auto', id: a.id })))] : []),
       });
       return;
     }
     rowList($('fileRows'), groups[fileTab], {
-      name: (f) => f.path.split(/[\\/]/).pop(), where: (f) => f.short || f.path, step: (f) => stepBy([`inject:${f.id}`, `hidden:${f.id}`, `manual:${f.id}`]),
+      name: (f) => f.path.split(/[\\/]/).pop(), where: (f) => f.short || f.path, step: (f) => stepBy([`inject:${f.id}`, `hidden:${f.id}`, `manual:${f.id}`]), key: (f) => `file:${f.id}`,
       actions: (f) => [
         f.path && !f.path.startsWith('Environment') ? btn(t('btn.open'), () => A.reveal(f.path)) : null,
         f.state === 'watch' && f.id ? btn(t('btn.ignore'), () => run(A.trust({ type: 'file', id: f.id, path: f.path }))) : null,
@@ -693,7 +802,7 @@
     const ports = h('ul', { class: 'rows' });
     rowList(ports, s ? s.ports : [], {
       empty: t('net.noPorts'),
-      step: (p) => stepBy([`port:${p.port}`]),
+      step: (p) => stepBy([`port:${p.port}`]), key: (p) => `port:${p.port}`,
       name: (p) => `${p.product} · ${p.port}`, where: (p) => `${p.addr}:${p.port} · ${p.process || ''} · PID ${p.pid}`,
       actions: (p) => (!p.exposed ? [] : isMac() ? [btn(t('btn.how'), () => modal(t('btn.how'), t('an.port.todoMac')))]
         : [btn(t('btn.localOnly'), () => run(A.localOnly(p.port, true), t('fw.localOnly', { port: p.port })), 'fix'), btn(t('btn.how'), () => modal(t('btn.how'), t('fix.port')))]),
@@ -772,15 +881,22 @@
         fix.auto ? null : setRow(`${t('fix.level')} · ${t('fix.title')}`, fixLevel, t(`fix.level.${fix.level}Desc`)),
         setRow(t('set.fixMin'), fixMin),
         ...custom),
+      h('section', { class: 'set-group' }, h('h2', { text: t('set.notify') }),
+        setRow(t('set.notify'), notifySel),
+        setRow(t('set.snooze'), h('div', { class: 'seg' },
+          [['off', t('set.snoozeOff')], ['1h', t('set.snooze1h')], ['tomorrow', t('set.snoozeTomorrow')]].map(([k, label]) => h('button', {
+            class: `seg-btn${k === 'off' && !(snap.snoozeUntil > Date.now()) ? ' is-active' : ''}`, type: 'button', text: label,
+            onclick: async () => { await A.snooze(k); toast(t('set.saved')); } }))),
+        snap.snoozeUntil > Date.now() ? t('snooze.until', { t: clock(snap.snoozeUntil) }) : null)),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.view') }),
         setRow(t('set.view'), modeSeg, t('set.modeDesc')),
         setRow(t('set.welcome'), btn(t('set.welcomeBtn'), () => openWelcome()))),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.protection') }),
         setRow(t('set.level'), levelSeg),
-        setRow(t('set.notify'), notifySel),
         setRow(t('set.autoFreeze'), sw(s.autoFreezeOnMassDelete, () => save({ autoFreezeOnMassDelete: !s.autoFreezeOnMassDelete }))),
         setRow(t('set.threshold'), num(s.massDeleteThreshold, 10, 1000, 'massDeleteThreshold', t('set.files10s')), null, 'adv'),
         setRow(t('set.portCheck'), sw(s.portCheck, () => save({ portCheck: !s.portCheck })), null, 'adv'),
+        setRow(t('set.dlGuard'), sw(s.downloadGuard !== false, () => save({ downloadGuard: s.downloadGuard === false })), t('set.dlGuardDesc')),
         setRow(t('set.hotkey'), sw(s.hotkey, () => save({ hotkey: !s.hotkey })), null, 'adv'),
         isMac() ? setRow(t('guard.title'), h('span'), t('mac.guard')) : setRow(t('guard.title'), guardBtn, t('guard.desc'))),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.watching') }),
@@ -793,13 +909,62 @@
         setRow(t('set.learning'), [btn(t('set.rollback'), async () => { if (await A.rollback()) toast(t('set.rolledBack')); }), btn(t('set.reset'), async () => { await A.forget(); toast(t('set.forgot')); }), sw(s.learning, () => save({ learning: !s.learning }))]),
         setRow(t('set.judge'), sw(s.judge.enabled, () => save({ judge: { enabled: !s.judge.enabled } })), t('set.judgeDesc')),
         s.judge.enabled ? setRow(t('set.judgeModel'), judgeSel) : null),
+      h('section', { class: 'set-group' }, h('h2', { text: t('set.updates') }),
+        setRow(t('set.version', { v: (snap.update && snap.update.current) || A.version || '' }), btn(t('set.updatesNow'), async (e) => {
+          e.target.textContent = t('upd.checking');
+          const u = await A.checkUpdate();
+          e.target.textContent = t('set.updatesNow');
+          modal(t('set.updates'), !u || u.status === 'unreachable' ? t('upd.unreachable') : u.status === 'newer' ? t('upd.available', { v: u.version }) : t('upd.latest', { v: u.current }));
+        }), snap.update && snap.update.status === 'newer' ? t('upd.available', { v: snap.update.version }) : null),
+        setRow(t('set.updatesAuto'), sw(s.updates !== false, () => save({ updates: s.updates === false })))),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.app') }),
         setRow(startupLabel(), sw(s.startWithWindows, () => save({ startWithWindows: !s.startWithWindows }))),
         setRow(t('set.tray'), sw(s.closeToTray, () => save({ closeToTray: !s.closeToTray }))),
         setRow(t('set.logDays'), num(s.logDays, 1, 365, 'logDays', t('set.days')), null, 'adv'),
         setRow(t('set.api'), sw(s.api, () => save({ api: !s.api })), `127.0.0.1:${snap.apiPort}`, 'adv'),
+        setRow(t('report.save'), btn(t('report.save'), async () => { const r = await A.saveReport(); if (r && r.ok) toast(t('report.saved')); }), t('report.desc')),
         setRow(t('set.verify'), btn(t('set.verify'), async () => { const r = await A.verifyLog(); modal(t('set.verify'), r.ok ? t('set.verifyOk', { n: r.lines }) : t('set.verifyBad', { n: r.line })); }), null, 'adv')));
   }
+
+  // ---------- check text: paste anything before an agent reads it ----------
+  let checkRes = null;
+  $('checkRun').addEventListener('click', async () => {
+    const text = $('checkInput').value;
+    if (!text.trim() || !A.checkText) return;
+    checkRes = await A.checkText(text);
+    renderCheck();
+  });
+  $('checkClean').addEventListener('click', async () => { if (checkRes && A.copyText) { await A.copyText(checkRes.clean); toast(t('check.copied')); } });
+  $('checkInput').addEventListener('input', () => { $('checkCount').textContent = t('check.chars', { n: [...$('checkInput').value].length }); });
+  function renderCheck() {
+    $('checkInput').placeholder = t('check.placeholder');
+    const box = $('checkResult');
+    if (!checkRes) { fill(box); $('checkClean').hidden = true; return; }
+    const r = checkRes;
+    const found = r.reasons.filter((x) => x.sev !== 'calm');
+    $('checkClean').hidden = !r.removed;
+    if (!found.length) { fill(box, h('div', { class: 'check-ok', text: t('check.ok') })); return; }
+    fill(box, h('div', { class: `box check-out ${r.sev}` },
+      h('div', { class: 'box-row' }, h('h2', { text: t('check.found') }), h('span', { class: `an-sev ${r.sev}`, text: t('an.sev.' + r.sev) })),
+      reasonList(found),
+      r.decoded ? sec(t('check.hiddenText'), h('div', { class: 'code', text: r.decoded })) : null,
+      r.removed ? h('p', { text: t('check.removed', { n: r.removed }) }) : null,
+      r.secrets && r.secrets.length ? sec(t('check.secrets'), h('div', { class: 'code', text: r.secrets.map((x) => `${x.kind}: ${x.masked}`).join('\n') })) : null,
+      h('div', { class: 'event-actions' }, btn(t('fix.why'), () => analyse({ name: t('nav.check'), sev: r.sev, reasons: found }, null)))));
+  }
+
+  // ---------- update banner and report ----------
+  let updHidden = false;
+  function renderUpdate() {
+    const u = snap && snap.update;
+    const b = $('updBanner');
+    if (!u || u.status !== 'newer' || updHidden) { b.hidden = true; return; }
+    b.hidden = false;
+    fill(b, h('span', { class: 'upd-dot' }), h('span', { text: t('upd.available', { v: u.version }) }),
+      h('button', { class: 'btn-small fix', type: 'button', text: isMac() ? t('upd.open') : t('upd.install'), onclick: async () => { toast(t('upd.downloading', { v: u.version })); const r = await A.installUpdate(); if (r && r.ok === false) modal(t('set.updates'), t('upd.failed')); } }),
+      h('button', { class: 'btn-small', type: 'button', text: t('upd.later'), onclick: () => { updHidden = true; renderUpdate(); } }));
+  }
+  $('reportBtn').addEventListener('click', async () => { const r = await A.saveReport(); if (r && r.ok) toast(t('report.saved')); });
 
   // ---------- welcome: language, view, live scanner, Guard, auto-fix ----------
   const wel = { mode: 'advanced', live: true, startup: true, guard: false, fix: false, level: 'firm' };
@@ -859,6 +1024,8 @@
     if (view === 'models') renderModels();
     if (view === 'network') renderNetwork();
     if (view === 'log') renderLog();
+    if (view === 'check') renderCheck();
+    renderUpdate();
     if (view === 'settings') renderSettings();
   }
 

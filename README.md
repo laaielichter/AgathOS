@@ -53,9 +53,13 @@ words, predicts the next step from the actions it sees, and limits the damage.
 **Self-learning, safely.** It learns only from clean sessions or sessions you approved, never while a session read untrusted content, a little at a time, with versions you can roll back. Hard rules are never learned.
 
 **Fix it.** After every scan AgathOS lists what it found and offers one button: *Fix all*.
-Or open *Review and choose* and pick per finding what happens. Every finding has an
-**Explain** button with a short analysis: what it could be (the harmless and the harmful
-explanation), why it matters and what you can do.
+Or open *Review and choose* and pick per finding what happens, or **Dismiss** it: a dismissed
+finding stops counting until it changes, and *Show again* brings it back.
+
+Every finding has an **Explain** button with two levels. *Simple* says in one plain sentence
+what is going on and what to do. *In depth* shows the evidence (paths, commands, decoded hidden
+text, process tree, signer), how the attack works, the harmless and the harmful explanation,
+how sure AgathOS is, the matching MITRE ATT&CK / ATLAS technique and the steps to fix it.
 
 ![Explain: analysis of a finding](docs/analysis.png)
 
@@ -80,6 +84,32 @@ is never rewritten, and a cleaned file is never restored over newer work.
 
 **Live scanner switch.** One click in the title bar (or the tray menu) turns background
 watching on or off. It is on by default.
+
+**Mini pop-up (Windows).** Click the AgathOS icon next to the clock and a small window opens
+right above it: the six watchers, the status, *Fix all*, *Scan now*, *Pause all agents*, the
+live scanner switch and the agents running now. Double-click for the full window, right-click
+for the menu. The icon itself shows a coloured dot for attention, danger or paused.
+
+**Check text.** Paste a prompt, README, rules file or web text before an agent reads it.
+AgathOS shows hidden characters (and decodes them), attack text and keys, and copies a clean
+version for you.
+
+**Download guard.** New files in Downloads are checked the moment they land: models that can
+run code, and rules files or prompts with hidden instructions.
+
+**Pause notifications** for an hour or until tomorrow; danger still comes through.
+
+**Safety report.** One HTML page with all findings, agents, fixes and the last 24 hours, to
+keep or share (Log > Save report).
+
+**Updates.** AgathOS checks GitHub Releases once a day. On Windows the installed app downloads
+the new installer, checks its SHA-256 against the checksum GitHub publishes, and only then
+installs it and starts again. On a Mac it opens the download page.
+
+**Mini pop-up (Windows).** Click the AgathOS icon next to the clock and a small window opens
+right above it: the six watchers, the status, *Fix all*, *Scan now*, *Pause all agents*, the
+live scanner switch and the agents running now. Double-click the icon for the full window,
+right-click for the menu.
 
 **Advanced or simple.** The advanced view (default) shows every score, process and
 prediction. The simple view keeps four pages and plain words.
@@ -111,6 +141,14 @@ open it, then go to System Settings > Privacy & Security and click *Open Anyway*
 whether AgathOS can read your Documents, Desktop and Downloads folders; that is where it looks for
 instruction files, MCP settings and keys. From source: `npm install` and `npm start`.
 Build the disk images yourself on a Mac with `npm run dist:mac`.
+
+> **Mac testers wanted.** The Mac version is built and its tests run automatically on macOS,
+> but nobody has clicked through it on a real Mac yet. If something does not work or looks
+> wrong, please open an issue with a screenshot and your macOS version.
+
+> **Mac testers wanted.** The Mac version is built and its tests run automatically on macOS,
+> but nobody has clicked through it on a real Mac yet. If something does not work or looks
+> wrong, please open an issue with a screenshot and your macOS version.
 
 After the first scan AgathOS keeps watching from the system tray.
 

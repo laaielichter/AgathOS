@@ -137,4 +137,21 @@ function scanText(text) {
   return { sev, reasons, secrets };
 }
 
-module.exports = { hiddenUnicode, injectionPhrases, findSecrets, scanText };
+// A copy without invisible characters (a leading BOM stays). Used by "Check text" and "Fix it".
+const STRIP = /[\u200B-\u200D\u2060-\u2064\u180E\u00AD\u202A-\u202E\u2066-\u2069]|[\u{E0000}-\u{E007F}]/gu;
+function stripHidden(text) {
+  const s = String(text || '');
+  const bom = s.charCodeAt(0) === 0xfeff ? '\uFEFF' : '';
+  return bom + s.slice(bom.length).replace(STRIP, '').replace(/\uFEFF/g, '');
+}
+
+// Everything the "Check text" page shows, for text you paste in.
+function checkText(text) {
+  const s = String(text || '').slice(0, 2 * 1024 * 1024);
+  const r = scanText(s);
+  const h = hiddenUnicode(s);
+  const clean = stripHidden(s);
+  return { sev: r.sev, reasons: r.reasons, secrets: r.secrets, decoded: h && h.decoded ? h.decoded : '', length: [...s].length, removed: [...s].length - [...clean].length, clean };
+}
+
+module.exports = { hiddenUnicode, injectionPhrases, findSecrets, scanText, stripHidden, checkText };

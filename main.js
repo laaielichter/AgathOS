@@ -1,13 +1,17 @@
 // AgathOS - main process.
 // Window, system tray, notifications, the pause hotkey and the bridge to the engine.
 // Security first: no Node in the page, strict isolation, only whitelisted IPC calls.
-const { app, BrowserWindow, shell, ipcMain, Tray, Menu, Notification, nativeImage, globalShortcut, dialog } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, Tray, Menu, Notification, nativeImage, globalShortcut, dialog, screen, clipboard } = require('electron');
+const fs = require('fs');
 const path = require('path');
 const { Store } = require('./core/store');
 const { Engine } = require('./core/engine');
 const api = require('./core/api');
 const guard = require('./core/guard');
 const judge = require('./core/judge');
+const updater = require('./core/update');
+const report = require('./core/report');
+const { checkText } = require('./core/textscan');
 const { I18N } = require('./src/i18n.js');
 
 const THEMES = {
@@ -17,6 +21,8 @@ const THEMES = {
 
 const IS_MAC = process.platform === 'darwin';
 let win = null;
+let mini = null;          // the small pop-up above the tray icon (Windows)
+let miniHiddenAt = 0;
 let tray = null;
 let engine = null;
 let store = null;
@@ -25,6 +31,8 @@ let apiServer = null;
 let uiLang = 'en';
 let trayPaused = null;
 let trayLive = null;
+let trayState = null;     // calm | watch | alarm | paused: the tray icon shows it
+let updateInfo = null;    // last update check
 
 // Only one AgathOS at a time.
 if (!app.requestSingleInstanceLock()) { app.quit(); }
@@ -59,7 +67,54 @@ function createWindow() {
   });
 }
 
+// ---------- mini pop-up next to the clock ----------
+// A left click on the tray icon opens a small window right above it, like the Windows
+// volume or Wi-Fi flyouts. It closes as soon as you click somewhere else.
+const MINI_W = 340;
+const MINI_H = 468;
+function createMini() {
+  const theme = THEMES[(store.state.ui && store.state.ui.theme) || 'dark'] || THEMES.dark;
+  mini = new BrowserWindow({
+    width: MINI_W, height: MINI_H, show: false, frame: false, resizable: false, movable: false, minimizable: false, maximizable: false,
+    fullscreenable: false, skipTaskbar: true, alwaysOnTop: true, backgroundColor: theme.color, title: 'AgathOS',
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  mini.loadFile(path.join(__dirname, 'src', 'mini.html'));
+  mini.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mini.webContents.on('will-navigate', (e) => e.preventDefault());
+  mini.on('blur', () => { if (mini && mini.isVisible()) { mini.hide(); miniHiddenAt = Date.now(); } });
+  mini.on('closed', () => { mini = null; });
+}
+function placeMini() {
+  const tb = tray.getBounds();
+  const point = tb.width ? { x: Math.round(tb.x + tb.width / 2), y: Math.round(tb.y + tb.height / 2) } : screen.getCursorScreenPoint();
+  const d = screen.getDisplayNearestPoint(point);
+  const wa = d.workArea;
+  const b = d.bounds;
+  const gap = 10;
+  let x = Math.round(point.x - MINI_W / 2);
+  let y = wa.y + wa.height - MINI_H - gap;                         // taskbar at the bottom (normal)
+  if (wa.y > b.y) y = wa.y + gap;                                    // taskbar at the top
+  if (wa.x > b.x) { x = wa.x + gap; y = Math.round(point.y - MINI_H / 2); }                 // left
+  else if (wa.width < b.width && wa.x === b.x && point.x > wa.x + wa.width) { x = wa.x + wa.width - MINI_W - gap; y = Math.round(point.y - MINI_H / 2); } // right
+  x = Math.min(Math.max(x, wa.x + gap), wa.x + wa.width - MINI_W - gap);
+  y = Math.min(Math.max(y, wa.y + gap), wa.y + wa.height - MINI_H - gap);
+  mini.setBounds({ x, y, width: MINI_W, height: MINI_H });
+}
+function toggleMini() {
+  if (!mini) createMini();
+  if (mini.isVisible()) { mini.hide(); return; }
+  // The click that blurred the pop-up is the same click on the icon: do not reopen it.
+  if (Date.now() - miniHiddenAt < 250) return;
+  placeMini();
+  mini.webContents.send('agathos:navigate', 'refresh');
+  if (engine) mini.webContents.send('agathos:update', engine.snapshot());
+  mini.show();
+  mini.focus();
+}
+
 function showWindow(view) {
+  if (mini && mini.isVisible()) mini.hide();
   if (!win) return;
   if (win.isMinimized()) win.restore();
   win.show();
@@ -70,28 +125,67 @@ function showWindow(view) {
 // Windows gets the .ico with hand-made small sizes; elsewhere the PNG.
 const ICON = path.join(__dirname, 'src', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
 
-function trayImage() {
-  if (process.platform === 'win32') return nativeImage.createFromPath(ICON);
+function trayImage(state) {
+  // Windows: the icon carries a small coloured dot for attention, danger or paused.
+  if (process.platform === 'win32') return nativeImage.createFromPath(state && state !== 'calm' ? path.join(__dirname, 'src', `tray-${state}.ico`) : ICON);
   // macOS menu bar: a black "Template" image that the system tints for light and dark menu bars.
   if (IS_MAC) { const t = nativeImage.createFromPath(path.join(__dirname, 'src', 'trayTemplate.png')); t.setTemplateImage(true); return t; }
   return nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 });
 }
 
+// Notifications can be paused for a while; danger still comes through.
+const snoozed = () => !!(store && store.state.snoozeUntil && Date.now() < store.state.snoozeUntil);
+function snooze(ms) {
+  store.state.snoozeUntil = ms ? Date.now() + ms : 0;
+  store.saveState();
+  buildTray();
+  engine.changed(true);
+}
+function untilTomorrow() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(8, 0, 0, 0);
+  return d.getTime() - Date.now();
+}
+
+function statusText(snap) {
+  if (!snap || !snap.watchers) return '';
+  if (snap.pausedAll) return tt('status.paused');
+  const n = snap.watchers.filter((w) => w.state !== 'calm').length;
+  return n === 0 ? tt('status.calm') : n === 1 ? tt('status.one') : tt('status.many', { n });
+}
+
 function buildTray() {
-  const img = trayImage();
+  const img = trayImage(trayState);
   if (!tray) {
     tray = new Tray(img);
-    tray.on('click', () => showWindow());
+    // Windows: left click = the mini pop-up, double click = the full window, right click = menu.
+    if (process.platform === 'win32') {
+      tray.on('click', () => toggleMini());
+      tray.on('double-click', () => showWindow());
+    } else {
+      tray.on('click', () => showWindow());
+    }
   }
-  tray.setToolTip('AgathOS');
+  tray.setImage(img);
+  tray.setToolTip(engine ? `AgathOS · ${statusText(engine.lastSnap)}`.slice(0, 120) : 'AgathOS');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: tt('tray.open'), click: () => showWindow() },
     { label: tt('tray.scan'), click: () => engine.fullScan('tray') },
+    { label: tt('tray.check'), click: () => showWindow('check') },
     { label: tt('tray.live'), type: 'checkbox', checked: !!(store && store.settings.realtime), click: (item) => setLive(item.checked) },
     { type: 'separator' },
     engine && engine.pausedAll
       ? { label: tt('tray.resume'), click: () => engine.resumeAll() }
       : { label: tt('tray.pause'), click: () => engine.pauseAll('tray') },
+    { type: 'separator' },
+    snoozed()
+      ? { label: tt('tray.snoozeOff'), click: () => snooze(0) }
+      : { label: tt('tray.snooze'), submenu: [
+        { label: tt('set.snooze1h'), click: () => snooze(3600 * 1000) },
+        { label: tt('set.snoozeTomorrow'), click: () => snooze(untilTomorrow()) },
+      ] },
+    ...(updateInfo && updateInfo.status === 'newer' ? [{ label: tt('upd.available', { v: updateInfo.version }), click: () => installUpdate() }] : []),
     { type: 'separator' },
     { label: tt('tray.quit'), click: () => { quitting = true; app.quit(); } },
   ]));
@@ -113,6 +207,7 @@ function eventText(e) {
 
 function notify(e) {
   if (!Notification.isSupported()) return;
+  if (snoozed() && e.sev !== 'alarm') return;
   const n = new Notification({ title: `${tt('notif.title')} · ${tt('state.' + e.sev)}`, body: eventText(e).slice(0, 220), icon: path.join(__dirname, 'src', 'icon.png'), silent: e.sev !== 'alarm' });
   n.on('click', () => showWindow(e.watcher === 'gate' ? 'mcp' : e.watcher === 'traps' || e.watcher === 'keys' ? 'files' : e.watcher === 'net' ? 'network' : 'agents'));
   n.show();
@@ -132,6 +227,30 @@ function applyOsSettings() {
   }
   if (s.api && !apiServer) apiServer = api.start(engine, store.dir);
   if (!s.api && apiServer) { apiServer.close(); apiServer = null; }
+}
+
+// ---------- updates from GitHub Releases ----------
+async function checkUpdate(manual = false) {
+  if (!manual && !store.settings.updates) return updateInfo;
+  const before = updateInfo && updateInfo.version;
+  updateInfo = await updater.check();
+  if (engine) { engine.update = updateInfo; engine.changed(true); }
+  if (updateInfo.status === 'newer' && updateInfo.version !== before && !manual) {
+    engine.event({ key: 'upd.event', sev: 'watch', watcher: 'gate', params: { v: updateInfo.version } });
+  }
+  buildTray();
+  return updateInfo;
+}
+async function installUpdate() {
+  if (!updateInfo || updateInfo.status !== 'newer') return { ok: false };
+  // Only the installed Windows app updates itself; otherwise open the download page.
+  if (process.platform === 'win32' && app.isPackaged) {
+    const r = await updater.install(updateInfo);
+    if (r.ok) { quitting = true; setTimeout(() => app.quit(), 500); return { ok: true }; }
+    if (r.reason !== 'page') return { ok: false, reason: r.reason };
+  }
+  if (updateInfo.page && /^https:\/\/github\.com\//.test(updateInfo.page)) shell.openExternal(updateInfo.page);
+  return { ok: true, page: true };
 }
 
 // ---------- IPC: a short, fixed list of calls ----------
@@ -157,6 +276,8 @@ function wireIpc() {
   h('fixPlan', () => engine.fixPlan());
   h('fixApply', (picks) => engine.fixApply(Array.isArray(picks) ? picks.slice(0, 200).map((p) => ({ id: String(p && p.id), action: String(p && p.action) })) : []));
   h('fixUndo', (rid) => engine.fixUndo(String(rid)));
+  h('fixDismiss', (key) => engine.fixDismiss(String(key)));
+  h('fixRestore', (key) => engine.fixRestore(String(key)));
   h('settings', (patch) => {
     const s = store.updateSettings(patch || {});
     engine.applySchedule();
@@ -169,11 +290,31 @@ function wireIpc() {
     store.saveState();
     if (patch && patch.lang && I18N[patch.lang]) { uiLang = patch.lang; buildTray(); }
     if (patch && patch.theme && THEMES[patch.theme] && win) {
-      try { win.setTitleBarOverlay({ ...THEMES[patch.theme], height: 40 }); win.setBackgroundColor(THEMES[patch.theme].color); } catch (_) {}
+      try { if (!IS_MAC) win.setTitleBarOverlay({ ...THEMES[patch.theme], height: 40 }); win.setBackgroundColor(THEMES[patch.theme].color); } catch (_) {}
+      try { if (mini) mini.setBackgroundColor(THEMES[patch.theme].color); } catch (_) {}
     }
     return store.state.ui;
   });
-  h('uiState', () => store.state.ui || {});
+  h('uiState', () => ({ ...(store.state.ui || {}), snoozeUntil: store.state.snoozeUntil || 0, update: updateInfo, version: app.getVersion() }));
+  // From the mini pop-up: open the full window (optionally on a page or the fix dialog).
+  h('checkText', (text) => checkText(typeof text === 'string' ? text : ''));
+  h('copyText', (text) => { if (typeof text === 'string') clipboard.writeText(text); return true; });
+  h('snooze', (what) => { snooze(what === '1h' ? 3600 * 1000 : what === 'tomorrow' ? untilTomorrow() : 0); return store.state.snoozeUntil || 0; });
+  h('saveReport', async () => {
+    const d = new Date();
+    const name = `AgathOS-report-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.html`;
+    const r = await dialog.showSaveDialog(win, { defaultPath: path.join(app.getPath('documents'), name), filters: [{ name: 'HTML', extensions: ['html'] }] });
+    if (r.canceled || !r.filePath) return { ok: false, cancelled: true };
+    const snap = { ...engine.snapshot(), statusLine: statusText(engine.snapshot()) };
+    const rtl = ['ar'].includes(uiLang);
+    fs.writeFileSync(r.filePath, report.build(snap, tt, uiLang, rtl ? 'rtl' : 'ltr'), 'utf8');
+    shell.showItemInFolder(r.filePath);
+    return { ok: true };
+  });
+  h('checkUpdate', () => checkUpdate(true));
+  h('installUpdate', () => installUpdate());
+  h('openMain', (view) => { showWindow(typeof view === 'string' ? view : undefined); return true; });
+  h('closeMini', () => { if (mini) mini.hide(); return true; });
   h('verifyLog', () => store.verify());
   h('rollback', () => engine.intent.rollbackBaseline());
   h('forget', () => { engine.intent.resetBaseline(); return true; });
@@ -205,7 +346,10 @@ app.whenReady().then(async () => {
     appDir: __dirname,
     onUpdate: (snap) => {
       if (win && !win.isDestroyed()) win.webContents.send('agathos:update', snap);
-      if (tray && (snap.pausedAll !== trayPaused || snap.settings.realtime !== trayLive)) { trayPaused = snap.pausedAll; trayLive = snap.settings.realtime; buildTray(); }
+      if (mini && !mini.isDestroyed() && mini.isVisible()) mini.webContents.send('agathos:update', snap);
+      engine.lastSnap = snap;
+      const st = snap.pausedAll ? 'paused' : snap.watchers.some((w) => w.state === 'alarm') ? 'alarm' : snap.watchers.some((w) => w.state === 'watch') ? 'watch' : 'calm';
+      if (tray && (snap.pausedAll !== trayPaused || snap.settings.realtime !== trayLive || st !== trayState)) { trayPaused = snap.pausedAll; trayLive = snap.settings.realtime; trayState = st; buildTray(); }
     },
     notify,
   });
@@ -215,6 +359,9 @@ app.whenReady().then(async () => {
   await engine.start();
   applyOsSettings();
   buildTray();
+  // First update check a minute after start, then once a day.
+  setTimeout(() => checkUpdate().catch(() => {}), 60 * 1000);
+  setInterval(() => checkUpdate().catch(() => {}), 24 * 3600 * 1000);
 });
 
 app.on('before-quit', () => { quitting = true; });

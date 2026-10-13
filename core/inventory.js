@@ -172,7 +172,7 @@ async function envBaseUrls() {
     if (!vals[v]) continue;
     let host = '';
     try { host = new URL(vals[v]).hostname; } catch (_) {}
-    if (host && !C.OFFICIAL_HOSTS.test(host)) out.push({ path: `Environment: ${v}`, app: 'Windows', kind: 'config', state: 'alarm', reasons: [{ key: 'config.baseUrl', params: { v, host }, sev: 'alarm' }] });
+    if (host && !C.OFFICIAL_HOSTS.test(host)) out.push({ id: U.sha256(`env|${v}`).slice(0, 16), path: `Environment: ${v}`, app: U.IS_MAC ? 'macOS' : 'Windows', kind: 'config', state: 'alarm', reasons: [{ key: 'config.baseUrl', params: { v, host }, sev: 'alarm' }] });
   }
   return out;
 }

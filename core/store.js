@@ -25,6 +25,8 @@ const DEFAULT_SETTINGS = {
   closeToTray: true,
   logDays: 30,
   api: true,                  // local API on 127.0.0.1 for hooks and future apps
+  downloadGuard: true,        // check new files in Downloads right away
+  updates: true,              // check GitHub Releases for a new version once a day
   // "Fix it": auto mode is off until you switch it on. level: gentle | firm | max | custom
   fix: { auto: false, level: 'firm', minSev: 'alarm', custom: { agent: 'block', port: 'localOnly', mcp: 'disable', hidden: 'clean', inject: 'off', model: 'quarantine', auto: 'off' } },
 };
