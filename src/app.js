@@ -376,6 +376,7 @@
     baseUrl: ['config.baseUrl'],
     model: ['model.pickleDanger', 'model.pickle', 'model.pickleUnknown', 'model.unreadable', 'model.flagged'],
     port: ['port.open'],
+    worm: ['worm.lanSweep', 'worm.portScan'],
     destroy: ['proc.destructive', 'mass.delete'],
     persist: ['proc.persistence', 'auto.hiddenScript', 'auto.tempPath', 'auto.scriptRuntime', 'auto.added'],
     cred: ['proc.credential', 'proc.sensitive'],
@@ -398,10 +399,10 @@
   // How sure AgathOS is per kind of finding, and the matching public technique IDs
   // (MITRE ATT&CK for classic attacks, MITRE ATLAS for attacks on AI systems).
   const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', tamper: 'high',
-    inject: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
+    inject: 'medium', worm: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
     chain: 'low', odd: 'low', generic: 'low' };
   const MITRE = { hidden: 'AML.T0051.001 · T1027', inject: 'AML.T0051.001', secret: 'T1552.001', mcpBad: 'T1195.002 · AML.T0053', supply: 'T1195.002 · T1195.001',
-    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', model: 'AML.T0010.003 · T1204.002', port: 'T1133',
+    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', model: 'AML.T0010.003 · T1204.002', port: 'T1133', worm: 'T1046 · T1210 · T1570',
     destroy: 'T1485', persist: 'T1053.005 · T1543.001 · T1547.001', cred: 'T1555 · T1552', secOff: 'T1562.001 · T1562.004', exfil: 'AML.T0057 · T1567 · T1041',
     chain: 'AML.T0051 · T1059', tamper: 'T1070' };
   let anLevel = null;     // 'simple' | 'deep'; follows the view until you pick a tab
@@ -916,6 +917,7 @@
         setRow(t('set.autoFreeze'), sw(s.autoFreezeOnMassDelete, () => save({ autoFreezeOnMassDelete: !s.autoFreezeOnMassDelete }))),
         setRow(t('set.threshold'), num(s.massDeleteThreshold, 10, 1000, 'massDeleteThreshold', t('set.files10s')), null, 'adv'),
         setRow(t('set.portCheck'), sw(s.portCheck, () => save({ portCheck: !s.portCheck })), null, 'adv'),
+        setRow(t('set.wormWatch'), sw(s.wormWatch !== false, () => save({ wormWatch: s.wormWatch === false })), t('set.wormWatchDesc')),
         setRow(t('set.dlGuard'), sw(s.downloadGuard !== false, () => save({ downloadGuard: s.downloadGuard === false })), t('set.dlGuardDesc')),
         setRow(t('set.hotkey'), sw(s.hotkey, () => save({ hotkey: !s.hotkey })), null, 'adv'),
         isMac() ? setRow(t('guard.title'), h('span'), t('mac.guard')) : setRow(t('guard.title'), guardBtn, t('guard.desc'))),

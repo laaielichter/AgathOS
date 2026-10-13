@@ -248,6 +248,16 @@
     "set.quietTo": "to",
     "notif.bundle": "{n} new findings",
     "notif.more": "More findings are waiting in AgathOS. Open it when it suits you.",
+    // worm watch, part 1: network sweeps
+    "worm.lanSweep": "{process} knocked on {hosts} devices in your network within a minute (ports {sample}). That is how a worm looks for its next victim.",
+    "worm.portScan": "{process} tried {ports} different ports on {host} within a minute. That is how a worm looks for a way in.",
+    "set.wormWatch": "Worm watch: warn when a program sweeps your network",
+    "set.wormWatchDesc": "Checks every few seconds which programs knock on many devices or ports in your home network, such as cameras, TVs and routers.",
+    "an.worm.simple": "A program on this computer is searching your home network for devices, the way a worm does before it spreads.",
+    "an.worm.maybe": "A program contacted many devices, or many ports of one device, in a short time. That can be a network tool you started yourself (such as nmap or Fing), or malware or a rogue agent that looks for cameras, TVs or routers to break into.",
+    "an.worm.risk": "A worm that finds a weak device can take it over and spread from there, to other devices and other homes. Smart TVs, cameras and routers cannot run a virus scanner, so they rarely notice.",
+    "an.worm.todo": "Did you not start a network tool? Pause or stop the program, check where it came from, and disconnect this computer from the network if you are unsure.",
+    "an.worm.deep": "AgathOS reads the open and half-open TCP connections per process every three seconds (Get-NetTCPConnection on Windows, lsof on macOS, Sysmon event 3 with AgathOS Guard). It counts different devices and ports on private addresses within one minute. 20 devices or 15 ports on one device count as a sweep. Known network tools get a warning instead of an alarm.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);
