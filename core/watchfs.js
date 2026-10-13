@@ -1,0 +1,85 @@
+'use strict';
+// AgathOS - file watching (no admin needed, uses ReadDirectoryChangesW through fs.watch).
+//  * config files of agents and MCP: any change is reported and re-checked
+//  * project roots: detects mass deletion (many files gone within a few seconds)
+const fs = require('fs');
+const path = require('path');
+const U = require('./util');
+
+class FileWatch {
+  constructor({ onConfigChange, onMassDelete, onInstructionChange, threshold = 40, windowMs = 10000 }) {
+    this.watchers = [];
+    this.onConfigChange = onConfigChange;
+    this.onMassDelete = onMassDelete;
+    this.onInstructionChange = onInstructionChange;
+    this.threshold = threshold;
+    this.windowMs = windowMs;
+    this.deletes = new Map();   // top folder -> [timestamps]
+    this.fired = new Map();     // top folder -> last alert time
+    this.debounce = new Map();
+  }
+
+  stop() {
+    for (const w of this.watchers) try { w.close(); } catch (_) {}
+    this.watchers = [];
+  }
+
+  // configFiles: absolute paths. We watch their folders and filter by name.
+  start(configFiles, roots) {
+    this.stop();
+    const byDir = new Map();
+    for (const f of configFiles) {
+      const d = path.dirname(f);
+      if (!U.exists(d)) continue;
+      if (!byDir.has(d)) byDir.set(d, new Set());
+      byDir.get(d).add(path.basename(f).toLowerCase());
+    }
+    for (const [dir, names] of byDir) {
+      try {
+        const w = fs.watch(dir, { persistent: false }, (type, name) => {
+          if (!name || !names.has(String(name).toLowerCase())) return;
+          this.debounced(path.join(dir, String(name)), () => this.onConfigChange && this.onConfigChange(path.join(dir, String(name))));
+        });
+        w.on('error', () => {});
+        this.watchers.push(w);
+      } catch (_) {}
+    }
+    for (const root of roots) {
+      if (!U.exists(root)) continue;
+      try {
+        const w = fs.watch(root, { persistent: false, recursive: true }, (type, name) => {
+          if (!name) return;
+          const rel = String(name);
+          if (/(^|[\\/])(node_modules|\.git|__pycache__|\.venv|dist|build|target|\.next)([\\/]|$)/i.test(rel)) return;
+          const full = path.join(root, rel);
+          const base = path.basename(rel).toLowerCase();
+          if (/^(claude|agents|gemini)\.md$|^\.cursorrules$|^\.mcp\.json$|^skill\.md$/.test(base)) {
+            this.debounced(full, () => this.onInstructionChange && this.onInstructionChange(full));
+          }
+          if (type === 'rename' && !U.exists(full)) this.countDelete(root, rel);
+        });
+        w.on('error', () => {});
+        this.watchers.push(w);
+      } catch (_) {}
+    }
+  }
+
+  debounced(key, fn) {
+    clearTimeout(this.debounce.get(key));
+    this.debounce.set(key, setTimeout(() => { this.debounce.delete(key); fn(); }, 700));
+  }
+
+  countDelete(root, rel) {
+    const top = path.join(root, rel.split(/[\\/]/)[0]);
+    const now = Date.now();
+    const list = (this.deletes.get(top) || []).filter((t) => now - t < this.windowMs);
+    list.push(now);
+    this.deletes.set(top, list);
+    if (list.length >= this.threshold && now - (this.fired.get(top) || 0) > 30000) {
+      this.fired.set(top, now);
+      this.onMassDelete && this.onMassDelete({ dir: top, n: list.length, seconds: Math.round((now - list[0]) / 1000) || 1 });
+    }
+  }
+}
+
+module.exports = { FileWatch };

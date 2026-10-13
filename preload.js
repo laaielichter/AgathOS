@@ -1,11 +1,35 @@
-// AgathOS - preload
-// The bridge between the window and the main process. In step 1 it only
-// exposes version info and the theme switch; the real scanner arrives in step 2.
+// AgathOS - preload. The only bridge between the window and the engine.
+// The page gets a fixed list of functions; it can never run Node or arbitrary IPC.
 const { contextBridge, ipcRenderer } = require('electron');
 
+const call = (name) => (...args) => ipcRenderer.invoke(`agathos:${name}`, ...args);
+
 contextBridge.exposeInMainWorld('agathos', {
-  version: '0.1.0',
+  version: '0.2.0',
   platform: process.platform,
-  demo: true,
-  setTheme: (theme) => ipcRenderer.send('agathos:theme', theme === 'light' ? 'light' : 'dark'),
+  snapshot: call('snapshot'),
+  scan: call('scan'),
+  pauseAll: call('pauseAll'),
+  resumeAll: call('resumeAll'),
+  freeze: call('freeze'),
+  resume: call('resume'),
+  kill: call('kill'),
+  block: call('block'),
+  localOnly: call('localOnly'),
+  lockdown: call('lockdown'),
+  trust: call('trust'),
+  settings: call('settings'),
+  ui: call('ui'),
+  uiState: call('uiState'),
+  verifyLog: call('verifyLog'),
+  rollback: call('rollback'),
+  forget: call('forget'),
+  judgeModels: call('judgeModels'),
+  guardInstall: call('guardInstall'),
+  guardUninstall: call('guardUninstall'),
+  addFolder: call('addFolder'),
+  removeFolder: call('removeFolder'),
+  reveal: call('reveal'),
+  onUpdate: (fn) => { const h = (_e, snap) => fn(snap); ipcRenderer.on('agathos:update', h); return () => ipcRenderer.removeListener('agathos:update', h); },
+  onNavigate: (fn) => ipcRenderer.on('agathos:navigate', (_e, view) => fn(view)),
 });
