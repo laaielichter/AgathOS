@@ -113,6 +113,8 @@
     'wel.guard': '詳細な保護（AgathOS Guard）', 'wel.guardDesc': 'リアルタイムのファイアウォールと詳細な Windows ログ。Windows が一度だけ管理者の許可を求めます。',
     'wel.fix': '危険を自動で修正', 'wel.fixDesc': '初期設定はオフ。いつでもボタン 1 つで手動修正できます。',
     'wel.start': 'AgathOS を開始', 'recommended': 'おすすめ',
+    'mac.guard': "AgathOS Guard（リアルタイムのファイアウォールと詳細ログ）は Windows 専用です。Mac では macOS に組み込まれたツールで監視し、ファイアウォールの手順は自分で行う作業として表示されます。", 'wel.startupMac': "ログイン時に起動",
+    'an.port.todoMac': "サーバーをこの Mac だけで待ち受けるようにします。Ollama：ターミナルで launchctl setenv OLLAMA_HOST 127.0.0.1 を実行し、Ollama を再起動します。LM Studio：「Serve on Local Network」をオフにします。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ja, d);

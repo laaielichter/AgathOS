@@ -113,6 +113,8 @@
     'wel.guard': 'Глубокая защита (AgathOS Guard)', 'wel.guardDesc': 'Брандмауэр в реальном времени и глубокие журналы Windows. Windows один раз запросит права администратора.',
     'wel.fix': 'Устранять опасности автоматически', 'wel.fixDesc': 'По умолчанию выключено. Вы всегда можете исправить всё вручную одной кнопкой.',
     'wel.start': 'Запустить AgathOS', 'recommended': 'рекомендуется',
+    'mac.guard': "AgathOS Guard (живой брандмауэр и глубокое журналирование) есть только для Windows. На Mac AgathOS следит с помощью встроенных средств macOS, а шаги с брандмауэром показываются как действия, которые нужно сделать самому.", 'wel.startupMac': "Запускать при входе в систему",
+    'an.port.todoMac': "Пусть сервер слушает только на этом Mac. Ollama: выполните в Терминале launchctl setenv OLLAMA_HOST 127.0.0.1 и перезапустите Ollama. LM Studio: отключите «Serve on Local Network».",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ru, d);

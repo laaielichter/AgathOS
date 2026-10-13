@@ -6,7 +6,7 @@
 
 The ancient Greeks believed every home had an *Agathos Daimon*: a good spirit that
 quietly watched over the house and the people in it. In computing, a *daemon* is a
-program that runs in the background. AgathOS is both: a free, open-source Windows app
+program that runs in the background. AgathOS is both: a free, open-source app for Windows and macOS
 that keeps watching the AI agents on your PC, warns you before they do damage, and gives
 you a real stop button.
 
@@ -105,6 +105,13 @@ the Start menu, and registers an uninstaller under Settings > Apps.
 
 **Just try it.** Double-click `start.bat` to run it from this folder.
 
+**Mac.** Download `AgathOS-<version>-arm64.dmg` (Apple chip, M1 and newer) or `-x64.dmg` (Intel),
+open it and drag AgathOS to Applications. The app is not notarized by Apple yet: the first time,
+open it, then go to System Settings > Privacy & Security and click *Open Anyway*. macOS may ask
+whether AgathOS can read your Documents, Desktop and Downloads folders; that is where it looks for
+instruction files, MCP settings and keys. From source: `npm install` and `npm start`.
+Build the disk images yourself on a Mac with `npm run dist:mac`.
+
 After the first scan AgathOS keeps watching from the system tray.
 
 ## Local API
@@ -119,6 +126,18 @@ Browsers are refused.
 | GET | `/v1/events?since=<ms>` | Event log |
 | POST | `/v1/check` | `{agent, tool, input, cwd}` → `allow` / `ask` / `deny` before a tool call runs |
 | POST | `/v1/pause-all`, `/v1/resume-all` | The stop button |
+
+## Windows and Mac
+
+| | Windows | Mac |
+|---|---|---|
+| Agents, MCP servers, instruction files, keys, models | yes | yes |
+| Live process watching, intent engine, honesty check | yes | yes (`ps`) |
+| Open AI ports and connections | yes | yes (`lsof`) |
+| Freeze, resume, stop an agent | yes | yes (signals) |
+| Autostart check and "turn off" | scheduled tasks | LaunchAgents (`launchctl`) |
+| Signature check | Authenticode | `codesign` |
+| AgathOS Guard: firewall, block an agent, lockdown, deep logging | yes | no (shown as a step for you) |
 
 ## Limits (honest list)
 

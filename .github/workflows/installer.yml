@@ -1,16 +1,21 @@
-name: Windows installer
+name: Installers
 
 on:
   push:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Publish a release (tag v<version from package.json>) with both installers'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,9 +26,43 @@ jobs:
       - run: npx --yes electron-builder@26 --win nsis --x64 --publish never
       - uses: actions/upload-artifact@v4
         with:
-          name: AgathOS-Setup
+          name: AgathOS-Windows
           path: dist/*.exe
-      - if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          files: dist/*.exe
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node test/run-tests.js
+      - run: npx --yes electron-builder@26 --mac dmg --arm64 --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgathOS-macOS
+          path: dist/*.dmg
+
+  release:
+    needs: [windows, mac]
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.v.outputs.version }}
+          name: AgathOS ${{ steps.v.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            Windows: AgathOS-Setup-${{ steps.v.outputs.version }}.exe
+            Mac with Apple chip (M1 and newer): AgathOS-${{ steps.v.outputs.version }}-arm64.dmg
+            Mac with Intel chip: AgathOS-${{ steps.v.outputs.version }}-x64.dmg
+          files: out/*

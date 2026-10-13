@@ -167,6 +167,7 @@ async function envBaseUrls() {
     const rows = await U.ps.json(`Get-ItemProperty -Path 'HKCU:\\Environment' | Select-Object ${C.BASE_URL_VARS.join(',')} | ConvertTo-Json -Compress`);
     for (const r of rows) for (const v of C.BASE_URL_VARS) if (r && r[v]) vals[v] = r[v];
   }
+  if (!U.IS_WIN) Object.assign(vals, require('./mac').shellExports(C.BASE_URL_VARS));
   for (const v of C.BASE_URL_VARS) {
     if (!vals[v]) continue;
     let host = '';
@@ -237,6 +238,8 @@ function scanFiles(roots, store) {
       check(f, 'instruction');
     }
   }
+  // macOS and Linux: API keys are often exported in shell startup files.
+  if (!U.IS_WIN) for (const rc of require('./mac').SHELL_RC) if (U.exists(rc)) check(rc, 'env');
   for (const d of C.SKILL_DIRS.map(U.expand)) {
     if (!U.exists(d)) continue;
     for (const f of U.walk(d, { maxDepth: 5, maxFiles: 5000, filter: (full, n) => /\.(md|mdc|txt|sh|ps1|py|js|ts|json|ya?ml)$/i.test(n) })) check(f, 'skill');
@@ -279,8 +282,8 @@ async function installedAgents() {
     const dirs = (a.dirs || []).map(U.expand).filter(U.exists);
     if (!dirs.length) continue;
     const entry = { id: a.id, name: a.name, kind: a.kind, dirs, version: null, reasons: [] };
-    if (a.version && U.IS_WIN) {
-      const out1 = await U.execFileText('cmd.exe', ['/d', '/c', a.version[0], ...a.version[1]], 6000);
+    if (a.version && (U.IS_WIN || U.IS_MAC)) {
+      const out1 = U.IS_WIN ? await U.execFileText('cmd.exe', ['/d', '/c', a.version[0], ...a.version[1]], 6000) : await U.execFileText(a.version[0], a.version[1], 6000);
       const m = out1 && out1.match(/\d+\.\d+(\.\d+)?/);
       if (m) entry.version = m[0];
     }
@@ -301,6 +304,7 @@ async function exeVersion(exePath) {
 }
 
 async function signature(exePath) {
+  if (U.IS_MAC) return require('./mac').signature(exePath);
   if (!U.IS_WIN || !exePath) return null;
   const rows = await U.ps.json(`$s = Get-AuthenticodeSignature -LiteralPath ${U.psq(exePath)}; [pscustomobject]@{ status = "$($s.Status)"; subject = "$($s.SignerCertificate.Subject)" } | ConvertTo-Json -Compress`, 8000);
   const r = rows[0];
@@ -311,6 +315,7 @@ async function signature(exePath) {
 
 // ---------- Autostart ----------
 async function autostarts() {
+  if (U.IS_MAC) return require('./mac').autostarts();
   if (!U.IS_WIN) return [];
   const rows = await U.ps.json(`
 $a = @(Get-CimInstance Win32_StartupCommand | ForEach-Object { [pscustomobject]@{ kind='startup'; name=$_.Name; command=$_.Command; where=$_.Location } })

@@ -44,6 +44,10 @@
   const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   const pad = (n) => String(n).padStart(2, '0');
   const clock = (ts) => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  // Windows has AgathOS Guard (firewall, deep logging); a Mac uses its built-in tools only.
+  const platform = () => (snap && !snap.demo && snap.platform) || (A.platform === 'darwin' ? 'darwin' : (snap && snap.platform) || A.platform || 'win32');
+  const isMac = () => platform() === 'darwin';
+  const startupLabel = () => (isMac() ? t('wel.startupMac') : t('set.startup'));
   const worst = (list) => list.reduce((a, b) => (RANK[b] > RANK[a] ? b : a), 'calm');
 
   // ---------- tiny DOM builder (textContent only) ----------
@@ -116,9 +120,10 @@
     document.documentElement.lang = lang;
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.mode = mode;
+    document.documentElement.dataset.platform = platform();
     document.querySelectorAll('[data-t]').forEach((n) => { n.textContent = t(n.dataset.t); });
     const realtime = !!(snap && snap.settings.realtime);
-    const live = realtime && (snap.platform === 'win32' || snap.demo);
+    const live = realtime && (snap.platform === 'win32' || snap.platform === 'darwin' || snap.demo);
     const pill = $('livePill');
     pill.classList.toggle('is-live', !!live);
     pill.setAttribute('aria-checked', realtime ? 'true' : 'false');
@@ -241,7 +246,7 @@
       const needs = s.watchers.filter((w) => w.state !== 'calm').length;
       line = needs === 0 ? t('status.calm') : needs === 1 ? t('status.one') : t('status.many', { n: capital(numberWord(needs)) });
       sub = t('status.sub', { a: s.counts.agents, m: s.counts.mcp, w: capital(numberWord(6)) });
-      if (s.platform !== 'win32' && !s.demo) sub += ' ' + t('notWindows');
+      if (s.platform !== 'win32' && s.platform !== 'darwin' && !s.demo) sub += ' ' + t('notWindows');
     }
     $('statusLine').textContent = line;
     $('statusSub').textContent = sub;
@@ -391,7 +396,7 @@
       sec(t('an.seen'), reasonList(reasons)),
       sec(t('an.maybe'), cats.map((c) => h('p', { text: t(`an.${c}.maybe`) }))),
       sec(t('an.risk'), cats.map((c) => h('p', { text: t(`an.${c}.risk`) }))),
-      sec(t('an.todo'), cats.map((c) => h('p', { text: t(`an.${c}.todo`) }))),
+      sec(t('an.todo'), cats.map((c) => h('p', { text: t(c === 'port' && isMac() ? 'an.port.todoMac' : `an.${c}.todo`) }))),
       act ? sec(t('an.fix'), h('p', { text: t('fixdesc.' + act) })) : null,
       h('div', { class: 'sheet-foot' },
         canFix ? h('button', { class: `btn-primary${act === 'kill' ? ' danger' : ''}`, type: 'button', text: `${t('fix.title')}: ${t('fixact.' + act)}`,
@@ -462,7 +467,8 @@
           picks.length ? h('button', { class: `btn-primary${state === 'alarm' ? ' danger' : ''}`, type: 'button', text: `${t('fix.all')} (${picks.length})`, onclick: () => openFix('all') }) : null,
           h('button', { class: 'btn-ghost small', type: 'button', text: t('fix.choose'), onclick: () => openFix('choose') })) : null),
       h('div', { class: 'fix-auto' },
-        h('span', { class: fix.auto ? 'on' : '', text: fix.auto ? t('fix.autoOn', { level: t('fix.level.' + fix.level) }) : t('fix.autoOff') }),
+        h('span', { class: fix.auto ? 'on' : '', text: t('set.fixAuto') }),
+        autoSeg(fix, fix.level === 'custom'),
         h('button', { class: 'link', type: 'button', text: t('fix.autoSet'), onclick: () => { show('settings'); setTimeout(() => { const g = $('setFix'); if (g) g.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60); } })),
     ];
     if (mode === 'simple' && plan.length) {
@@ -479,6 +485,17 @@
         r.canUndo ? btn(t('fix.undo'), () => undoFix(r.rid)) : h('span', { class: 'chip', text: t('fix.noUndo') }))))));
     }
     fill(p, kids);
+  }
+
+  // Auto-fix in one control: Off, or the level it works at. Off is the default.
+  function autoSeg(fix, withCustom) {
+    const cur = fix.auto ? fix.level : 'off';
+    const opts = ['off', 'gentle', 'firm', 'max', ...(withCustom ? ['custom'] : [])];
+    return h('div', { class: 'seg', role: 'group', 'aria-label': t('set.fixAuto') }, opts.map((l) => h('button', {
+      class: `seg-btn${cur === l ? ' is-active' : ''}`, type: 'button', 'aria-pressed': cur === l ? 'true' : 'false',
+      text: l === 'off' ? t('off') : t('fix.level.' + l),
+      onclick: () => save({ fix: l === 'off' ? { auto: false } : { auto: true, level: l } }),
+    })));
   }
 
   async function undoFix(rid) {
@@ -678,8 +695,15 @@
       empty: t('net.noPorts'),
       step: (p) => stepBy([`port:${p.port}`]),
       name: (p) => `${p.product} · ${p.port}`, where: (p) => `${p.addr}:${p.port} · ${p.process || ''} · PID ${p.pid}`,
-      actions: (p) => (p.exposed ? [btn(t('btn.localOnly'), () => run(A.localOnly(p.port, true), t('fw.localOnly', { port: p.port })), 'fix'), btn(t('btn.how'), () => modal(t('btn.how'), t('fix.port')))] : []),
+      actions: (p) => (!p.exposed ? [] : isMac() ? [btn(t('btn.how'), () => modal(t('btn.how'), t('an.port.todoMac')))]
+        : [btn(t('btn.localOnly'), () => run(A.localOnly(p.port, true), t('fw.localOnly', { port: p.port })), 'fix'), btn(t('btn.how'), () => modal(t('btn.how'), t('fix.port')))]),
     });
+    if (isMac()) {
+      fill($('networkBody'), h('div', { class: 'stack' },
+        h('div', null, h('h2', { class: 'panel-title', style: 'margin-left:0', text: t('net.ports') }), ports),
+        h('div', { class: 'box' }, h('div', { class: 'box-row' }, h('h2', { text: t('guard.title') })), h('p', { text: t('mac.guard') }))));
+      return;
+    }
     const guardChip = g.running ? h('span', { class: 'status-chip on', text: t('guard.running') }) : g.installed ? h('span', { class: 'status-chip warn', text: t('guard.stopped') }) : h('span', { class: 'status-chip', text: t('guard.none') });
     fill($('networkBody'), h('div', { class: 'stack' },
       h('div', null, h('h2', { class: 'panel-title', style: 'margin-left:0', text: t('net.ports') }), ports),
@@ -744,8 +768,8 @@
       : btn(t('guard.install'), installGuard, 'fix');
     fill(body,
       h('section', { class: 'set-group', id: 'setFix' }, h('h2', { text: t('set.fix') }),
-        setRow(t('set.fixAuto'), sw(fix.auto, () => save({ fix: { auto: !fix.auto } })), t('set.fixAutoDesc')),
-        setRow(t('fix.level'), fixLevel, t(`fix.level.${fix.level}Desc`)),
+        setRow(t('set.fixAuto'), autoSeg(fix, true), fix.auto ? t(`fix.level.${fix.level}Desc`) : t('set.fixAutoDesc')),
+        fix.auto ? null : setRow(`${t('fix.level')} · ${t('fix.title')}`, fixLevel, t(`fix.level.${fix.level}Desc`)),
         setRow(t('set.fixMin'), fixMin),
         ...custom),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.view') }),
@@ -758,7 +782,7 @@
         setRow(t('set.threshold'), num(s.massDeleteThreshold, 10, 1000, 'massDeleteThreshold', t('set.files10s')), null, 'adv'),
         setRow(t('set.portCheck'), sw(s.portCheck, () => save({ portCheck: !s.portCheck })), null, 'adv'),
         setRow(t('set.hotkey'), sw(s.hotkey, () => save({ hotkey: !s.hotkey })), null, 'adv'),
-        setRow(t('guard.title'), guardBtn, t('guard.desc'))),
+        isMac() ? setRow(t('guard.title'), h('span'), t('mac.guard')) : setRow(t('guard.title'), guardBtn, t('guard.desc'))),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.watching') }),
         setRow(t('set.realtime'), sw(s.realtime, () => save({ realtime: !s.realtime }))),
         setRow(t('set.poll'), num(s.pollSeconds, 2, 60, 'pollSeconds', t('set.seconds')), null, 'adv'),
@@ -770,7 +794,7 @@
         setRow(t('set.judge'), sw(s.judge.enabled, () => save({ judge: { enabled: !s.judge.enabled } })), t('set.judgeDesc')),
         s.judge.enabled ? setRow(t('set.judgeModel'), judgeSel) : null),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.app') }),
-        setRow(t('set.startup'), sw(s.startWithWindows, () => save({ startWithWindows: !s.startWithWindows }))),
+        setRow(startupLabel(), sw(s.startWithWindows, () => save({ startWithWindows: !s.startWithWindows }))),
         setRow(t('set.tray'), sw(s.closeToTray, () => save({ closeToTray: !s.closeToTray }))),
         setRow(t('set.logDays'), num(s.logDays, 1, 365, 'logDays', t('set.days')), null, 'adv'),
         setRow(t('set.api'), sw(s.api, () => save({ api: !s.api })), `127.0.0.1:${snap.apiPort}`, 'adv'),
@@ -804,10 +828,10 @@
         setRow(t('wel.lang'), langSel),
         setRow(t('wel.mode'), seg(['advanced', 'simple'], wel.mode, (v) => { wel.mode = v; }, (v) => (v === 'advanced' ? `${t('mode.advanced')} · ${t('recommended')}` : t('mode.simple'))), wel.mode === 'advanced' ? t('wel.modeAdv') : t('wel.modeSimple')),
         setRow(t('wel.live'), toggle('live'), t('wel.liveDesc')),
-        setRow(t('wel.startup'), toggle('startup'), t('wel.startupDesc')),
-        setRow(t('wel.guard'), toggle('guard'), t('wel.guardDesc')),
-        setRow(t('wel.fix'), toggle('fix'), t('wel.fixDesc')),
-        wel.fix ? setRow(t('fix.level'), seg(['gentle', 'firm', 'max'], wel.level, (v) => { wel.level = v; }, (v) => t('fix.level.' + v)), t(`fix.level.${wel.level}Desc`)) : null),
+        setRow(isMac() ? t('wel.startupMac') : t('wel.startup'), toggle('startup'), t('wel.startupDesc')),
+        isMac() ? null : setRow(t('wel.guard'), toggle('guard'), t('wel.guardDesc')),
+        setRow(t('wel.fix'), seg(['off', 'gentle', 'firm', 'max'], wel.fix ? wel.level : 'off', (v) => { if (v === 'off') wel.fix = false; else { wel.fix = true; wel.level = v; } },
+          (v) => (v === 'off' ? t('off') : t('fix.level.' + v))), wel.fix ? t(`fix.level.${wel.level}Desc`) : t('wel.fixDesc'))),
       h('div', { class: 'sheet-foot' }, h('button', { class: 'btn-primary', type: 'button', text: t('wel.start'), onclick: finishWelcome })));
   }
   $('welcome').addEventListener('cancel', (e) => { if (!welcomed) e.preventDefault(); });

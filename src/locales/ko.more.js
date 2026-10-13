@@ -113,6 +113,8 @@
     'wel.guard': '깊은 보호 (AgathOS Guard)', 'wel.guardDesc': '실시간 방화벽과 깊은 Windows 로그. Windows가 한 번 관리자 권한을 요청합니다.',
     'wel.fix': '위험 자동으로 고치기', 'wel.fixDesc': '기본값은 꺼짐입니다. 언제든 버튼 하나로 직접 고칠 수 있습니다.',
     'wel.start': 'AgathOS 시작', 'recommended': '추천',
+    'mac.guard': "AgathOS Guard(실시간 방화벽과 심층 로그)는 Windows 전용입니다. Mac에서는 macOS에 내장된 도구로 감시하며, 방화벽 단계는 직접 할 일로 표시됩니다.", 'wel.startupMac': "로그인할 때 시작",
+    'an.port.todoMac': "서버가 이 Mac에서만 수신하도록 하세요. Ollama: 터미널에서 launchctl setenv OLLAMA_HOST 127.0.0.1을 실행하고 Ollama를 다시 시작하세요. LM Studio: \"Serve on Local Network\"를 끄세요.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);

@@ -113,6 +113,8 @@
     'wel.guard': 'Protection profonde (AgathOS Guard)', 'wel.guardDesc': 'Pare-feu en direct et journalisation profonde de Windows. Windows demande une fois l’autorisation administrateur.',
     'wel.fix': 'Corriger les dangers automatiquement', 'wel.fixDesc': 'Désactivé par défaut. Vous pouvez toujours corriger à la main avec un seul bouton.',
     'wel.start': 'Démarrer AgathOS', 'recommended': 'recommandé',
+    'mac.guard': "AgathOS Guard (pare-feu en direct et journalisation approfondie) existe uniquement pour Windows. Sur un Mac, AgathOS surveille avec les outils intégrés à macOS, et les étapes de pare-feu s’affichent comme des actions à faire vous-même.", 'wel.startupMac': "Démarrer à l’ouverture de session",
+    'an.port.todoMac': "Faites écouter le serveur sur ce Mac uniquement. Ollama : exécutez launchctl setenv OLLAMA_HOST 127.0.0.1 dans le Terminal et redémarrez Ollama. LM Studio : désactivez « Serve on Local Network ».",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.fr, d);

@@ -2,11 +2,13 @@
 // AgathOS - network view (no admin needed): open AI ports and who talks to whom.
 const U = require('./util');
 const C = require('./catalog');
+const mac = require('./mac');
 
 const PS_CONN = `Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Listen' -or $_.State -eq 'Established' } |
   ForEach-Object { [pscustomobject]@{ la=$_.LocalAddress; lp=$_.LocalPort; ra=$_.RemoteAddress; rp=$_.RemotePort; s="$($_.State)"; p=$_.OwningProcess } } | ConvertTo-Json -Compress`;
 
 async function connections() {
+  if (U.IS_MAC) return mac.connections();
   if (!U.IS_WIN) return [];
   let rows = await U.ps.json(PS_CONN, 15000);
   if (rows.length) return rows.map((r) => ({ la: r.la, lp: r.lp, ra: r.ra, rp: r.rp, state: r.s, pid: r.p }));
@@ -36,7 +38,7 @@ function aiListeners(conns, procName) {
     if (c.state !== 'Listen') continue;
     const pname = procName(c.pid) || '';
     const product = C.AI_PORTS[c.lp];
-    const aiProc = /ollama|lm studio|lms\.exe|llama-server|koboldcpp|openclaw|jan\.exe|gpt4all|anythingllm|comfyui/i.test(pname);
+    const aiProc = /ollama|lm studio|lms\.exe|^lms$|llama-server|koboldcpp|openclaw|jan\.exe|^jan$|gpt4all|anythingllm|comfyui/i.test(pname);
     if (!product && !aiProc) continue;
     // Generic ports (3000, 5000, 8000, 8080) only count when the owner looks like an AI server.
     if (product && [3000, 5000, 8000, 8080, 8001, 3001].includes(c.lp) && !C.AI_SERVER_PROCS.test(pname)) continue;

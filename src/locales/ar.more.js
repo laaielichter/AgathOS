@@ -113,6 +113,8 @@
     'wel.guard': 'حماية عميقة (AgathOS Guard)', 'wel.guardDesc': 'جدار ناري مباشر وتسجيل عميق في Windows. يطلب Windows إذن المسؤول مرة واحدة.',
     'wel.fix': 'إصلاح الأخطار تلقائيًا', 'wel.fixDesc': 'متوقف افتراضيًا. يمكنك دائمًا إصلاح الأمور يدويًا بزر واحد.',
     'wel.start': 'ابدأ AgathOS', 'recommended': 'مُستحسن',
+    'mac.guard': "AgathOS Guard (جدار حماية مباشر وسجلات عميقة) متاح لنظام Windows فقط. على جهاز Mac يراقب AgathOS باستخدام الأدوات المدمجة في macOS، وتظهر خطوات جدار الحماية كأمور تقوم بها بنفسك.", 'wel.startupMac': "التشغيل عند تسجيل الدخول",
+    'an.port.todoMac': "اجعل الخادم يستمع على جهاز Mac هذا فقط. Ollama: نفّذ launchctl setenv OLLAMA_HOST 127.0.0.1 في Terminal ثم أعد تشغيل Ollama. LM Studio: أوقف «Serve on Local Network».",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ar, d);

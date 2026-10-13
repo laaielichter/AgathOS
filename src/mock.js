@@ -8,7 +8,7 @@
   const listeners = [];
   const R = (key, params, sev) => ({ key, params: params || {}, sev });
   const snap = {
-    ready: true, demo: true, platform: 'win32', lastScan: m(4), scanning: null, heartbeat: now, pausedAll: false, lockdown: false,
+    ready: true, demo: true, platform: /mac/.test(location.hash) ? 'darwin' : 'win32', lastScan: m(4), scanning: null, heartbeat: now, pausedAll: false, lockdown: false,
     guard: { installed: true, running: true, sysmon: false, elevated: true },
     watchers: [
       { id: 'gate', state: 'alarm', total: 6, issues: 2 }, { id: 'files', state: 'watch', total: 5, issues: 1 },
@@ -80,11 +80,13 @@
     S('manual:flag:claude-code', 'manual', 'watch', 'Claude Code', '--dangerously-skip-permissions', [R('flag.dangerous', { flag: '--dangerously-skip-permissions' }, 'watch')], 'guide', 'guide', ['guide']),
   ];
   snap.remedies = [];
+  let fixSnap = { ...snap.settings.fix };
+  const fixBefore = () => fixSnap;
   const emit = () => listeners.forEach((f) => f(JSON.parse(JSON.stringify(snap))));
   const ok = (r = {}) => Promise.resolve({ ok: true, ...r });
   setInterval(() => { snap.heartbeat = Date.now(); emit(); }, 5000);
   window.agathos = {
-    version: 'demo', platform: 'win32',
+    version: 'demo', platform: /mac/.test(location.hash) ? 'darwin' : 'win32',
     snapshot: () => Promise.resolve(JSON.parse(JSON.stringify(snap))),
     onUpdate: (f) => listeners.push(f),
     scan: async () => {
@@ -98,7 +100,7 @@
     kill: () => ok(), block: () => ok(), lockdown: (on) => { snap.lockdown = on; emit(); return ok(); },
     localOnly: () => { snap.ports[0].exposed = false; snap.ports[0].state = 'calm'; snap.ports[0].reasons = [R('port.local', { product: 'Ollama', port: 11434 }, 'calm')]; snap.watchers[2].state = 'calm'; snap.watchers[2].issues = 0; emit(); return ok(); },
     trust: (tg) => { if (tg && tg.type === 'mcp') { const x = snap.mcp.find((y) => y.id === tg.id); if (x) { x.approved = true; x.state = 'calm'; x.reasons = [R('mcp.ok', {}, 'calm')]; } } emit(); return ok(); },
-    settings: (p) => { Object.assign(snap.settings, p); emit(); return ok(); },
+    settings: (p) => { const f = p.fix; Object.assign(snap.settings, p); if (f) snap.settings.fix = { ...fixBefore(), ...f }; fixSnap = { ...snap.settings.fix }; emit(); return ok(); },
     fixPlan: () => Promise.resolve(snap.fixPlan),
     fixApply: async (picks) => {
       await new Promise((r) => setTimeout(r, 700));

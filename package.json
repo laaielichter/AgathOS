@@ -1,15 +1,16 @@
 {
   "name": "agathos-os",
   "productName": "AgathOS",
-  "version": "0.3.0",
-  "description": "The good daemon for your local AI agents. Finds rogue agents, poisoned MCP servers and hidden instructions on Windows.",
+  "version": "0.4.0",
+  "description": "The good daemon for your local AI agents. Finds rogue agents, poisoned MCP servers and hidden instructions on Windows and macOS.",
   "main": "main.js",
   "license": "MIT",
   "author": "AgathOS contributors",
   "scripts": {
     "start": "electron .",
     "test": "node test/run-tests.js",
-    "dist": "npx --yes electron-builder@26 --win nsis --x64"
+    "dist": "npx --yes electron-builder@26 --win nsis --x64",
+    "dist:mac": "npx --yes electron-builder@26 --mac dmg --arm64 --x64"
   },
   "devDependencies": {
     "electron": "^38.0.0"
@@ -74,6 +75,30 @@
         "ar_SA"
       ],
       "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon-mac.png",
+      "category": "public.app-category.developer-tools",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "artifactName": "AgathOS-${version}-${arch}.${ext}",
+      "extendInfo": {
+        "NSDocumentsFolderUsageDescription": "AgathOS checks instruction files, MCP settings and API keys in your projects.",
+        "NSDesktopFolderUsageDescription": "AgathOS checks instruction files, MCP settings and API keys in your projects.",
+        "NSDownloadsFolderUsageDescription": "AgathOS checks downloaded models and repos for hidden instructions and unsafe code."
+      }
+    },
+    "dmg": {
+      "title": "AgathOS ${version}"
     }
   }
 }

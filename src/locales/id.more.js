@@ -113,6 +113,8 @@
     'wel.guard': 'Perlindungan mendalam (AgathOS Guard)', 'wel.guardDesc': 'Firewall langsung dan log Windows yang mendalam. Windows meminta izin admin sekali.',
     'wel.fix': 'Perbaiki bahaya otomatis', 'wel.fixDesc': 'Mati secara bawaan. Anda selalu bisa memperbaiki secara manual dengan satu tombol.',
     'wel.start': 'Mulai AgathOS', 'recommended': 'disarankan',
+    'mac.guard': "AgathOS Guard (firewall langsung dan pencatatan mendalam) hanya untuk Windows. Di Mac, AgathOS mengawasi dengan alat bawaan macOS, dan langkah firewall muncul sebagai hal yang kamu lakukan sendiri.", 'wel.startupMac': "Mulai saat saya masuk",
+    'an.port.todoMac': "Buat server hanya mendengarkan di Mac ini. Ollama: jalankan launchctl setenv OLLAMA_HOST 127.0.0.1 di Terminal lalu mulai ulang Ollama. LM Studio: matikan \"Serve on Local Network\".",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);
