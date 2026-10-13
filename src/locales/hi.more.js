@@ -237,6 +237,17 @@
     "upd.downloading": "{v} डाउनलोड हो रहा है…",
     "upd.failed": "अपडेट नहीं हो पाया: डाउनलोड अपने चेकसम से मेल नहीं खाया या शुरू नहीं हो सका। कुछ नहीं बदला।",
     "upd.event": "अपडेट उपलब्ध: AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "AgathOS सूचनाओं को शांत रखता है: एक साथ होने वाली बातें एक सूचना में आती हैं, वही सूचना 6 घंटे में दोबारा नहीं आती, एक घंटे में अधिकतम 3 आती हैं और विंडो खुली होने पर कोई नहीं। ऐसा खतरा जिसमें अभी आपकी ज़रूरत है, हमेशा दिखता है।",
+    "set.notifyLevel": "पॉप-अप किसके लिए",
+    "set.notifyLevel.alarm": "सिर्फ़ खतरा",
+    "set.notifyLevel.watch": "खतरा और ध्यान",
+    "set.quiet": "शांत समय",
+    "set.quietDesc": "इस समय सिर्फ़ वही खतरा दिखेगा जिसमें अभी आपकी ज़रूरत है।",
+    "set.quietFrom": "से",
+    "set.quietTo": "तक",
+    "notif.bundle": "{n} नई सूचनाएँ",
+    "notif.more": "AgathOS में और सूचनाएँ इंतज़ार कर रही हैं। जब सुविधा हो तब देखें।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.hi, d);

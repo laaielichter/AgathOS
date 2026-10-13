@@ -237,6 +237,17 @@
     "upd.downloading": "{v} downloaden…",
     "upd.failed": "De update is niet gelukt: de download klopte niet met de controlesom of kon niet starten. Er is niets veranderd.",
     "upd.event": "Update beschikbaar: AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "AgathOS houdt meldingen rustig: wat tegelijk gebeurt komt in één melding, dezelfde melding komt niet terug binnen 6 uur, je krijgt er hooguit 3 per uur en niets als het venster open staat. Gevaar dat je nu nodig heeft komt altijd door.",
+    "set.notifyLevel": "Meldingen bij",
+    "set.notifyLevel.alarm": "Alleen gevaar",
+    "set.notifyLevel.watch": "Gevaar en aandacht",
+    "set.quiet": "Stille uren",
+    "set.quietDesc": "In deze uren komt alleen gevaar door dat je nu nodig heeft.",
+    "set.quietFrom": "van",
+    "set.quietTo": "tot",
+    "notif.bundle": "{n} nieuwe meldingen",
+    "notif.more": "Er wachten meer meldingen in AgathOS. Kijk als het jou uitkomt.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.nl, d);

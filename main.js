@@ -12,6 +12,7 @@ const judge = require('./core/judge');
 const updater = require('./core/update');
 const report = require('./core/report');
 const { checkText } = require('./core/textscan');
+const { Notifier } = require('./core/notifier');
 const { I18N } = require('./src/i18n.js');
 
 const THEMES = {
@@ -205,13 +206,29 @@ function eventText(e) {
   return tt(e.key, p).replace(/\s+/g, ' ').trim();
 }
 
-function notify(e) {
-  if (!Notification.isSupported()) return;
-  if (snoozed() && e.sev !== 'alarm') return;
-  const n = new Notification({ title: `${tt('notif.title')} · ${tt('state.' + e.sev)}`, body: eventText(e).slice(0, 220), icon: path.join(__dirname, 'src', 'icon.png'), silent: e.sev !== 'alarm' });
-  n.on('click', () => showWindow(e.watcher === 'gate' ? 'mcp' : e.watcher === 'traps' || e.watcher === 'keys' ? 'files' : e.watcher === 'net' ? 'network' : 'agents'));
+// Calm notifications: core/notifier.js decides what pops up, bundles bursts and keeps a limit.
+const viewOf = (e) => (e.watcher === 'gate' ? 'mcp' : e.watcher === 'traps' || e.watcher === 'keys' ? 'files' : e.watcher === 'net' ? 'network' : 'agents');
+function showNotification(events, { sound, overflow }) {
+  if (!Notification.isSupported() || !events.length) return;
+  const first = events[0];
+  const title = overflow ? tt('notif.title') : events.length > 1 ? `${tt('notif.title')} · ${tt('notif.bundle', { n: events.length })}` : `${tt('notif.title')} · ${tt('state.' + first.sev)}`;
+  const body = overflow ? tt('notif.more') : events.length > 1 ? events.slice(0, 3).map((x) => `• ${eventText(x)}`).join('\n').slice(0, 300) : eventText(first).slice(0, 220);
+  const n = new Notification({ title, body, icon: path.join(__dirname, 'src', 'icon.png'), silent: !sound });
+  n.on('click', () => showWindow(overflow || events.length > 1 ? 'overview' : viewOf(first)));
   n.show();
-  if (store.settings.notify === 'ask' && e.sev === 'alarm') showWindow();
+  if (store.settings.notify === 'ask' && first.sev === 'alarm' && !overflow) showWindow();
+}
+let notifier = null;
+function notify(e) {
+  if (!notifier) {
+    notifier = new Notifier({
+      show: showNotification,
+      settings: () => store.settings,
+      snoozed,
+      windowFocused: () => !!(win && !win.isDestroyed() && win.isVisible() && win.isFocused()),
+    });
+  }
+  notifier.push(e);
 }
 
 function applyOsSettings() {

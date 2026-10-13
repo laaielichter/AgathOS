@@ -237,6 +237,17 @@
     "upd.downloading": "جارٍ تنزيل {v}…",
     "upd.failed": "لم يكتمل التحديث: التنزيل لم يطابق مجموع التحقق الخاص به أو تعذّر بدؤه. لم يتغيّر شيء.",
     "upd.event": "تحديث متاح: AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "يُبقي AgathOS الإشعارات هادئة: ما يحدث في الوقت نفسه يأتي في إشعار واحد، ولا يتكرر الإشعار نفسه خلال 6 ساعات، وبحد أقصى 3 في الساعة، ولا شيء أثناء فتح النافذة. الخطر الذي يحتاجك الآن يصل دائمًا.",
+    "set.notifyLevel": "النوافذ المنبثقة لـ",
+    "set.notifyLevel.alarm": "الخطر فقط",
+    "set.notifyLevel.watch": "الخطر والانتباه",
+    "set.quiet": "ساعات الهدوء",
+    "set.quietDesc": "خلال هذه الساعات لا يصل إلا الخطر الذي يحتاجك الآن.",
+    "set.quietFrom": "من",
+    "set.quietTo": "إلى",
+    "notif.bundle": "إشعارات جديدة: {n}",
+    "notif.more": "هناك إشعارات أخرى بانتظارك في AgathOS. اطّلع عليها حين يناسبك.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ar, d);

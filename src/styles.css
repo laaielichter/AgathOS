@@ -434,3 +434,5 @@ dialog.modal { position: fixed; }
 /* The X stays in place: the sheet itself does not scroll, its content does. */
 .modal.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .modal.sheet > div { overflow: auto; min-height: 0; margin: -4px -8px -4px 0; padding: 4px 8px 4px 0; }
+.set-note { color: var(--dim); font-size: 13px; margin: 0 0 4px; max-width: 80ch; }
+.set-control input[type="time"] { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 8px; color: var(--text); }

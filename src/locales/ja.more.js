@@ -237,6 +237,17 @@
     "upd.downloading": "{v} をダウンロード中…",
     "upd.failed": "アップデートできませんでした。ダウンロードがチェックサムと一致しなかったか、起動できませんでした。何も変更していません。",
     "upd.event": "アップデートがあります：AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "AgathOS は通知を静かに保ちます。同時に起きたことは 1 件にまとめ、同じ通知は 6 時間以内に繰り返さず、1 時間に最大 3 件、ウィンドウを開いている間は表示しません。今すぐ対応が必要な危険は必ず通知します。",
+    "set.notifyLevel": "ポップアップ通知",
+    "set.notifyLevel.alarm": "危険のみ",
+    "set.notifyLevel.watch": "危険と注意",
+    "set.quiet": "おやすみ時間",
+    "set.quietDesc": "この時間帯は、今すぐ対応が必要な危険だけを通知します。",
+    "set.quietFrom": "開始",
+    "set.quietTo": "終了",
+    "notif.bundle": "新しい通知 {n} 件",
+    "notif.more": "AgathOS にほかの通知があります。都合のよいときに確認してください。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ja, d);

@@ -237,6 +237,17 @@
     "upd.downloading": "{v} 내려받는 중…",
     "upd.failed": "업데이트가 되지 않았습니다. 다운로드가 체크섬과 맞지 않았거나 시작되지 않았습니다. 바뀐 것은 없습니다.",
     "upd.event": "업데이트 있음: AgathOS {v}",
+    // calm notifications
+    "set.smartDesc": "AgathOS는 알림을 차분하게 유지합니다. 동시에 일어난 일은 하나로 묶고, 같은 알림은 6시간 안에 다시 보내지 않으며, 1시간에 최대 3개, 창이 열려 있을 때는 보내지 않습니다. 지금 바로 필요한 위험은 항상 알립니다.",
+    "set.notifyLevel": "팝업 알림",
+    "set.notifyLevel.alarm": "위험만",
+    "set.notifyLevel.watch": "위험과 주의",
+    "set.quiet": "방해 금지 시간",
+    "set.quietDesc": "이 시간에는 지금 바로 필요한 위험만 알립니다.",
+    "set.quietFrom": "시작",
+    "set.quietTo": "종료",
+    "notif.bundle": "새 알림 {n}개",
+    "notif.more": "AgathOS에 알림이 더 있습니다. 편할 때 확인하세요.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);
