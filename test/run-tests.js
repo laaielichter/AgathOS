@@ -147,6 +147,30 @@ ok(fsr.configs.some((c) => c.reasons.some((r) => r.key === 'config.autoApprove')
   ok(snap.events.some((e) => e.key === 'scan.done'), 'scan.done event logged');
   ok(eng.checkToolCall({ agent: 'x', tool: 'Bash', input: { command: 'schtasks /create /tn a /tr b' } }).decision === 'deny', 'API check denies persistence');
   ok(eng.checkToolCall({ agent: 'x', tool: 'Read', input: { file_path: 'src/a.js' } }).decision === 'allow', 'API check allows a normal read');
+
+  // ---------- fix it ----------
+  const remedy = require('../core/remedy');
+  const plan = eng.fixPlan();
+  const mailStep = plan.find((x) => x.cat === 'mcp' && x.name === 'mail');
+  const hidStep = plan.find((x) => x.cat === 'hidden' && /AGENTS\.md$/.test(x.target.path));
+  ok(mailStep && mailStep.action === 'disable', 'plan: bad MCP server gets "take out of config"');
+  ok(hidStep && hidStep.action === 'clean', 'plan: hidden text gets "remove hidden text"');
+  ok(plan.some((x) => x.cat === 'manual' && x.reasons.some((r) => r.key === 'file.secret')), 'plan: a secret is "do it yourself"');
+  ok((await remedy.auto(eng)).length === 0, 'auto-fix does nothing while it is off');
+  const mailFile = eng.inventory.mcp.find((m) => m.name === 'mail').file;
+  const res = await remedy.apply(eng, [{ id: mailStep.id, action: 'disable' }, { id: hidStep.id, action: 'clean' }], est.settings.fix);
+  ok(res.length === 2 && res.every((r) => r.ok), 'fixes applied');
+  ok(!/postmark/.test(fs.readFileSync(mailFile, 'utf8')), 'MCP server removed from its config');
+  ok(!/[\u200b\u200c]/.test(fs.readFileSync(hidStep.target.path, 'utf8')), 'hidden characters removed');
+  for (const r of res) await remedy.undo(eng, r.rid);
+  ok(/postmark/.test(fs.readFileSync(mailFile, 'utf8')), 'undo puts the MCP server back');
+  ok(/[\u200b\u200c]/.test(fs.readFileSync(hidStep.target.path, 'utf8')), 'undo restores the original file');
+  ok(remedy.policy({ level: 'custom', custom: { agent: 'kill', mcp: 'nonsense' } }).agent === 'kill' && remedy.policy({ level: 'custom', custom: { mcp: 'nonsense' } }).mcp === 'disable', 'custom levels are validated');
+  const cut = remedy.cutTomlServer('a=1\n[mcp_servers.bad]\ncommand="x"\n[mcp_servers.bad.env]\nK="v"\n[mcp_servers.good]\ncommand="y"\n', 'bad');
+  ok(cut && !/bad/.test(cut.text) && /good/.test(cut.text) && /bad\.env/.test(cut.removed), 'TOML server and its sub tables are cut out');
+  const jc = path.join(tmp, 'jsonc.json');
+  fs.writeFileSync(jc, '{ // keep me\n "mcpServers": { "x": { "command": "npx" } } }');
+  ok(remedy.disableMcp(path.join(tmp, 'store4'), { file: jc, name: 'x' }).error === 'jsonc', 'a config with comments is never rewritten');
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
   fs.rmSync(tmp, { recursive: true, force: true });

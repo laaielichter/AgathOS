@@ -25,6 +25,8 @@ const DEFAULT_SETTINGS = {
   closeToTray: true,
   logDays: 30,
   api: true,                  // local API on 127.0.0.1 for hooks and future apps
+  // "Fix it": auto mode is off until you switch it on. level: gentle | firm | max | custom
+  fix: { auto: false, level: 'firm', minSev: 'alarm', custom: { agent: 'block', port: 'localOnly', mcp: 'disable', hidden: 'clean', inject: 'off', model: 'quarantine', auto: 'off' } },
 };
 
 class Store {
@@ -43,7 +45,11 @@ class Store {
   loadState() {
     let s = {};
     try { s = JSON.parse(fs.readFileSync(this.stateFile, 'utf8')); } catch (_) {}
-    s.settings = { ...DEFAULT_SETTINGS, ...(s.settings || {}), judge: { ...DEFAULT_SETTINGS.judge, ...((s.settings || {}).judge || {}) } };
+    const old = s.settings || {};
+    const oldFix = old.fix || {};
+    s.settings = { ...DEFAULT_SETTINGS, ...old, judge: { ...DEFAULT_SETTINGS.judge, ...(old.judge || {}) },
+      fix: { ...DEFAULT_SETTINGS.fix, ...oldFix, custom: { ...DEFAULT_SETTINGS.fix.custom, ...(oldFix.custom || {}) } } };
+    s.remedies = s.remedies || [];     // what "Fix it" changed, with what is needed to undo it
     s.approvals = s.approvals || {};   // id -> { hash, at }   (MCP servers, agents, skills, autostarts)
     s.ignored = s.ignored || {};       // finding id -> at
     s.pins = s.pins || {};             // id -> hash of last seen definition
@@ -69,6 +75,7 @@ class Store {
     for (const [k, v] of Object.entries(patch || {})) {
       if (!(k in DEFAULT_SETTINGS)) continue;
       if (k === 'judge') s.judge = { ...s.judge, ...v };
+      else if (k === 'fix') s.fix = { ...s.fix, ...v, custom: { ...s.fix.custom, ...((v && v.custom) || {}) } };
       else s[k] = v;
     }
     this.saveState();

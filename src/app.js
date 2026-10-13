@@ -13,6 +13,10 @@
   let view = 'overview';
   let fileTab = 'instruction';
   let introDone = false;
+  let mode = 'advanced';          // advanced (default) | simple
+  let welcomed = true;
+  let fresh = false;              // a scan just finished with findings: the fix panel pulses once
+  const SIMPLE_VIEWS = ['overview', 'agents', 'log', 'settings'];
   let lastBeat = 0;
   const seenEvents = new Set();
   let firstEvents = true;
@@ -27,6 +31,7 @@
   function tp(key, params = {}) {
     const p = { ...params };
     if (p.action) p.action = t('act.' + p.action);
+    if (p.fix) p.fix = t('fixact.' + p.fix);
     if (p.next) p.next = t('act.' + p.next);
     if (p.chain) p.chain = t('chain.' + p.chain);
     if (p.labels) p.labels = String(p.labels).split('+').map((l) => t('label.' + l)).join(' + ');
@@ -89,7 +94,8 @@
     const b = {
       agents: cnt(s && s.agents), mcp: cnt(s && s.mcp), files: cnt(s && [...s.files, ...s.autostarts]), models: cnt(s && s.models), network: cnt(s && s.ports),
     };
-    fill($('nav'), VIEWS.map((v) => {
+    const shown = mode === 'simple' ? SIMPLE_VIEWS : VIEWS;
+    fill($('nav'), shown.map((v) => {
       const list = b[v] || [];
       return h('li', null, h('button', { class: `nav-item${v === view ? ' is-active' : ''}`, type: 'button', onclick: () => show(v) },
         h('span', { text: t('nav.' + v) }), badge(worst(list.map((x) => x.state)), list.length)));
@@ -97,6 +103,7 @@
   }
   function show(v) {
     if (!VIEWS.includes(v)) return;
+    if (mode === 'simple' && !SIMPLE_VIEWS.includes(v)) v = 'overview';
     view = v;
     document.querySelectorAll('.view').forEach((n) => n.classList.toggle('is-active', n.id === `view-${v}`));
     $('main').scrollTop = 0;
@@ -108,10 +115,15 @@
   function renderChrome() {
     document.documentElement.lang = lang;
     document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.mode = mode;
     document.querySelectorAll('[data-t]').forEach((n) => { n.textContent = t(n.dataset.t); });
-    const live = snap && snap.settings.realtime && snap.platform === 'win32';
-    $('livePill').classList.toggle('is-live', !!live);
-    $('liveText').textContent = snap && snap.demo ? t('pill.demo') : live ? t('pill.live') : t('pill.off');
+    const realtime = !!(snap && snap.settings.realtime);
+    const live = realtime && (snap.platform === 'win32' || snap.demo);
+    const pill = $('livePill');
+    pill.classList.toggle('is-live', !!live);
+    pill.setAttribute('aria-checked', realtime ? 'true' : 'false');
+    pill.title = realtime ? t('live.onHint') : t('live.offHint');
+    $('liveText').textContent = `${t('live.scanner')} · ${realtime ? t('on') : t('off')}${snap && snap.demo ? ` · ${t('pill.demo')}` : ''}`;
     $('guardPill').hidden = !(snap && snap.guard.running);
     if (snap && snap.heartbeat && snap.heartbeat !== lastBeat) {
       lastBeat = snap.heartbeat;
@@ -136,10 +148,14 @@
   async function setUi(patch) {
     if (patch.lang) lang = patch.lang;
     if (patch.theme) theme = patch.theme;
-    try { localStorage.setItem('agathos-ui', JSON.stringify({ lang, theme })); } catch (_) {}
+    if (patch.mode) mode = patch.mode === 'simple' ? 'simple' : 'advanced';
+    try { localStorage.setItem('agathos-ui', JSON.stringify({ lang, theme, mode, welcomed })); } catch (_) {}
     if (A.ui) A.ui(patch);
     render();
   }
+
+  function toggleLive() { if (snap) save({ realtime: !snap.settings.realtime }); }
+  $('livePill').addEventListener('click', toggleLive);
 
   // ---------- panic button: hold to pause, click to resume ----------
   (() => {
@@ -234,6 +250,8 @@
     btn.disabled = !!scanning;
     btn.textContent = scanning ? t('scanning') : t('scan');
     $('lastScan').textContent = scanning ? t('scanPhase', { w: t(`w.${scanning.watcher}.name`) }) : s && s.lastScan ? t('lastScan', { t: clock(s.lastScan) }) : t('never');
+    const rt = !!(s && s.settings.realtime);
+    fill($('liveSwitch'), sw(rt, toggleLive), h('span', { text: t('live.scanner') }), h('span', { class: rt ? 'on-text' : 'off-text', text: rt ? t('on') : t('off') }));
   }
   $('scanBtn').addEventListener('click', () => A.scan());
 
@@ -275,6 +293,7 @@
   const agentRunning = (id) => snap && snap.agents.find((a) => a.id === id && a.running.length);
   function eventActions(e) {
     const out = [];
+    if (e.sev !== 'calm' && !/^(fix|pause|fw\.(blocked|unblocked|localOnly|lockdown))/.test(e.key)) out.push({ label: t('fix.why'), fn: () => analyseEvent(e) });
     if (Date.now() - e.ts > 6 * 3600 * 1000) return out;
     const tg = e.target || {};
     if (e.key === 'port.open') {
@@ -324,12 +343,213 @@
     firstEvents = false;
   }
 
+  // ---------- analysis: what a finding could be, why it matters, what to do ----------
+  const AN_CAT = {
+    hidden: ['file.hiddenTags', 'file.hidden', 'file.bidi'],
+    inject: ['file.injectionPhrase'],
+    secret: ['file.secret', 'mcp.inlineSecret'],
+    mcpBad: ['mcp.malicious'],
+    supply: ['mcp.unpinned', 'mcp.new', 'mcp.oddPath', 'mcp.shellPipe', 'mcp.added', 'agent.installed', 'proc.unknownLauncher', 'proc.download'],
+    remote: ['mcp.remoteHttp', 'mcp.remote'],
+    hijack: ['mcp.changed', 'mcp.defChanged', 'proc.configChange', 'config.repoHooks'],
+    approve: ['config.autoApprove', 'flag.dangerous'],
+    baseUrl: ['config.baseUrl'],
+    model: ['model.pickleDanger', 'model.pickle', 'model.pickleUnknown', 'model.unreadable', 'model.flagged'],
+    port: ['port.open'],
+    destroy: ['proc.destructive', 'mass.delete'],
+    persist: ['proc.persistence', 'auto.hiddenScript', 'auto.tempPath', 'auto.scriptRuntime', 'auto.added'],
+    cred: ['proc.credential', 'proc.sensitive'],
+    secOff: ['proc.securityOff', 'fw.changed'],
+    exfil: ['proc.exfil', 'intent.trifecta', 'intent.twoOfThree'],
+    chain: ['intent.chainDone', 'intent.chain', 'intent.predict'],
+    odd: ['intent.baseline', 'intent.raised'],
+    honesty: ['honesty.claimNoTest', 'honesty.claimFailed', 'honesty.testsEdited', 'honesty.silent', 'honesty.thought'],
+    tamper: ['log.tampered'],
+  };
+  const KEY_CAT = {};
+  for (const [c, keys] of Object.entries(AN_CAT)) for (const k of keys) KEY_CAT[k] = c;
+
+  const planOf = () => (snap && snap.fixPlan) || [];
+  const stepBy = (ids) => planOf().find((s) => ids.includes(s.id)) || null;
+  const firstReason = (s) => (s.reasons && s.reasons[0] ? tp(s.reasons[0].key, s.reasons[0].params) : '');
+  const stepAction = (s) => (s.cat === 'manual' ? 'guide' : s.action !== 'off' ? s.action : s.preset);
+  const sec = (title, ...kids) => h('div', { class: 'an-sec' }, h('h3', { text: title }), ...kids);
+
+  function analyse(item, step) {
+    const all = item.reasons || [];
+    const reasons = all.filter((r) => r.sev !== 'calm').length ? all.filter((r) => r.sev !== 'calm') : all;
+    const cats = [...new Set(reasons.map((r) => KEY_CAT[r.key] || 'generic'))].slice(0, 3);
+    if (!cats.length) cats.push('generic');
+    const sev = item.sev || worst(reasons.map((r) => r.sev));
+    const act = step ? stepAction(step) : null;
+    const canFix = step && act && act !== 'off' && act !== 'guide';
+    fill($('anBody'),
+      h('div', { class: 'sheet-head' }, h('div', null,
+        h('h2', { class: 'modal-title', text: item.name || t('an.title') }),
+        h('span', { class: `an-sev ${sev}`, text: t('an.sev.' + sev) }))),
+      item.where ? h('div', { class: 'code', text: item.where }) : null,
+      sec(t('an.seen'), reasonList(reasons)),
+      sec(t('an.maybe'), cats.map((c) => h('p', { text: t(`an.${c}.maybe`) }))),
+      sec(t('an.risk'), cats.map((c) => h('p', { text: t(`an.${c}.risk`) }))),
+      sec(t('an.todo'), cats.map((c) => h('p', { text: t(`an.${c}.todo`) }))),
+      act ? sec(t('an.fix'), h('p', { text: t('fixdesc.' + act) })) : null,
+      h('div', { class: 'sheet-foot' },
+        canFix ? h('button', { class: `btn-primary${act === 'kill' ? ' danger' : ''}`, type: 'button', text: `${t('fix.title')}: ${t('fixact.' + act)}`,
+          onclick: async () => {
+            $('anDlg').close();
+            const res = await A.fixApply([{ id: step.id, action: act }]);
+            const r = res && res[0];
+            toast(r && r.ok ? `${t('fix.ok')}: ${step.name}` : `${t('fix.fail')}: ${step.name}${r ? ' · ' + failText(r) : ''}`);
+          } }) : null,
+        h('button', { class: 'btn-ghost', type: 'button', text: t('close'), onclick: () => $('anDlg').close() })));
+    if (!$('anDlg').open) $('anDlg').showModal();
+  }
+
+  // An event in the log: use the inventory item it points at when there is one.
+  function analyseEvent(e) {
+    const tg = e.target || {};
+    let reasons = [{ key: e.key, params: e.params, sev: e.sev }];
+    let name = tp(e.key, e.params).slice(0, 90);
+    let where = '';
+    let step = null;
+    const merge = (list) => { for (const r of list || []) if (r.sev !== 'calm' && !reasons.some((x) => x.key === r.key)) reasons.push(r); };
+    if (tg.type === 'mcp') {
+      const m = snap.mcp.find((x) => x.id === tg.id);
+      if (m) { name = m.name; where = `${m.app} · ${m.file || ''}`; merge(m.reasons); }
+      step = stepBy([`mcp:${tg.id}`]);
+    } else if (tg.type === 'file') {
+      const f = snap.files.find((x) => x.id === tg.id);
+      if (f) { name = f.path.split(/[\\/]/).pop(); where = f.short || f.path; reasons = []; merge(f.reasons); }
+      step = stepBy([`inject:${tg.id}`, `hidden:${tg.id}`, `manual:${tg.id}`]);
+    } else if (tg.type === 'port') {
+      step = stepBy([`port:${tg.port}`]);
+    } else if (tg.type === 'auto') {
+      step = stepBy([`auto:${tg.id}`, `manual:${tg.id}`]);
+    }
+    if (!step && e.agentId) {
+      const a = snap.agents.find((x) => x.id === e.agentId);
+      if (a) { where = a.name; merge(a.reasons); }
+      step = stepBy([`agent:${e.agentId}`, `manual:flag:${e.agentId}`]);
+    }
+    analyse({ name, where, sev: e.sev, reasons }, step);
+  }
+
+  function failText(r) {
+    if (r.needGuard) return t('fix.needGuard');
+    if (r.error === 'jsonc') return t('fix.err.jsonc');
+    if (r.error === 'changed since') return t('fix.err.changed');
+    return t('fix.err.other');
+  }
+
+  // ---------- fix it: panel on the overview ----------
+  function renderFix() {
+    const p = $('fixPanel');
+    if (!snap || !snap.lastScan) { p.hidden = true; return; }
+    p.hidden = false;
+    const plan = planOf();
+    const a = plan.filter((s) => s.sev === 'alarm' && s.cat !== 'manual').length;
+    const w = plan.filter((s) => s.sev === 'watch' && s.cat !== 'manual').length;
+    const m = plan.filter((s) => s.cat === 'manual').length;
+    const state = plan.some((s) => s.sev === 'alarm') ? 'alarm' : plan.length ? 'watch' : 'calm';
+    p.className = `fix-panel ${state}${fresh ? ' is-fresh' : ''}`;
+    const fix = snap.settings.fix || {};
+    const picks = plan.filter((s) => s.cat !== 'manual' && s.action !== 'off');
+    const title = !plan.length ? t('fix.none') : plan.length === 1 ? t('fix.one') : t('fix.many', { n: plan.length });
+    const kids = [
+      h('div', { class: 'fix-head' },
+        h('div', null, h('h2', { text: title }), plan.length ? h('p', { text: t('fix.sub', { a, w, m }) }) : null),
+        plan.length ? h('div', { class: 'fix-btns' },
+          picks.length ? h('button', { class: `btn-primary${state === 'alarm' ? ' danger' : ''}`, type: 'button', text: `${t('fix.all')} (${picks.length})`, onclick: () => openFix('all') }) : null,
+          h('button', { class: 'btn-ghost small', type: 'button', text: t('fix.choose'), onclick: () => openFix('choose') })) : null),
+      h('div', { class: 'fix-auto' },
+        h('span', { class: fix.auto ? 'on' : '', text: fix.auto ? t('fix.autoOn', { level: t('fix.level.' + fix.level) }) : t('fix.autoOff') }),
+        h('button', { class: 'link', type: 'button', text: t('fix.autoSet'), onclick: () => { show('settings'); setTimeout(() => { const g = $('setFix'); if (g) g.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60); } })),
+    ];
+    if (mode === 'simple' && plan.length) {
+      kids.push(h('ul', { class: 'fix-list' }, plan.slice(0, 8).map((s) => h('li', null,
+        h('span', { class: `dot ${s.sev}` }),
+        h('span', null, h('b', { text: s.name }), ` · ${firstReason(s)}`),
+        btn(t('fix.why'), () => analyse(s, s))))));
+    }
+    const recent = (snap.remedies || []).filter((r) => Date.now() - r.at < 86400000 && !r.undone).slice(0, 3);
+    if (recent.length) {
+      kids.push(h('div', null, h('div', { class: 'field-label', text: t('fix.recent') }), h('ul', { class: 'fix-recent' }, recent.map((r) => h('li', null,
+        h('span', { class: 'dot calm' }),
+        h('span', { class: 'what', text: `${clock(r.at)} · ${t('fixact.' + r.action)}: ${r.name}` }),
+        r.canUndo ? btn(t('fix.undo'), () => undoFix(r.rid)) : h('span', { class: 'chip', text: t('fix.noUndo') }))))));
+    }
+    fill(p, kids);
+  }
+
+  async function undoFix(rid) {
+    const r = await A.fixUndo(rid);
+    toast(r && r.ok ? t('fix.undone') : `${t('fix.fail')}${r && r.error ? ' · ' + failText(r) : ''}`);
+    if (fixResults) { const x = fixResults.find((y) => y.rid === rid); if (x && r && r.ok) { x.undone = true; renderFixDlg(); } }
+  }
+
+  // ---------- fix it: the dialog ----------
+  let fixMode = 'choose';
+  let fixRows = [];
+  let fixSel = {};
+  let fixResults = null;
+  function openFix(m) {
+    fixMode = m;
+    fixResults = null;
+    const plan = planOf();
+    fixRows = m === 'all' ? plan.filter((s) => s.cat !== 'manual' && s.action !== 'off') : plan;
+    fixSel = {};
+    for (const s of plan) fixSel[s.id] = s.action;
+    renderFixDlg();
+    if (!$('fixDlg').open) $('fixDlg').showModal();
+  }
+  function renderFixDlg() {
+    const level = ((snap && snap.settings.fix) || {}).level || 'firm';
+    const chosen = fixRows.filter((s) => s.cat !== 'manual' && fixSel[s.id] && fixSel[s.id] !== 'off');
+    const sub = fixResults ? t('fix.results')
+      : fixMode === 'all' ? t('fix.allConfirm', { n: chosen.length, level: t('fix.level.' + level) })
+        : `${t('fix.level')}: ${t('fix.level.' + level)} · ${t(`fix.level.${level}Desc`)}`;
+    const rows = fixRows.map((s) => {
+      const res = fixResults && fixResults.find((r) => r.stepId === s.id);
+      const cls = `step${res ? (res.ok ? ' done' : ' failed') : ''}`;
+      let ctl;
+      if (fixResults) {
+        ctl = [res && res.ok && res.undo && !res.undone ? btn(t('fix.undo'), () => undoFix(res.rid)) : null, btn(t('fix.why'), () => analyse(s, s))];
+      } else if (s.cat === 'manual') {
+        ctl = [h('span', { class: 'manual', text: t('fix.manual') }), btn(t('fix.why'), () => analyse(s, s))];
+      } else if (fixMode === 'all') {
+        ctl = [h('span', { class: 'manual', text: t('fixact.' + fixSel[s.id]) }), btn(t('fix.why'), () => analyse(s, s))];
+      } else {
+        ctl = [h('select', { 'aria-label': s.name, onchange: (e) => { fixSel[s.id] = e.target.value; renderFixDlg(); } },
+          s.options.map((o) => h('option', { value: o, selected: fixSel[s.id] === o, text: t('fixact.' + o) }))), btn(t('fix.why'), () => analyse(s, s))];
+      }
+      const why = res ? (res.ok ? `${t('fix.ok')}: ${t('fixact.' + res.action)}${res.needGuard ? ' · ' + t('fix.needGuard') : ''}${res.undone ? ' · ' + t('fix.undone') : ''}` : `${t('fix.fail')}: ${failText(res)}`)
+        : [firstReason(s), s.where].filter(Boolean).join(' · ');
+      return h('li', { class: cls }, h('span', { class: `dot ${s.sev}` }), h('div', null, h('div', { class: 'step-name', text: s.name }), h('div', { class: 'step-why', text: why })), h('div', { class: 'step-ctl' }, ctl));
+    });
+    fill($('fixBody'),
+      h('div', { class: 'sheet-head' }, h('div', null, h('h2', { class: 'modal-title', text: t('fix.title') }), h('p', { class: 'sheet-sub', text: sub }))),
+      rows.length ? h('ul', { class: 'steps' }, rows) : h('p', { class: 'sheet-sub', text: t('fix.none') }),
+      h('div', { class: 'sheet-foot' },
+        fixResults ? null : h('span', { class: 'grow', text: chosen.length ? '' : t('fix.applyNone') }),
+        h('button', { class: 'btn-ghost', type: 'button', text: fixResults ? t('close') : t('cancel'), onclick: () => $('fixDlg').close() }),
+        fixResults ? null : h('button', { class: `btn-primary${chosen.some((s) => fixSel[s.id] === 'kill') ? ' danger' : ''}`, type: 'button', disabled: !chosen.length,
+          text: t('fix.apply', { n: chosen.length }),
+          onclick: async (e) => {
+            e.target.disabled = true;
+            e.target.textContent = t('scanning');
+            const res = await A.fixApply(chosen.map((s) => ({ id: s.id, action: fixSel[s.id] })));
+            fixResults = Array.isArray(res) ? res : [];
+            renderFixDlg();
+          } })));
+  }
+
   // ---------- agents ----------
   function reasonList(reasons) {
     if (!reasons || !reasons.length) return h('div', { class: 'field-value', style: 'color:var(--dim)', text: t('card.noReasons') });
     return h('ul', { class: 'reasons' }, reasons.map((r) => h('li', null, h('span', { class: `dot ${r.sev}` }), h('span', { text: tp(r.key, r.params) }))));
   }
   function field(label, ...value) { return h('div', null, h('div', { class: 'field-label', text: label }), ...value); }
+  const adv = (n) => { if (n) n.classList.add('adv'); return n; };
   function trifecta(labels) {
     const on = ['untrusted', 'private', 'exit'].filter((k) => labels && labels[k]);
     const box = h('div', { class: `trifecta${on.length === 3 ? ' full' : ''}` });
@@ -352,27 +572,28 @@
       ];
       const body = [];
       if (run0) {
-        body.push(field(t('card.parent'), h('div', { class: 'field-value', text: run0.parent || '?' })));
-        body.push(field(t('card.signer'), h('div', { class: 'field-value', text: run0.signer ? (run0.signer.valid ? run0.signer.signer : `${t('card.unsigned')} (${run0.signer.status})`) : '…' })));
-        body.push(h('div', { style: 'grid-column:1/-1' }, field('PID ' + run0.pid, h('div', { class: 'code', text: run0.cmd || run0.exe || '' }))));
+        body.push(adv(field(t('card.parent'), h('div', { class: 'field-value', text: run0.parent || '?' }))));
+        body.push(adv(field(t('card.signer'), h('div', { class: 'field-value', text: run0.signer ? (run0.signer.valid ? run0.signer.signer : `${t('card.unsigned')} (${run0.signer.status})`) : '…' }))));
+        body.push(adv(h('div', { style: 'grid-column:1/-1' }, field('PID ' + run0.pid, h('div', { class: 'code', text: run0.cmd || run0.exe || '' })))));
         if (run0.flags && run0.flags.length) body.push(field(t('card.flags'), h('div', { class: 'flag', text: run0.flags.join(' ') })));
       }
       if (a.task) body.push(field(t('card.task'), h('div', { class: 'field-value', text: a.task })));
-      body.push(field(t('card.labels'), trifecta(a.labels)));
-      if (a.prediction) body.push(field(t('card.next'), h('div', { class: 'field-value', text: `${t('act.' + a.prediction.action)} · ${Math.round(a.prediction.p * 100)}%` })));
+      body.push(adv(field(t('card.labels'), trifecta(a.labels))));
+      if (a.prediction) body.push(adv(field(t('card.next'), h('div', { class: 'field-value', text: `${t('act.' + a.prediction.action)} · ${Math.round(a.prediction.p * 100)}%` }))));
       body.push(h('div', { style: 'grid-column:1/-1' }, field(t('card.why'), reasonList(a.reasons))));
-      if (a.domains && a.domains.length) body.push(h('div', { style: 'grid-column:1/-1' }, field(t('card.domains'), h('div', { class: 'domains' }, a.domains.map((d) => h('span', { class: 'chip', text: d })))))) ;
+      if (a.domains && a.domains.length) body.push(adv(h('div', { style: 'grid-column:1/-1' }, field(t('card.domains'), h('div', { class: 'domains' }, a.domains.map((d) => h('span', { class: 'chip', text: d }))))))) ;
       if (a.actions && a.actions.length) {
-        body.push(h('div', { style: 'grid-column:1/-1' }, field(t('card.recent'), h('ul', { class: 'actions-list' },
-          a.actions.slice(0, 20).map((x) => h('li', null, h('span', { text: clock(x.ts) }), h('span', { class: 'a', text: t('act.' + x.action) }), h('span', { class: 'd', text: x.detail || '' })))))));
+        body.push(adv(h('div', { style: 'grid-column:1/-1' }, field(t('card.recent'), h('ul', { class: 'actions-list' },
+          a.actions.slice(0, 20).map((x) => h('li', null, h('span', { text: clock(x.ts) }), h('span', { class: 'a', text: t('act.' + x.action) }), h('span', { class: 'd', text: x.detail || '' }))))))));
       }
       if (!run0 && a.dirs.length) body.push(field(t('card.where'), h('div', { class: 'field-value', text: a.dirs.join(', ') })));
       const btns = [];
+      if (a.state !== 'calm') btns.push(btn(t('fix.why'), () => analyse({ name: a.name, where: run0 ? `PID ${run0.pid}` : '', sev: a.state, reasons: a.reasons }, stepBy([`agent:${a.id}`, `manual:flag:${a.id}`]))));
       if (run0) {
         btns.push(a.paused ? h('button', { class: 'btn-small ice', type: 'button', text: t('btn.resume'), onclick: () => run(A.resume(a.id)) })
           : h('button', { class: 'btn-small ice', type: 'button', text: t('btn.freeze'), onclick: () => run(A.freeze(a.id)) }));
         btns.push(h('button', { class: 'btn-small danger', type: 'button', text: t('btn.kill'), onclick: () => run(A.kill(a.id)) }));
-        btns.push(h('button', { class: 'btn-small', type: 'button', text: t('btn.block'), onclick: () => run(A.block(a.id, true)) }));
+        btns.push(adv(h('button', { class: 'btn-small', type: 'button', text: t('btn.block'), onclick: () => run(A.block(a.id, true)) })));
       }
       if (a.state !== 'calm' || a.actions.length) btns.push(h('button', { class: 'btn-small', type: 'button', text: t('btn.approve'), onclick: () => run(A.trust({ type: 'agent', id: a.id }), t('agent.approved', { name: a.name })) }));
       return h('article', { class: `card ${a.paused ? 'paused' : a.state}` },
@@ -391,13 +612,16 @@
       h('div', null, h('div', { class: 'row-name', text: opts.name(x) }), h('div', { class: 'row-where', text: opts.where(x) })),
       h('div', null,
         h('div', { class: 'row-why' }, (x.reasons || []).map((r) => h('span', { class: `r ${r.sev}`, text: tp(r.key, r.params) }))),
-        opts.actions ? h('div', { class: 'row-actions' }, opts.actions(x)) : null),
+        h('div', { class: 'row-actions' },
+          x.state !== 'calm' ? btn(t('fix.why'), () => analyse({ name: opts.name(x), where: opts.where(x), sev: x.state, reasons: x.reasons }, opts.step ? opts.step(x) : null)) : null,
+          opts.actions ? opts.actions(x) : null)),
       h('span', { class: `state-text ${x.state}`, text: t('state.' + x.state) }))));
   }
   const btn = (label, fn, cls = '') => h('button', { class: `btn-small ${cls}`, type: 'button', text: label, onclick: fn });
 
   function renderMcp() {
     rowList($('mcpRows'), snap ? snap.mcp : [], {
+      step: (m) => stepBy([`mcp:${m.id}`]),
       name: (m) => m.name,
       where: (m) => `${t('mcp.in', { app: m.app })} · ${m.transport === 'http' ? m.url : [m.command, ...(m.args || [])].join(' ')}`.slice(0, 200),
       actions: (m) => [
@@ -421,13 +645,13 @@
     }));
     if (fileTab === 'auto') {
       rowList($('fileRows'), groups.auto, {
-        name: (a) => a.name, where: (a) => a.command.slice(0, 200),
+        name: (a) => a.name, where: (a) => a.command.slice(0, 200), step: (a) => stepBy([`auto:${a.id}`, `manual:${a.id}`]),
         actions: (a) => (a.state !== 'calm' ? [btn(t('btn.ignore'), () => run(A.trust({ type: 'auto', id: a.id })))] : []),
       });
       return;
     }
     rowList($('fileRows'), groups[fileTab], {
-      name: (f) => f.path.split(/[\\/]/).pop(), where: (f) => f.short || f.path,
+      name: (f) => f.path.split(/[\\/]/).pop(), where: (f) => f.short || f.path, step: (f) => stepBy([`inject:${f.id}`, `hidden:${f.id}`, `manual:${f.id}`]),
       actions: (f) => [
         f.path && !f.path.startsWith('Environment') ? btn(t('btn.open'), () => A.reveal(f.path)) : null,
         f.state === 'watch' && f.id ? btn(t('btn.ignore'), () => run(A.trust({ type: 'file', id: f.id, path: f.path }))) : null,
@@ -439,6 +663,7 @@
   function renderModels() {
     rowList($('modelRows'), snap ? snap.models : [], {
       empty: t('empty.models'),
+      step: (m) => planOf().find((s) => s.target && s.target.path === m.path) || null,
       name: (m) => m.path.split(/[\\/]/).pop(),
       where: (m) => `${m.format} · ${(m.size / 1048576).toFixed(m.size > 1e9 ? 0 : 1)} MB · ${m.short || m.path}`,
       actions: (m) => [btn(t('btn.open'), () => A.reveal(m.path)), m.state !== 'calm' ? btn(t('btn.how'), () => modal(t('btn.how'), t('fix.model'))) : null],
@@ -451,6 +676,7 @@
     const ports = h('ul', { class: 'rows' });
     rowList(ports, s ? s.ports : [], {
       empty: t('net.noPorts'),
+      step: (p) => stepBy([`port:${p.port}`]),
       name: (p) => `${p.product} · ${p.port}`, where: (p) => `${p.addr}:${p.port} · ${p.process || ''} · PID ${p.pid}`,
       actions: (p) => (p.exposed ? [btn(t('btn.localOnly'), () => run(A.localOnly(p.port, true), t('fw.localOnly', { port: p.port })), 'fix'), btn(t('btn.how'), () => modal(t('btn.how'), t('fix.port')))] : []),
     });
@@ -467,12 +693,13 @@
         g.running ? h('p', { text: g.sysmon ? t('guard.sysmon') : t('guard.basic') }) : null,
         g.installed
           ? btn(t('guard.uninstall'), async () => { const r = await A.guardUninstall(); toast(r && r.ok ? t('guard.removed') : t('guard.failed')); })
-          : btn(t('guard.install'), async () => {
-            modal(t('guard.title'), t('guard.uac'));
-            const r = await A.guardInstall();
-            if ($('modal').open) $('modal').close();
-            modal(t('guard.title'), r && r.ok ? t('guard.done') : t('guard.failed'));
-          }, 'fix'))));
+          : btn(t('guard.install'), installGuard, 'fix'))));
+  }
+  async function installGuard() {
+    modal(t('guard.title'), t('guard.uac'));
+    const r = await A.guardInstall();
+    if ($('modal').open) $('modal').close();
+    modal(t('guard.title'), r && r.ok ? t('guard.done') : t('guard.failed'));
   }
 
   function renderLog() {
@@ -483,8 +710,8 @@
   // ---------- settings ----------
   function sw(on, fn) { return h('button', { class: 'switch', type: 'button', role: 'switch', 'aria-checked': on ? 'true' : 'false', onclick: fn }); }
   async function save(patch) { if (!A.settings) return; await A.settings(patch); toast(t('set.saved')); }
-  function setRow(label, control, small) {
-    return h('div', { class: 'set' }, h('div', { class: 'set-label' }, h('span', { text: label }), small ? h('small', { text: small }) : null), h('div', { class: 'set-control' }, control));
+  function setRow(label, control, small, cls) {
+    return h('div', { class: cls ? `set ${cls}` : 'set' }, h('div', { class: 'set-label' }, h('span', { text: label }), small ? h('small', { text: small }) : null), h('div', { class: 'set-control' }, control));
   }
   function num(value, min, max, key, unit) {
     return [h('input', { type: 'number', value: String(value), min: String(min), max: String(max),
@@ -504,30 +731,95 @@
     const notifySel = h('select', { onchange: (e) => save({ notify: e.target.value }) }, ['log', 'notify', 'ask'].map((n) => h('option', { value: n, selected: s.notify === n, text: t('set.notify.' + n) })));
     const models = (judgeModels && judgeModels.length ? judgeModels : [s.judge.model]);
     const judgeSel = h('select', { onchange: (e) => save({ judge: { model: e.target.value } }) }, models.map((m) => h('option', { value: m, selected: s.judge.model === m, text: m })));
+    const fix = s.fix || { auto: false, level: 'firm', minSev: 'alarm', custom: {} };
+    const CATS = { agent: ['off', 'freeze', 'block', 'kill'], port: ['off', 'localOnly'], mcp: ['off', 'disable'], hidden: ['off', 'clean'], inject: ['off', 'quarantine'], model: ['off', 'quarantine'], auto: ['off', 'disableTask'] };
+    const fixLevel = h('div', { class: 'seg' }, ['gentle', 'firm', 'max', 'custom'].map((l) => h('button', { class: `seg-btn${fix.level === l ? ' is-active' : ''}`, type: 'button', text: t('fix.level.' + l), onclick: () => save({ fix: { level: l } }) })));
+    const fixMin = h('select', { onchange: (e) => save({ fix: { minSev: e.target.value } }) }, ['alarm', 'watch'].map((n) => h('option', { value: n, selected: fix.minSev === n, text: t('set.fixMin.' + n) })));
+    const custom = fix.level === 'custom' ? Object.entries(CATS).map(([cat, opts]) => setRow(t('fixcat.' + cat),
+      h('select', { onchange: (e) => save({ fix: { custom: { [cat]: e.target.value } } }) }, opts.map((o) => h('option', { value: o, selected: (fix.custom || {})[cat] === o, text: t('fixact.' + o) }))))) : [];
+    const modeSeg = h('div', { class: 'seg' }, ['advanced', 'simple'].map((m) => h('button', { class: `seg-btn${mode === m ? ' is-active' : ''}`, type: 'button', text: t('mode.' + m), onclick: () => setUi({ mode: m }) })));
+    const g = snap.guard || {};
+    const guardBtn = g.installed
+      ? btn(t('guard.uninstall'), async () => { const r = await A.guardUninstall(); toast(r && r.ok ? t('guard.removed') : t('guard.failed')); })
+      : btn(t('guard.install'), installGuard, 'fix');
     fill(body,
+      h('section', { class: 'set-group', id: 'setFix' }, h('h2', { text: t('set.fix') }),
+        setRow(t('set.fixAuto'), sw(fix.auto, () => save({ fix: { auto: !fix.auto } })), t('set.fixAutoDesc')),
+        setRow(t('fix.level'), fixLevel, t(`fix.level.${fix.level}Desc`)),
+        setRow(t('set.fixMin'), fixMin),
+        ...custom),
+      h('section', { class: 'set-group' }, h('h2', { text: t('set.view') }),
+        setRow(t('set.view'), modeSeg, t('set.modeDesc')),
+        setRow(t('set.welcome'), btn(t('set.welcomeBtn'), () => openWelcome()))),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.protection') }),
         setRow(t('set.level'), levelSeg),
         setRow(t('set.notify'), notifySel),
         setRow(t('set.autoFreeze'), sw(s.autoFreezeOnMassDelete, () => save({ autoFreezeOnMassDelete: !s.autoFreezeOnMassDelete }))),
-        setRow(t('set.threshold'), num(s.massDeleteThreshold, 10, 1000, 'massDeleteThreshold', t('set.files10s'))),
-        setRow(t('set.portCheck'), sw(s.portCheck, () => save({ portCheck: !s.portCheck }))),
-        setRow(t('set.hotkey'), sw(s.hotkey, () => save({ hotkey: !s.hotkey })))),
+        setRow(t('set.threshold'), num(s.massDeleteThreshold, 10, 1000, 'massDeleteThreshold', t('set.files10s')), null, 'adv'),
+        setRow(t('set.portCheck'), sw(s.portCheck, () => save({ portCheck: !s.portCheck })), null, 'adv'),
+        setRow(t('set.hotkey'), sw(s.hotkey, () => save({ hotkey: !s.hotkey })), null, 'adv'),
+        setRow(t('guard.title'), guardBtn, t('guard.desc'))),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.watching') }),
         setRow(t('set.realtime'), sw(s.realtime, () => save({ realtime: !s.realtime }))),
-        setRow(t('set.poll'), num(s.pollSeconds, 2, 60, 'pollSeconds', t('set.seconds'))),
-        setRow(t('set.fullScan'), num(s.fullScanHours, 1, 48, 'fullScanHours', t('set.hours'))),
-        h('div', { class: 'set' }, h('div', { class: 'set-label' }, h('span', { text: t('set.roots') })), h('div', { class: 'set-control' }, btn(t('set.add'), () => A.addFolder('roots'))), folders(s.roots, 'roots')),
-        h('div', { class: 'set' }, h('div', { class: 'set-label' }, h('span', { text: t('set.modelDirs') })), h('div', { class: 'set-control' }, btn(t('set.add'), () => A.addFolder('models'))), folders(s.modelDirs, 'models'))),
-      h('section', { class: 'set-group' }, h('h2', { text: t('set.smart') }),
+        setRow(t('set.poll'), num(s.pollSeconds, 2, 60, 'pollSeconds', t('set.seconds')), null, 'adv'),
+        setRow(t('set.fullScan'), num(s.fullScanHours, 1, 48, 'fullScanHours', t('set.hours')), null, 'adv'),
+        h('div', { class: 'set adv' }, h('div', { class: 'set-label' }, h('span', { text: t('set.roots') })), h('div', { class: 'set-control' }, btn(t('set.add'), () => A.addFolder('roots'))), folders(s.roots, 'roots')),
+        h('div', { class: 'set adv' }, h('div', { class: 'set-label' }, h('span', { text: t('set.modelDirs') })), h('div', { class: 'set-control' }, btn(t('set.add'), () => A.addFolder('models'))), folders(s.modelDirs, 'models'))),
+      h('section', { class: 'set-group adv' }, h('h2', { text: t('set.smart') }),
         setRow(t('set.learning'), [btn(t('set.rollback'), async () => { if (await A.rollback()) toast(t('set.rolledBack')); }), btn(t('set.reset'), async () => { await A.forget(); toast(t('set.forgot')); }), sw(s.learning, () => save({ learning: !s.learning }))]),
         setRow(t('set.judge'), sw(s.judge.enabled, () => save({ judge: { enabled: !s.judge.enabled } })), t('set.judgeDesc')),
         s.judge.enabled ? setRow(t('set.judgeModel'), judgeSel) : null),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.app') }),
         setRow(t('set.startup'), sw(s.startWithWindows, () => save({ startWithWindows: !s.startWithWindows }))),
         setRow(t('set.tray'), sw(s.closeToTray, () => save({ closeToTray: !s.closeToTray }))),
-        setRow(t('set.logDays'), num(s.logDays, 1, 365, 'logDays', t('set.days'))),
-        setRow(t('set.api'), sw(s.api, () => save({ api: !s.api })), `127.0.0.1:${snap.apiPort}`),
-        setRow(t('set.verify'), btn(t('set.verify'), async () => { const r = await A.verifyLog(); modal(t('set.verify'), r.ok ? t('set.verifyOk', { n: r.lines }) : t('set.verifyBad', { n: r.line })); }))));
+        setRow(t('set.logDays'), num(s.logDays, 1, 365, 'logDays', t('set.days')), null, 'adv'),
+        setRow(t('set.api'), sw(s.api, () => save({ api: !s.api })), `127.0.0.1:${snap.apiPort}`, 'adv'),
+        setRow(t('set.verify'), btn(t('set.verify'), async () => { const r = await A.verifyLog(); modal(t('set.verify'), r.ok ? t('set.verifyOk', { n: r.lines }) : t('set.verifyBad', { n: r.line })); }), null, 'adv')));
+  }
+
+  // ---------- welcome: language, view, live scanner, Guard, auto-fix ----------
+  const wel = { mode: 'advanced', live: true, startup: true, guard: false, fix: false, level: 'firm' };
+  function brandSvg() {
+    const n = svg('svg', { viewBox: '-42 -42 84 84', 'aria-hidden': 'true' });
+    n.appendChild(svg('path', { d: 'M-35 35 L-35 -35 L35 -35 L35 35 L-21 35 L-21 -21 L21 -21 L21 21 L-7 21 L-7 -7 L7 -7', fill: 'none', stroke: 'currentColor', 'stroke-width': '8', pathLength: '100' }));
+    return n;
+  }
+  function openWelcome() {
+    if (snap) {
+      const s = snap.settings;
+      Object.assign(wel, { mode, live: s.realtime !== false, startup: welcomed ? !!s.startWithWindows : true, guard: false, fix: !!(s.fix && s.fix.auto), level: (s.fix && s.fix.level !== 'custom' && s.fix.level) || 'firm' });
+    }
+    renderWelcome();
+    if (!$('welcome').open) $('welcome').showModal();
+  }
+  function renderWelcome() {
+    const seg = (opts, cur, pick, label) => h('div', { class: 'seg' }, opts.map((o) => h('button', { class: `seg-btn${o === cur ? ' is-active' : ''}`, type: 'button', text: label(o), onclick: () => { pick(o); renderWelcome(); } })));
+    const toggle = (k) => sw(wel[k], () => { wel[k] = !wel[k]; renderWelcome(); });
+    const langSel = h('select', { class: 'lang-select', 'aria-label': t('wel.lang'), onchange: (e) => { setUi({ lang: e.target.value }); renderWelcome(); } },
+      window.LANGS.filter((l) => window.I18N[l.code]).map((l) => h('option', { value: l.code, lang: l.code, selected: l.code === lang, text: l.label })));
+    fill($('welBody'),
+      h('div', { class: 'wel-brand' }, brandSvg(), h('h2', { class: 'modal-title', text: t('wel.title') })),
+      h('p', { class: 'sheet-sub', text: t('wel.sub') }),
+      h('div', { class: 'wel-grid' },
+        setRow(t('wel.lang'), langSel),
+        setRow(t('wel.mode'), seg(['advanced', 'simple'], wel.mode, (v) => { wel.mode = v; }, (v) => (v === 'advanced' ? `${t('mode.advanced')} · ${t('recommended')}` : t('mode.simple'))), wel.mode === 'advanced' ? t('wel.modeAdv') : t('wel.modeSimple')),
+        setRow(t('wel.live'), toggle('live'), t('wel.liveDesc')),
+        setRow(t('wel.startup'), toggle('startup'), t('wel.startupDesc')),
+        setRow(t('wel.guard'), toggle('guard'), t('wel.guardDesc')),
+        setRow(t('wel.fix'), toggle('fix'), t('wel.fixDesc')),
+        wel.fix ? setRow(t('fix.level'), seg(['gentle', 'firm', 'max'], wel.level, (v) => { wel.level = v; }, (v) => t('fix.level.' + v)), t(`fix.level.${wel.level}Desc`)) : null),
+      h('div', { class: 'sheet-foot' }, h('button', { class: 'btn-primary', type: 'button', text: t('wel.start'), onclick: finishWelcome })));
+  }
+  $('welcome').addEventListener('cancel', (e) => { if (!welcomed) e.preventDefault(); });
+  async function finishWelcome() {
+    $('welcome').close();
+    const first = !welcomed;
+    welcomed = true;
+    await setUi({ mode: wel.mode, welcomed: true });
+    if (A.settings) await A.settings({ realtime: wel.live, startWithWindows: wel.startup, fix: { auto: wel.fix, level: wel.level } });
+    toast(t('set.saved'));
+    if (wel.guard && !(snap && snap.guard && snap.guard.installed)) await installGuard();
+    else if (first && snap && snap.lastScan && planOf().length) { fresh = true; render(); setTimeout(() => { fresh = false; }, 2600); }
   }
 
   // ---------- main render ----------
@@ -535,7 +827,7 @@
     renderChrome();
     renderRing();
     renderStatus();
-    if (view === 'overview') { renderLive(); renderWatchers(); renderEvents(); }
+    if (view === 'overview') { renderFix(); renderLive(); renderWatchers(); renderEvents(); }
     else if (snap && snap.events) snap.events.forEach((e) => seenEvents.add(e.hash));
     if (view === 'agents') renderAgents();
     if (view === 'mcp') renderMcp();
@@ -554,11 +846,19 @@
     const guess = (navigator.language || 'en').slice(0, 2).toLowerCase();
     lang = ui.lang || local.lang || (window.I18N[guess] ? guess : 'en');
     theme = ui.theme || local.theme || 'dark';
+    mode = (ui.mode || local.mode) === 'simple' ? 'simple' : 'advanced';
+    welcomed = !!(ui.welcomed || local.welcomed);
     if (!ui.lang && A.ui) A.ui({ lang, theme });
     render();
-    A.onUpdate((s) => { snap = s; render(); });
+    A.onUpdate((s) => {
+      // A scan that ends with things to fix makes the fix panel pulse once.
+      if (snap && snap.scanning && !s.scanning && (s.fixPlan || []).length) { fresh = true; setTimeout(() => { fresh = false; }, 2600); }
+      snap = s;
+      render();
+    });
     const s = await A.snapshot();
     if (s && s.ready) { snap = s; render(); }
+    if (!welcomed) openWelcome();
   }
   init();
 })();

@@ -14,7 +14,7 @@
         <path d="M-35 35 L-35 -35 L35 -35 L35 35 L-21 35 L-21 -21 L21 -21 L21 21 L-7 21 L-7 -7 L7 -7" fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="miter" stroke-linecap="square"/>
       </svg>
       <span class="brand-name">Agath<span class="brand-os">OS</span></span>
-      <span class="live-pill" id="livePill"><span class="live-dot" id="liveDot"></span><span id="liveText"></span></span>
+      <button class="live-pill" id="livePill" type="button" role="switch"><span class="live-dot" id="liveDot"></span><span id="liveText"></span></button>
       <span class="guard-pill" id="guardPill" hidden>Guard</span>
     </div>
   </header>
@@ -58,14 +58,16 @@
               <button class="btn-primary" id="scanBtn" type="button"></button>
               <span class="last-scan" id="lastScan"></span>
             </div>
+            <div class="live-switch" id="liveSwitch"></div>
           </div>
         </div>
+        <section class="fix-panel" id="fixPanel" aria-live="polite" hidden></section>
         <section class="live" aria-labelledby="liveTitle">
           <h2 class="panel-title" id="liveTitle"></h2>
           <div class="live-cards" id="liveCards"></div>
         </section>
         <div class="grid">
-          <section class="panel" aria-labelledby="watchersTitle">
+          <section class="panel adv" aria-labelledby="watchersTitle">
             <h2 class="panel-title" id="watchersTitle"></h2>
             <ul class="watcher-list" id="watcherList"></ul>
           </section>
@@ -91,6 +93,9 @@
     <p class="modal-body" id="modalBody"></p>
     <div class="modal-actions"><button class="btn-ghost" id="modalClose" type="button"></button></div>
   </dialog>
+  <dialog class="modal sheet" id="fixDlg"><div id="fixBody"></div></dialog>
+  <dialog class="modal sheet" id="anDlg"><div id="anBody"></div></dialog>
+  <dialog class="modal sheet welcome" id="welcome"><div id="welBody"></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="i18n.js"></script>
@@ -102,6 +107,20 @@
   <script src="locales/id.js"></script>
   <script src="locales/ja.js"></script>
   <script src="locales/ko.js"></script>
+  <script src="locales/en.more.js"></script>
+  <script src="locales/nl.more.js"></script>
+  <script src="locales/de.more.js"></script>
+  <script src="locales/fr.more.js"></script>
+  <script src="locales/es.more.js"></script>
+  <script src="locales/zh.more.js"></script>
+  <script src="locales/hi.more.js"></script>
+  <script src="locales/ar.more.js"></script>
+  <script src="locales/bn.more.js"></script>
+  <script src="locales/pt.more.js"></script>
+  <script src="locales/ru.more.js"></script>
+  <script src="locales/id.more.js"></script>
+  <script src="locales/ja.more.js"></script>
+  <script src="locales/ko.more.js"></script>
   <script src="mock.js"></script>
   <script src="app.js"></script>
 </body>
