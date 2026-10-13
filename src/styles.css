@@ -425,3 +425,12 @@ button, input, select { font: inherit; color: inherit; }
 .upd-banner { display: flex; align-items: center; gap: 12px; margin: 8px 0 4px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--gold) 8%, var(--panel)); max-width: 1200px; flex-wrap: wrap; }
 .upd-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
 .upd-banner > span:nth-child(2) { flex: 1; }
+
+/* ---------- every window on top can be closed ---------- */
+dialog.modal { position: fixed; }
+.dlg-x { position: absolute; top: 10px; inset-inline-end: 12px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid transparent; background: none; color: var(--dim); font-size: 22px; line-height: 1; cursor: pointer; z-index: 2; }
+.dlg-x:hover { color: var(--text); border-color: var(--line); background: var(--raised); }
+.modal .sheet-head, .modal .modal-title { padding-inline-end: 36px; }
+/* The X stays in place: the sheet itself does not scroll, its content does. */
+.modal.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
+.modal.sheet > div { overflow: auto; min-height: 0; margin: -4px -8px -4px 0; padding: 4px 8px 4px 0; }

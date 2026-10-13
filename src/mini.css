@@ -37,3 +37,4 @@ body.mini { overflow: hidden; display: flex; flex-direction: column; height: 100
 .mini-score { text-align: end; font-variant-numeric: tabular-nums; font-size: 12px; }
 .mini-foot { padding: 10px 16px 14px; border-top: 1px solid var(--line); }
 .mini-open { width: 100%; }
+.mini-head .mini-x { position: static; width: 28px; height: 28px; font-size: 20px; -webkit-app-region: no-drag; }
