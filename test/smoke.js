@@ -109,15 +109,17 @@ async function until(fn, ms, every = 1500) {
     p.on('console', (m) => { if (m.type() === 'error') pageErrors.push(`console: ${m.text()}`); });
   };
 
+  let app2 = null;           // the second start of the app (in the tray), when the check has got that far
   const finish = async () => {
     try { await app.evaluate(({ app: a }) => a.exit(0)); } catch (_) { /* already gone */ }
+    if (app2) { try { await app2.evaluate(({ app: a }) => a.exit(0)); } catch (_) { /* already gone */ } }
     if (failed) { say('\n--- output of the app ---\n' + output.slice(-3000)); }
     try { fs.rmSync(root, { recursive: true, force: true }); } catch (_) { /* a locked file on Windows: leave it */ }
     say(`\nSMOKE ${failed ? 'FAILED (' + failed + ')' : 'PASSED'}`);
     annotate(failed ? 'error' : 'notice', `Smoke test ${process.platform}`, lines.join('\n'));
     process.exit(failed ? 1 : 0);
   };
-  const stop = setTimeout(() => { say('FAIL the whole check took longer than 8 minutes'); failed++; finish(); }, 8 * 60 * 1000);
+  const stop = setTimeout(() => { say('FAIL the whole check took longer than 10 minutes'); failed++; finish(); }, 10 * 60 * 1000);
 
   try {
     const v = await app.evaluate(({ app: a }) => ({ electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node, platform: process.platform, arch: process.arch, version: a.getVersion(), packaged: a.isPackaged }));
@@ -263,6 +265,36 @@ async function until(fn, ms, every = 1500) {
     });
     check(darkAgain.theme === 'dark' && darkAgain.page === 'rgb(13, 16, 32)' && darkAgain.saved === 'dark' && darkAgain.side === 2, 'the standard look comes back with one click', darkAgain);
 
+    // Settings > Performance: the animation level follows the choice at once, and the choice of graphics is written in the small file
+    // that is read before the browser starts. It is put back to automatic right away, so the rest of this check draws as usual.
+    const perfUi = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      [...document.querySelectorAll('.nav-item')].pop().click();   // Settings is the last page
+      await wait(700);
+      if (!document.getElementById('setPerf')) return { error: 'no Performance section in Settings' };
+      const seg = (i) => document.querySelectorAll('#setPerf .seg')[i];
+      const press = async (i, n) => { seg(i).querySelectorAll('.seg-btn')[n].click(); await wait(700); };
+      const out = { rows: document.querySelectorAll('#setPerf .set').length, now: ((document.querySelector('#setPerf .set-now') || {}).textContent || '').length };
+      await press(0, 2);
+      out.fxLow = document.documentElement.dataset.fx;
+      await press(0, 1);
+      out.fxFull = document.documentElement.dataset.fx;
+      await press(0, 0);
+      out.gfxBefore = document.querySelectorAll('#setPerf .set')[2].querySelectorAll('button').length;
+      await press(1, 1);
+      out.gfxAfter = document.querySelectorAll('#setPerf .set')[2].querySelectorAll('button').length;
+      out.saved = (await window.agathos.snapshot()).settings.graphics;
+      return out;
+    });
+    check(!perfUi.error && perfUi.rows === 3 && perfUi.now > 5 && perfUi.fxLow === 'low' && perfUi.fxFull === 'full', 'Settings > Performance: three rows, and the animation level follows the choice at once', perfUi);
+    check(!perfUi.error && perfUi.gfxBefore === 2 && perfUi.gfxAfter === 3 && perfUi.saved === 'software', 'choosing software graphics is saved and offers a restart', perfUi);
+    const gfxFile = path.join(userData, 'data', 'graphics.json');
+    const gfxNow = (() => { try { return JSON.parse(fs.readFileSync(gfxFile, 'utf8')).mode; } catch (_) { return null; } })();
+    check(gfxNow === 'software', 'the choice is in the small file that is read before the browser starts', gfxNow);
+    await page.evaluate(() => window.agathos.settings({ graphics: 'auto' }));
+    const gfxBack = (() => { try { return JSON.parse(fs.readFileSync(gfxFile, 'utf8')).mode; } catch (_) { return null; } })();
+    check(gfxBack === 'auto', 'and back to automatic', gfxBack);
+
     // Settings > Agent access: a key is made in the window and shown once. With it a program can read and ask through the local API of
     // the running app, but cannot stop agents or resume them. Every request is in the log, and a key that was taken back is refused.
     const keyUi = await page.evaluate(async () => {
@@ -376,7 +408,7 @@ async function until(fn, ms, every = 1500) {
     // How much the app uses when nothing happens. Information only: nothing here can fail the check.
     // First with the window in view, then with the window hidden (the way it sits in the tray).
     // Numbers are percent of one processor core, and megabytes of memory, per kind of process of the app.
-    const idleLoad = (secs) => app.evaluate(async ({ app: a }, seconds) => {
+    const idleLoadOf = (application, secs) => application.evaluate(async ({ app: a }, seconds) => {
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       const take = () => a.getAppMetrics().map((m) => ({ pid: m.pid, type: m.type, cpu: m.cpu && m.cpu.cumulativeCPUUsage, ws: m.memory && m.memory.workingSetSize }));
       await wait(2500);
@@ -397,6 +429,7 @@ async function until(fn, ms, every = 1500) {
       const total = Object.values(by).reduce((s, k) => s + k.cpu, 0);
       return { text, total: Math.round(total * 10) / 10, mb: Math.round(Object.values(by).reduce((s, k) => s + k.mb, 0)) };
     }, secs);
+    const idleLoad = (secs) => idleLoadOf(app, secs);
     try {
       const shown = await idleLoad(25);
       await app.evaluate(({ BrowserWindow }) => { for (const w of BrowserWindow.getAllWindows()) w.hide(); });
@@ -421,6 +454,61 @@ async function until(fn, ms, every = 1500) {
       const alive = await until(() => again.evaluate(async () => { const s = await window.agathos.snapshot(); return s.ready && s.watchers.length === 6; }), 20000, 1000);
       check(!!alive, 'the new window talks to the engine');
     } else check(false, 'the new window has a page');
+
+    // Started in the tray (start with Windows or at login): there is no window until it is asked for. A window that then sits
+    // hidden in the tray is closed for real after a while, so its browser process and its memory are free; opening it makes a new one.
+    // The waiting time is shortened for this check (AGATHOS_RELEASE_MS); it is ten minutes in daily use.
+    try {
+      const exited = new Promise((r) => app.process().once('exit', r));
+      try { await app.evaluate(({ app: a }) => a.exit(0)); } catch (_) { /* already gone */ }
+      await Promise.race([exited, sleep(15000)]);
+      await sleep(1000);
+      app2 = await electron.launch({ executablePath: exe, args: [...args, '--hidden'], env: { ...env, AGATHOS_RELEASE_MS: '4000' }, timeout: 120000 });
+      app2.process().stdout.on('data', (d) => { output += d; });
+      app2.process().stderr.on('data', (d) => { output += d; });
+      const windows = () => app2.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length);
+      const pageOf = () => app2.windows().find((p) => /index\.html/.test(p.url()));
+      const up = await until(() => app2.evaluate(({ app: a }) => a.isReady()), 60000, 500);
+      check(up === true, 'the app started in the tray comes up');
+      await sleep(8000);                                       // the first look at the computer runs
+      const atStart = await windows();
+      check(atStart === 0, 'started in the tray: there is no window yet', atStart);
+      const tray = await idleLoadOf(app2, 20);
+      say(`idle, started in the tray (no window): ${tray.total}% of one core, ${tray.mb} MB   (${tray.text})`);
+
+      await app2.evaluate(({ app: a }) => { a.emit('second-instance'); });
+      const page2 = await until(() => pageOf(), 30000, 500);
+      check(!!page2, 'a window is made when it is asked for');
+      let freed = null;
+      if (page2) {
+        watch(page2);
+        const talks = await until(() => page2.evaluate(async () => {
+          const s = await window.agathos.snapshot();
+          return !!(s.ready && s.power && s.power.speed >= 1 && ['normal', 'battery', 'hot'].includes(s.power.why));
+        }), 30000, 1000);
+        check(!!talks, 'the window made on request talks to the engine and the state knows about power');
+        await page2.evaluate(() => window.agathos.settings({ realtime: true, closeToTray: true }));
+        await app2.evaluate(({ BrowserWindow }) => { for (const w of BrowserWindow.getAllWindows()) w.hide(); });
+        await sleep(1500);
+        const early = await windows();
+        check(early === 1, 'a window that was just sent to the tray is still there', early);
+        const gone = await until(async () => (await windows()) === 0, 20000, 500);
+        check(!!gone, 'a window that sits in the tray is closed for real after the wait');
+        freed = await idleLoadOf(app2, 20);
+        say(`idle, window closed after the wait:        ${freed.total}% of one core, ${freed.mb} MB   (${freed.text})`);
+        await app2.evaluate(({ app: a }) => { a.emit('second-instance'); });
+        const back2 = await until(() => pageOf(), 30000, 500);
+        check(!!back2, 'and it comes back when asked');
+        if (back2) {
+          watch(back2);
+          const alive2 = await until(() => back2.evaluate(async () => { const s = await window.agathos.snapshot(); return !!(s.ready && s.watchers.length === 6); }), 30000, 1000);
+          check(!!alive2, 'the window that came back talks to the engine');
+        }
+      }
+      annotate('notice', `Idle load in the tray ${process.platform} ${v.arch}`, `started in the tray, no window: ${tray.total}% of one core, ${tray.mb} MB\n${tray.text}` + (freed ? `\n\nwindow closed after the wait: ${freed.total}% of one core, ${freed.mb} MB\n${freed.text}` : ''));
+    } catch (e) {
+      check(false, 'the second start (in the tray) ran to the end', String(e && e.stack || e).slice(0, 1500));
+    }
 
     // Nothing may have gone wrong in the background.
     const errFile = path.join(userData, 'data', 'errors.log');

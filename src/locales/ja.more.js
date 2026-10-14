@@ -651,6 +651,26 @@
     "api.report": "{name} から気になる点の報告です:「{note}」",
     "api.keyRotated": "この PC の他のユーザーがファイルを読める状態だったため、ローカル API の所有者キーを新しくしました",
     "api.auditTampered": "API リクエストのログが AgathOS の外で変更されました。古いログのコピーを保管し、新しいログを開始しました。",
+
+    "set.perf": "パフォーマンス",
+    "set.powerSave": "省電力",
+    "set.powerSaveDesc": "バッテリー駆動のときや、パソコンが熱いときは、繰り返しのチェックの間隔が長くなります。ファイルの変更と Guard は通常の速さのままです。",
+    "set.powerNow.normal": "現在：通常の速さです。",
+    "set.powerNow.battery": "現在：バッテリー駆動のため、繰り返しのチェックの待ち時間が {x} 倍になっています。",
+    "set.powerNow.hot": "現在：パソコンが熱いため、繰り返しのチェックの待ち時間が {x} 倍になっています。",
+    "set.powerNow.off": "現在：オフです。常に全速で動きます。",
+    "set.effects": "アニメーション",
+    "set.effectsDesc": "アニメーションを減らすと消費電力が減ります。「自動」では、バッテリー駆動のときと、システムが動きを減らすよう求めているときに減らします。",
+    "set.effects.auto": "自動",
+    "set.effects.full": "すべて",
+    "set.effects.low": "少なめ",
+    "set.graphics": "グラフィックス",
+    "set.graphicsDesc": "「自動」ではグラフィックスカードを使います。ウィンドウがちらついたり表示が乱れたりするときは「ソフトウェア」を選んでください。AgathOS はグラフィックスカードを使わずに描画します。",
+    "set.graphics.auto": "自動",
+    "set.graphics.software": "ソフトウェア",
+    "set.graphicsRestart": "AgathOS を再起動すると有効になります。",
+    "set.restartNow": "今すぐ再起動",
+    "gpu.fallback": "グラフィックスドライバーが続けて何度もクラッシュしました。次回の起動から、AgathOS はグラフィックスカードを使わずに描画します（設定 > パフォーマンス）。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ja, d);

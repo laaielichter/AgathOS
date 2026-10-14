@@ -652,6 +652,26 @@
     "api.report": "{name} meldt een zorg: “{note}”",
     "api.keyRotated": "De eigenaarssleutel van de lokale API is vernieuwd, omdat andere gebruikers van deze pc het bestand konden lezen",
     "api.auditTampered": "Het logboek van API-verzoeken is buiten AgathOS om veranderd. Een kopie van het oude logboek is bewaard en er is een nieuw begonnen.",
+
+    "set.perf": "Prestaties",
+    "set.powerSave": "Energie sparen",
+    "set.powerSaveDesc": "Op accu, of als de computer heet is, lopen de herhaalde controles minder vaak. Bestandswijzigingen en Guard blijven even snel.",
+    "set.powerNow.normal": "Nu: normale snelheid.",
+    "set.powerNow.battery": "Nu: op accu, dus wachten de herhaalde controles {x} keer zo lang.",
+    "set.powerNow.hot": "Nu: de computer is heet, dus wachten de herhaalde controles {x} keer zo lang.",
+    "set.powerNow.off": "Nu: uitgezet, altijd volle snelheid.",
+    "set.effects": "Animaties",
+    "set.effectsDesc": "Minder animaties kosten minder energie. Automatisch betekent minder op accu en als het systeem om minder beweging vraagt.",
+    "set.effects.auto": "Automatisch",
+    "set.effects.full": "Alle",
+    "set.effects.low": "Minder",
+    "set.graphics": "Beeldweergave",
+    "set.graphicsDesc": "Automatisch gebruikt de videokaart. Flikkert het venster of zie je storingen in beeld, kies dan Software: AgathOS tekent dan zonder de videokaart.",
+    "set.graphics.auto": "Automatisch",
+    "set.graphics.software": "Software",
+    "set.graphicsRestart": "Gaat in nadat AgathOS opnieuw is gestart.",
+    "set.restartNow": "Nu opnieuw starten",
+    "gpu.fallback": "Het stuurprogramma van de videokaart is een paar keer achter elkaar vastgelopen. Vanaf de volgende start tekent AgathOS zonder videokaart (Instellingen > Prestaties).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.nl, d);

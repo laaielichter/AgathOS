@@ -143,10 +143,18 @@
   if (A.onNavigate) A.onNavigate((v) => { if (ready) navigate(v); else pendingNav = v; });
 
   // ---------- chrome ----------
+  // How many animations: fewer when the person chose so, or (automatic) while the computer saves power. The system's own wish for
+  // less motion is handled in the styles.
+  function fxOf(s) {
+    const m = s && s.settings && s.settings.effects;
+    if (m === 'low' || m === 'full') return m;
+    return s && s.power && s.power.why && s.power.why !== 'normal' && s.settings.powerSave !== false ? 'low' : 'full';
+  }
   function renderChrome() {
     document.documentElement.lang = lang;
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.mode = mode;
+    document.documentElement.dataset.fx = fxOf(snap);
     document.documentElement.dataset.platform = platform();
     document.querySelectorAll('[data-t]').forEach((n) => { n.textContent = t(n.dataset.t); });
     document.querySelectorAll('.dlg-x').forEach((n) => { n.setAttribute('aria-label', t('close')); n.title = t('close'); });
@@ -1224,6 +1232,13 @@
     const modeSeg = h('div', { class: 'seg' }, ['advanced', 'simple'].map((m) => h('button', { class: `seg-btn${mode === m ? ' is-active' : ''}`, type: 'button', text: t('mode.' + m), onclick: () => setUi({ mode: m }) })));
     const g = snap.guard || {};
     const guardBtn = g.installed ? guardControls(g) : btn(t('guard.install'), installGuard, 'fix');
+    // Performance: power saving (and what it does right now), animations, and the graphics card.
+    const pw = snap.power || { speed: 1, why: 'normal' };
+    const powerNow = s.powerSave === false ? t('set.powerNow.off') : pw.why === 'normal' ? t('set.powerNow.normal') : t('set.powerNow.' + pw.why, { x: pw.speed });
+    const fxSeg = h('div', { class: 'seg' }, ['auto', 'full', 'low'].map((m) => h('button', { class: `seg-btn${(s.effects || 'auto') === m ? ' is-active' : ''}`, type: 'button', text: t('set.effects.' + m), onclick: () => save({ effects: m }) })));
+    const gfxMode = s.graphics === 'software' ? 'software' : 'auto';
+    const gfxPending = !!snap.runtime && (gfxMode === 'software') !== !!snap.runtime.gpuSoftware;
+    const gfxSeg = h('div', { class: 'seg' }, ['auto', 'software'].map((m) => h('button', { class: `seg-btn${gfxMode === m ? ' is-active' : ''}`, type: 'button', text: t('set.graphics.' + m), onclick: () => save({ graphics: m }) })));
     fill(body,
       h('section', { class: 'set-group', id: 'setFix' }, h('h2', { text: t('set.fix') }),
         setRow(t('set.fixAuto'), autoSeg(fix, true), fix.auto ? t(`fix.level.${fix.level}Desc`) : t('set.fixAutoDesc')),
@@ -1270,6 +1285,12 @@
         setRow(t('set.fullScan'), num(s.fullScanHours, 1, 48, 'fullScanHours', t('set.hours')), null, 'adv'),
         h('div', { class: 'set adv' }, h('div', { class: 'set-label' }, h('span', { text: t('set.roots') })), h('div', { class: 'set-control' }, btn(t('set.add'), () => A.addFolder('roots'))), folders(s.roots, 'roots')),
         h('div', { class: 'set adv' }, h('div', { class: 'set-label' }, h('span', { text: t('set.modelDirs') })), h('div', { class: 'set-control' }, btn(t('set.add'), () => A.addFolder('models'))), folders(s.modelDirs, 'models'))),
+      h('section', { class: 'set-group', id: 'setPerf' }, h('h2', { text: t('set.perf') }),
+        h('div', { class: 'set' }, h('div', { class: 'set-label' }, h('span', { text: t('set.powerSave') }), h('small', { text: t('set.powerSaveDesc') }),
+          h('small', { class: `set-now${s.powerSave !== false && pw.why !== 'normal' ? ' is-slow' : ''}`, text: powerNow })),
+          h('div', { class: 'set-control' }, sw(s.powerSave !== false, () => save({ powerSave: s.powerSave === false })))),
+        setRow(t('set.effects'), fxSeg, t('set.effectsDesc')),
+        setRow(t('set.graphics'), [gfxSeg, gfxPending && A.restart ? btn(t('set.restartNow'), () => A.restart()) : null], gfxPending ? `${t('set.graphicsDesc')} ${t('set.graphicsRestart')}` : t('set.graphicsDesc'))),
       h('section', { class: 'set-group adv' }, h('h2', { text: t('set.smart') }),
         setRow(t('set.learning'), [btn(t('set.rollback'), async () => { if (await A.rollback()) toast(t('set.rolledBack')); }), btn(t('set.reset'), async () => { await A.forget(); toast(t('set.forgot')); }), sw(s.learning, () => save({ learning: !s.learning }))]),
         setRow(t('set.judge'), sw(s.judge.enabled, () => save({ judge: { enabled: !s.judge.enabled } })), t('set.judgeDesc')),

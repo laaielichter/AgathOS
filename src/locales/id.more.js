@@ -651,6 +651,26 @@
     "api.report": "{name} menyampaikan kekhawatiran: “{note}”",
     "api.keyRotated": "Kunci pemilik API lokal diperbarui karena pengguna lain di PC ini bisa membaca berkasnya",
     "api.auditTampered": "Log permintaan API diubah di luar AgathOS. Salinan log lama disimpan dan log baru dimulai.",
+
+    "set.perf": "Kinerja",
+    "set.powerSave": "Hemat daya",
+    "set.powerSaveDesc": "Saat memakai baterai, atau saat komputer panas, pemeriksaan berulang berjalan lebih jarang. Perubahan berkas dan Guard tetap berjalan dengan kecepatan normal.",
+    "set.powerNow.normal": "Saat ini: kecepatan normal.",
+    "set.powerNow.battery": "Saat ini: memakai baterai, jadi pemeriksaan berulang menunggu {x} kali lebih lama.",
+    "set.powerNow.hot": "Saat ini: komputer panas, jadi pemeriksaan berulang menunggu {x} kali lebih lama.",
+    "set.powerNow.off": "Saat ini: dimatikan, selalu berkecepatan penuh.",
+    "set.effects": "Animasi",
+    "set.effectsDesc": "Animasi yang lebih sedikit memakai lebih sedikit daya. Otomatis berarti lebih sedikit saat memakai baterai dan saat sistem meminta gerakan yang lebih sedikit.",
+    "set.effects.auto": "Otomatis",
+    "set.effects.full": "Semua",
+    "set.effects.low": "Lebih sedikit",
+    "set.graphics": "Grafis",
+    "set.graphicsDesc": "Otomatis memakai kartu grafis. Jika jendela berkedip atau tampilannya bermasalah, pilih Perangkat lunak: AgathOS lalu menggambar tanpa kartu grafis.",
+    "set.graphics.auto": "Otomatis",
+    "set.graphics.software": "Perangkat lunak",
+    "set.graphicsRestart": "Berlaku setelah AgathOS dimulai ulang.",
+    "set.restartNow": "Mulai ulang sekarang",
+    "gpu.fallback": "Driver grafis mogok beberapa kali berturut-turut. Mulai peluncuran berikutnya, AgathOS menggambar tanpa kartu grafis (Pengaturan > Kinerja).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);

@@ -39,6 +39,37 @@ jobs:
           npm install --no-save --no-audit --no-fund playwright-core@1.56.0
           node test/smoke.js dist/win-unpacked/AgathOS.exe
 
+  # Windows on an ARM chip (Snapdragon laptops): its own installer, built and checked on a real ARM Windows machine. The Intel
+  # installer runs there too (slower), so a problem here does not stop the other installers from being released.
+  windows-arm:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node test/run-tests.js
+      - run: npx --yes electron-builder@26 --win nsis --arm64 --publish never
+      # A name that AgathOS versions before this one do not take for their own installer.
+      - name: Name the installer for the ARM chip
+        shell: bash
+        run: |
+          set -e
+          f="$(ls dist/AgathOS-Setup-*.exe | head -1)"
+          mv "$f" "dist/AgathOS-Windows-ARM64-Setup-${f#dist/AgathOS-Setup-}"
+          ls dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgathOS-Windows-ARM64
+          path: dist/AgathOS-Windows-ARM64-Setup-*.exe
+      - name: Smoke test of the built app
+        run: |
+          npm install --no-save --no-audit --no-fund playwright-core@1.56.0
+          node test/smoke.js dist/win-arm64-unpacked/AgathOS.exe
+
   mac:
     runs-on: macos-latest
     steps:
@@ -68,8 +99,9 @@ jobs:
           node test/smoke.js "$APP"
 
   release:
-    needs: [windows, mac]
-    if: startsWith(github.ref, 'refs/tags/v') || inputs.release
+    # The ARM installer is added when it was built; a failed or skipped ARM job does not hold back the others.
+    needs: [windows, windows-arm, mac]
+    if: ${{ !cancelled() && needs.windows.result == 'success' && needs.mac.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || inputs.release) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -83,13 +115,22 @@ jobs:
         with:
           path: out
           merge-multiple: true
+      - name: Text of the release
+        run: |
+          v="${{ steps.v.outputs.version }}"
+          {
+            echo "Windows: AgathOS-Setup-$v.exe"
+            if ls out/AgathOS-Windows-ARM64-Setup-*.exe > /dev/null 2>&1; then
+              echo "Windows on an ARM chip (Snapdragon): AgathOS-Windows-ARM64-Setup-$v.exe"
+            fi
+            echo "Mac with Apple chip (M1 and newer): AgathOS-$v-arm64.dmg"
+            echo "Mac with Intel chip: AgathOS-$v-x64.dmg"
+          } > release-text.md
+          cat release-text.md
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.v.outputs.version }}
           name: AgathOS ${{ steps.v.outputs.version }}
           target_commitish: ${{ github.sha }}
-          body: |
-            Windows: AgathOS-Setup-${{ steps.v.outputs.version }}.exe
-            Mac with Apple chip (M1 and newer): AgathOS-${{ steps.v.outputs.version }}-arm64.dmg
-            Mac with Intel chip: AgathOS-${{ steps.v.outputs.version }}-x64.dmg
+          body_path: release-text.md
           files: out/*

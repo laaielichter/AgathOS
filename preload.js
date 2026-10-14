@@ -5,7 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const call = (name) => (...args) => ipcRenderer.invoke(`agathos:${name}`, ...args);
 
 contextBridge.exposeInMainWorld('agathos', {
-  version: '0.12.0',
+  version: '0.13.0',
   platform: process.platform,
   snapshot: call('snapshot'),
   scan: call('scan'),
@@ -49,6 +49,7 @@ contextBridge.exposeInMainWorld('agathos', {
   installUpdate: call('installUpdate'),
   closeMini: call('closeMini'),
   liveWatch: call('liveWatch'),
+  restart: call('restart'),
   onLive: (fn) => { const h = (_e, v) => fn(v); ipcRenderer.on('agathos:live', h); return () => ipcRenderer.removeListener('agathos:live', h); },
   onUpdate: (fn) => { const h = (_e, snap) => fn(snap); ipcRenderer.on('agathos:update', h); return () => ipcRenderer.removeListener('agathos:update', h); },
   onNavigate: (fn) => ipcRenderer.on('agathos:navigate', (_e, view) => fn(view)),

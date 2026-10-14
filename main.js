@@ -11,6 +11,8 @@ const { AgentAccess, MAX_TOKENS } = require('./core/agentaccess');
 const guard = require('./core/guard');
 const judge = require('./core/judge');
 const updater = require('./core/update');
+const power = require('./core/power');
+const graphics = require('./core/graphics');
 const schedule = require('./core/schedule');
 const trayMenu = require('./core/traymenu');
 const report = require('./core/report');
@@ -36,12 +38,37 @@ let trayPaused = null;
 let trayLive = null;
 let trayState = null;     // calm | watch | alarm | paused: the tray icon shows it
 let updateInfo = null;    // last update check
+const RELEASE = power.releaseAfter(process.env);   // how long a hidden window or pop-up is kept before it is closed for real
+let winReleaseTimer = null;
+let miniReleaseTimer = null;
+let miniAsk = 0;          // the latest request to open the pop-up; an older one that was still waiting for its page is dropped
+let winStale = true;      // the window may have missed a push while it was out of sight
+
+// A window that is on screen. A hidden or minimized one is sent nothing: it asks for what it needs when it comes back.
+const seen = (w) => !!(w && !w.isDestroyed() && w.isVisible() && !w.isMinimized());
 
 // Only one AgathOS at a time. A second copy quits at once and must not start an engine of its own.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 // Errors nobody caught go to a small log file instead of an error box (core/errlog.js).
 try { errlog.install(path.join(app.getPath('userData'), 'data')); } catch (_) { /* no log, but still running */ }
+// Graphics: some drivers crash or draw wrong. Settings > Performance > Graphics, or three crashes of the graphics process within
+// two minutes, switch to drawing in software. The browser can only be told before it is ready, so the choice is read from a small file.
+let gpuSoftware = false;          // this run draws without the graphics card
+let gpuCrashes = [];
+try {
+  if (graphics.read(path.join(app.getPath('userData'), 'data')).mode === 'software') { app.disableHardwareAcceleration(); gpuSoftware = true; }
+} catch (_) { /* the browser decides by itself */ }
+app.on('child-process-gone', (_e, d) => {
+  try {
+    if (!d || d.type !== 'GPU') return;
+    gpuCrashes = graphics.record(gpuCrashes, Date.now(), d.reason);
+    if (!graphics.tooMany(gpuCrashes) || !store || gpuSoftware || store.settings.graphics === 'software') return;
+    store.updateSettings({ graphics: 'software' });
+    graphics.write(store.dir, 'software', 'crashes');
+    if (engine) { engine.event({ key: 'gpu.fallback', sev: 'calm', watcher: 'proc', params: {} }); engine.changed(true); }
+  } catch (_) { /* a failed safety net must not fail the program */ }
+});
 app.on('second-instance', () => showWindow());
 app.on('activate', () => showWindow());   // macOS: clicking the Dock icon
 // Must match the installer's appId, or Windows drops the notifications.
@@ -52,9 +79,17 @@ const tt = (key, params = {}) => {
   return s.replace(/\{(\w+)\}/g, (_, k) => (k in params ? params[k] : ''));
 };
 
+// Windows starts us with --hidden. On a Mac the system only says "opened at login" (the older "opened as hidden" is gone).
+// Then there is no window at all until someone asks for it (the tray, the Dock, a second start): a window nobody sees costs
+// a browser process, its memory and a little processor time, all day.
+function startedHidden() {
+  if (process.argv.includes('--hidden')) return true;
+  try { return IS_MAC && !!app.getLoginItemSettings().wasOpenedAtLogin; } catch (_) { return false; }
+}
+
 function createWindow() {
   const theme = themeOf(store.state.ui && store.state.ui.theme);
-  win = new BrowserWindow({
+  const w = new BrowserWindow({
     width: 1320, height: 860, minWidth: 1000, minHeight: 660,
     backgroundColor: theme.color, title: 'AgathOS',
     icon: ICON,
@@ -63,15 +98,41 @@ function createWindow() {
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
-  // Windows starts us with --hidden. On a Mac the system only says "opened at login" (the older "opened as hidden" is gone).
-  const hidden = process.argv.includes('--hidden') || (IS_MAC && (() => { try { return !!app.getLoginItemSettings().wasOpenedAtLogin; } catch (_) { return false; } })());
-  win.once('ready-to-show', () => { if (!hidden) win.show(); });
-  win.loadFile(path.join(__dirname, 'src', 'index.html'));
-  win.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://')) shell.openExternal(url).catch(() => {}); return { action: 'deny' }; });
-  win.webContents.on('will-navigate', (e) => e.preventDefault());
-  win.on('close', (e) => {
-    if (!quitting && store.settings.closeToTray && store.settings.realtime) { e.preventDefault(); win.hide(); }
+  win = w;
+  w.once('ready-to-show', () => { if (!w.isDestroyed()) w.show(); });
+  w.loadFile(path.join(__dirname, 'src', 'index.html'));
+  w.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://')) shell.openExternal(url).catch(() => {}); return { action: 'deny' }; });
+  w.webContents.on('will-navigate', (e) => e.preventDefault());
+  w.on('close', (e) => {
+    if (!quitting && store.settings.closeToTray && store.settings.realtime) { e.preventDefault(); w.hide(); }
   });
+  // While the window is out of sight nothing is pushed to it. When it comes back it gets the latest state at once.
+  winStale = true;
+  const latest = () => {
+    if (!winStale || !engine || !engine.lastSnap || !seen(w)) return;
+    winStale = false;
+    w.webContents.send('agathos:update', engine.lastSnap);
+  };
+  w.on('show', () => { clearTimeout(winReleaseTimer); latest(); liveSync(); });
+  w.on('restore', () => { latest(); liveSync(); });
+  w.on('focus', () => { latest(); liveSync(); });
+  w.on('minimize', () => liveSync());
+  w.on('hide', () => { liveSync(); armWinRelease(); });
+  w.on('closed', () => { if (win === w) win = null; clearTimeout(winReleaseTimer); liveSync(); });
+}
+
+// A window that sits in the tray for a long time is closed for real, so its browser process and memory are free again.
+// Opening it makes a new one. Not a minimized window (it is on the taskbar), and only when closing goes to the tray anyway.
+function armWinRelease() {
+  clearTimeout(winReleaseTimer);
+  winReleaseTimer = setTimeout(() => {
+    const w = win;
+    if (!w || w.isDestroyed() || w.isVisible() || w.isMinimized() || quitting) return;
+    if (!store || !store.settings.closeToTray || !store.settings.realtime) return;
+    win = null;
+    w.destroy();
+    liveSync();
+  }, RELEASE.win);
 }
 
 // ---------- mini pop-up next to the clock ----------
@@ -81,16 +142,27 @@ const MINI_W = 340;
 const MINI_H = 468;
 function createMini() {
   const theme = themeOf(store.state.ui && store.state.ui.theme);
-  mini = new BrowserWindow({
+  const m = new BrowserWindow({
     width: MINI_W, height: MINI_H, show: false, frame: false, resizable: false, movable: false, minimizable: false, maximizable: false,
     fullscreenable: false, skipTaskbar: true, alwaysOnTop: true, backgroundColor: theme.color, title: 'AgathOS',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
-  mini.loadFile(path.join(__dirname, 'src', 'mini.html'));
-  mini.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  mini.webContents.on('will-navigate', (e) => e.preventDefault());
-  mini.on('blur', () => { if (mini && mini.isVisible()) { mini.hide(); miniHiddenAt = Date.now(); } });
-  mini.on('closed', () => { mini = null; });
+  mini = m;
+  m.loadFile(path.join(__dirname, 'src', 'mini.html'));
+  m.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  m.webContents.on('will-navigate', (e) => e.preventDefault());
+  m.on('blur', () => { if (!m.isDestroyed() && m.isVisible()) { m.hide(); miniHiddenAt = Date.now(); } });
+  // Like the window: a pop-up that has not been opened for a while is closed for real. The next click makes a new one.
+  m.on('show', () => clearTimeout(miniReleaseTimer));
+  m.on('hide', () => {
+    clearTimeout(miniReleaseTimer);
+    miniReleaseTimer = setTimeout(() => {
+      if (mini !== m || m.isDestroyed() || m.isVisible()) return;
+      mini = null;
+      m.destroy();
+    }, RELEASE.mini);
+  });
+  m.on('closed', () => { if (mini === m) mini = null; clearTimeout(miniReleaseTimer); });
 }
 function placeMini() {
   const tb = tray.getBounds();
@@ -109,21 +181,32 @@ function placeMini() {
   mini.setBounds({ x, y, width: MINI_W, height: MINI_H });
 }
 function toggleMini() {
-  if (!mini) createMini();
-  if (mini.isVisible()) { mini.hide(); return; }
+  if (mini && !mini.isDestroyed() && mini.isVisible()) { mini.hide(); return; }
   // The click that blurred the pop-up is the same click on the icon: do not reopen it.
   if (Date.now() - miniHiddenAt < 250) return;
-  placeMini();
-  mini.webContents.send('agathos:navigate', 'refresh');
-  if (engine) mini.webContents.send('agathos:update', engine.snapshot());
-  mini.show();
-  mini.focus();
+  const ask = ++miniAsk;
+  let opened = false;
+  const open = () => {
+    if (opened || ask !== miniAsk || !mini || mini.isDestroyed()) return;
+    opened = true;
+    placeMini();
+    mini.webContents.send('agathos:navigate', 'refresh');
+    if (engine) mini.webContents.send('agathos:update', engine.snapshot());
+    mini.show();
+    mini.focus();
+  };
+  if (mini && !mini.isDestroyed()) { open(); return; }
+  // A new pop-up opens when its page has loaded, so there is no empty box for a moment (and if the page never says so, after 3 seconds).
+  createMini();
+  mini.webContents.once('did-finish-load', open);
+  setTimeout(open, 3000);
 }
 
 // The window to put a dialog on, or nothing when it is gone (a destroyed window cannot be a parent).
 const parentWin = () => (win && !win.isDestroyed() ? win : undefined);
 
 function showWindow(view) {
+  miniAsk++;                                           // a pop-up that was still loading must not open on top of the window
   if (mini && !mini.isDestroyed() && mini.isVisible()) mini.hide();
   // Mac: closing the window does not quit the app. A click on the Dock icon then needs a new window.
   const fresh = !!store && (!win || win.isDestroyed());
@@ -335,6 +418,26 @@ function startUpdateClock() {
   try { powerMonitor.on('resume', () => setTimeout(tick, 15 * 1000)); } catch (_) { /* no power events here */ }
 }
 
+// What the system says about power and heat. Only the speed of the repeating checks follows it (core/power.js): on battery, or when
+// the computer is hot, they run less often. What comes by itself (file changes, Guard, the stop button) keeps its speed.
+function watchPower() {
+  const set = (patch) => { try { if (engine) engine.setPower(patch); } catch (_) { /* the speed stays as it was */ } };
+  try {
+    set({ onBattery: powerMonitor.isOnBatteryPower() });
+    powerMonitor.on('on-battery', () => set({ onBattery: true }));
+    powerMonitor.on('on-ac', () => set({ onBattery: false }));
+  } catch (_) { /* no power events on this system */ }
+  // Only macOS tells how hot the computer is (nominal, fair, serious, critical).
+  try {
+    if (IS_MAC) {
+      set({ thermal: powerMonitor.getCurrentThermalState() });
+      powerMonitor.on('thermal-state-change', (d) => set({ thermal: d && d.state }));
+    }
+  } catch (_) { /* no heat information */ }
+  // After sleep, look at once: a program may have started while the computer slept.
+  try { powerMonitor.on('resume', () => { if (engine) engine.wake(); }); } catch (_) { /* no power events here */ }
+}
+
 // Updating by itself (Windows, installed app): only at a quiet moment, after a calm notice,
 // and only with a verified SHA-256 checksum. Not quiet? Look again 20 minutes later.
 let autoTimer = null;
@@ -405,22 +508,33 @@ async function installUpdateNow() {
 // ---------- live view: a light push once a second, only while the window shows it ----------
 let liveTimer = null;
 let liveSince = 0;
+let liveWanted = false;       // the page has the live view open
+function liveTick() {
+  const w = win;
+  const visible = seen(w);
+  engine.setLiveWatching(visible);
+  if (!visible) return;
+  const v = engine.liveView(liveSince);
+  liveSince = v.seq;
+  w.webContents.send('agathos:live', v);
+}
+// The timer runs only while the page has the live view open AND the window is on screen. A hidden window gets no push every second.
+function liveSync() {
+  if (!engine) return;
+  if (liveWanted && seen(win)) {
+    if (!liveTimer) { liveTick(); liveTimer = setInterval(liveTick, 1000); }
+    return;
+  }
+  clearInterval(liveTimer);
+  liveTimer = null;
+  engine.setLiveWatching(false);
+}
 function setLiveWatching(on, since) {
   clearInterval(liveTimer);
   liveTimer = null;
-  if (!engine) return;
-  if (!on) { engine.setLiveWatching(false); return; }
-  liveSince = Number.isFinite(since) && since > 0 ? Math.floor(since) : 0;
-  const tick = () => {
-    const visible = !!(win && !win.isDestroyed() && win.isVisible() && !win.isMinimized());
-    engine.setLiveWatching(visible);
-    if (!visible) return;
-    const v = engine.liveView(liveSince);
-    liveSince = v.seq;
-    win.webContents.send('agathos:live', v);
-  };
-  tick();
-  liveTimer = setInterval(tick, 1000);
+  liveWanted = !!on;
+  liveSince = on && Number.isFinite(since) && since > 0 ? Math.floor(since) : 0;
+  liveSync();
 }
 
 // ---------- IPC: a short, fixed list of calls ----------
@@ -453,6 +567,7 @@ function wireIpc() {
     const s = store.updateSettings(patch || {});
     engine.applySchedule();
     if (patch && 'copyGuard' in patch && (s.copyGuard !== false) !== was) engine.copySwitched();
+    if (patch && 'graphics' in patch) graphics.write(store.dir, s.graphics, 'chosen');
     applyOsSettings();
     engine.changed(true);
     if (patch && 'autoUpdate' in patch && updateInfo && updateInfo.status === 'newer') scheduleAutoUpdate(5000);
@@ -514,6 +629,13 @@ function wireIpc() {
     return store.settings;
   });
   h('liveWatch', (on, since) => { setLiveWatching(on === true, Number(since) || 0); return true; });
+  // Start again (after a change of graphics). Not with --hidden: the person is looking at the window right now.
+  h('restart', () => {
+    quitting = true;
+    app.relaunch({ args: process.argv.slice(1).filter((a) => a !== '--hidden') });
+    app.quit();
+    return true;
+  });
   h('reveal', (p) => { if (typeof p === 'string' && path.isAbsolute(p)) shell.showItemInFolder(p); return true; });
   // Keys of AI programs: made and taken back here, by a person; a key is shown once.
   h('agentTokens', () => ({ keys: access().list(), max: MAX_TOKENS, port: api.PORT, ownerFile: path.join(store.dir, 'api-token.txt'), serverFile: pluginServerFile() }));
@@ -529,17 +651,22 @@ app.whenReady().then(async () => {
   engine = new Engine(store, {
     appDir: __dirname,
     onUpdate: (snap) => {
-      if (win && !win.isDestroyed()) win.webContents.send('agathos:update', snap);
-      if (mini && !mini.isDestroyed() && mini.isVisible()) mini.webContents.send('agathos:update', snap);
       engine.lastSnap = snap;
+      // Only what is on screen gets the state. A window in the tray takes the latest one when it is shown again.
+      if (seen(win)) { winStale = false; win.webContents.send('agathos:update', snap); } else winStale = true;
+      if (seen(mini)) mini.webContents.send('agathos:update', snap);
       const st = snap.pausedAll ? 'paused' : snap.watchers.some((w) => w.state === 'alarm') ? 'alarm' : snap.watchers.some((w) => w.state === 'watch') ? 'watch' : 'calm';
       if (tray && (snap.pausedAll !== trayPaused || snap.settings.realtime !== trayLive || st !== trayState)) { trayPaused = snap.pausedAll; trayLive = snap.settings.realtime; trayState = st; buildTray(); }
     },
     notify,
   });
+  engine.runtime = { gpuSoftware };
+  // The file read at the start and the setting must agree (a file that was lost is made again).
+  try { if (graphics.read(store.dir).mode !== store.settings.graphics) graphics.write(store.dir, store.settings.graphics, 'sync'); } catch (_) { /* next time */ }
   wireIpc();
-  createWindow();
+  if (!startedHidden()) createWindow();
   buildTray();
+  watchPower();
   // If the first scan fails, the rest still has to start: the tray, the watchers and the settings.
   try { await engine.start(); } catch (err) { errlog.record(path.join(app.getPath('userData'), 'data'), 'error', err); }
   applyOsSettings();

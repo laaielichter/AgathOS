@@ -710,6 +710,26 @@
     "api.report": "{name} báo cho bạn một mối lo: “{note}”",
     "api.keyRotated": "Khóa chủ máy của API cục bộ đã được làm mới vì những người dùng khác trên máy này có thể đọc tệp của nó",
     "api.auditTampered": "Nhật ký yêu cầu API đã bị sửa bên ngoài AgathOS. Một bản sao của nhật ký cũ đã được giữ lại và một nhật ký mới đã được bắt đầu.",
+
+    "set.perf": "Hiệu năng",
+    "set.powerSave": "Tiết kiệm điện",
+    "set.powerSaveDesc": "Khi chạy bằng pin, hoặc khi máy nóng, các lần kiểm tra lặp lại diễn ra thưa hơn. Thay đổi tệp và Guard vẫn giữ tốc độ bình thường.",
+    "set.powerNow.normal": "Lúc này: tốc độ bình thường.",
+    "set.powerNow.battery": "Lúc này: đang dùng pin, nên các lần kiểm tra lặp lại chờ lâu gấp {x} lần.",
+    "set.powerNow.hot": "Lúc này: máy đang nóng, nên các lần kiểm tra lặp lại chờ lâu gấp {x} lần.",
+    "set.powerNow.off": "Lúc này: đã tắt, luôn chạy hết tốc độ.",
+    "set.effects": "Hiệu ứng chuyển động",
+    "set.effectsDesc": "Ít hiệu ứng chuyển động hơn thì tốn ít điện hơn. Tự động nghĩa là giảm khi dùng pin và khi hệ thống yêu cầu giảm chuyển động.",
+    "set.effects.auto": "Tự động",
+    "set.effects.full": "Tất cả",
+    "set.effects.low": "Ít hơn",
+    "set.graphics": "Đồ họa",
+    "set.graphicsDesc": "Tự động sẽ dùng card đồ họa. Nếu cửa sổ nhấp nháy hoặc hiển thị lỗi, hãy chọn Phần mềm: khi đó AgathOS vẽ mà không dùng card đồ họa.",
+    "set.graphics.auto": "Tự động",
+    "set.graphics.software": "Phần mềm",
+    "set.graphicsRestart": "Có hiệu lực sau khi khởi động lại AgathOS.",
+    "set.restartNow": "Khởi động lại ngay",
+    "gpu.fallback": "Trình điều khiển đồ họa đã sập nhiều lần liên tiếp. Từ lần khởi động sau, AgathOS sẽ vẽ mà không dùng card đồ họa (Cài đặt > Hiệu năng).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.vi, d);

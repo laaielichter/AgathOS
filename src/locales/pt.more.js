@@ -651,6 +651,26 @@
     "api.report": "{name} conta uma preocupação: “{note}”",
     "api.keyRotated": "A chave do proprietário da API local foi renovada porque outros usuários deste PC podiam ler o arquivo dela",
     "api.auditTampered": "O registro das solicitações da API foi alterado fora do AgathOS. Uma cópia do registro antigo foi guardada e um novo foi iniciado.",
+
+    "set.perf": "Desempenho",
+    "set.powerSave": "Economizar energia",
+    "set.powerSaveDesc": "Na bateria, ou quando o computador está quente, as verificações repetidas acontecem com menos frequência. Alterações em arquivos e o Guard mantêm a velocidade normal.",
+    "set.powerNow.normal": "Agora: velocidade normal.",
+    "set.powerNow.battery": "Agora: na bateria, então as verificações repetidas esperam {x} vezes mais.",
+    "set.powerNow.hot": "Agora: o computador está quente, então as verificações repetidas esperam {x} vezes mais.",
+    "set.powerNow.off": "Agora: desativado, sempre em velocidade total.",
+    "set.effects": "Animações",
+    "set.effectsDesc": "Menos animações gastam menos energia. Automático significa menos na bateria e quando o sistema pede menos movimento.",
+    "set.effects.auto": "Automático",
+    "set.effects.full": "Todas",
+    "set.effects.low": "Menos",
+    "set.graphics": "Gráficos",
+    "set.graphicsDesc": "Automático usa a placa de vídeo. Se a janela piscar ou mostrar falhas, escolha Software: o AgathOS passa a desenhar sem a placa de vídeo.",
+    "set.graphics.auto": "Automático",
+    "set.graphics.software": "Software",
+    "set.graphicsRestart": "Vale depois que o AgathOS reiniciar.",
+    "set.restartNow": "Reiniciar agora",
+    "gpu.fallback": "O driver de vídeo travou várias vezes seguidas. A partir da próxima abertura, o AgathOS desenha sem a placa de vídeo (Configurações > Desempenho).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pt, d);

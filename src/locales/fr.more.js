@@ -651,6 +651,26 @@
     "api.report": "{name} vous signale une inquiétude : « {note} »",
     "api.keyRotated": "La clé du propriétaire de l’API locale a été renouvelée, car d’autres utilisateurs de ce PC pouvaient lire son fichier",
     "api.auditTampered": "Le journal des requêtes de l’API a été modifié en dehors d’AgathOS. Une copie de l’ancien journal a été conservée et un nouveau a été commencé.",
+
+    "set.perf": "Performances",
+    "set.powerSave": "Économiser l’énergie",
+    "set.powerSaveDesc": "Sur batterie, ou quand l’ordinateur chauffe, les vérifications répétées sont plus espacées. Les changements de fichiers et Guard gardent leur rythme normal.",
+    "set.powerNow.normal": "En ce moment : vitesse normale.",
+    "set.powerNow.battery": "En ce moment : sur batterie, donc les vérifications répétées attendent {x} fois plus longtemps.",
+    "set.powerNow.hot": "En ce moment : l’ordinateur chauffe, donc les vérifications répétées attendent {x} fois plus longtemps.",
+    "set.powerNow.off": "En ce moment : désactivé, toujours à pleine vitesse.",
+    "set.effects": "Animations",
+    "set.effectsDesc": "Moins d’animations consomment moins d’énergie. Automatique : moins sur batterie, et quand le système demande moins de mouvement.",
+    "set.effects.auto": "Automatique",
+    "set.effects.full": "Toutes",
+    "set.effects.low": "Moins",
+    "set.graphics": "Affichage",
+    "set.graphicsDesc": "Automatique utilise la carte graphique. Si la fenêtre scintille ou affiche des défauts, choisissez Logiciel : AgathOS dessine alors sans la carte graphique.",
+    "set.graphics.auto": "Automatique",
+    "set.graphics.software": "Logiciel",
+    "set.graphicsRestart": "S’applique après le redémarrage d’AgathOS.",
+    "set.restartNow": "Redémarrer maintenant",
+    "gpu.fallback": "Le pilote graphique a planté plusieurs fois de suite. Dès le prochain démarrage, AgathOS dessine sans la carte graphique (Réglages > Performances).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.fr, d);

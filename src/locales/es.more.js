@@ -651,6 +651,26 @@
     "api.report": "{name} te avisa de una preocupación: «{note}»",
     "api.keyRotated": "La clave del propietario de la API local se renovó porque otros usuarios de este PC podían leer su archivo",
     "api.auditTampered": "El registro de solicitudes de la API se cambió fuera de AgathOS. Se guardó una copia del registro anterior y se empezó uno nuevo.",
+
+    "set.perf": "Rendimiento",
+    "set.powerSave": "Ahorrar energía",
+    "set.powerSaveDesc": "Con batería, o cuando el equipo está caliente, las comprobaciones repetidas se hacen con menos frecuencia. Los cambios de archivos y Guard mantienen su ritmo normal.",
+    "set.powerNow.normal": "Ahora: velocidad normal.",
+    "set.powerNow.battery": "Ahora: con batería, así que las comprobaciones repetidas esperan {x} veces más.",
+    "set.powerNow.hot": "Ahora: el equipo está caliente, así que las comprobaciones repetidas esperan {x} veces más.",
+    "set.powerNow.off": "Ahora: desactivado, siempre a toda velocidad.",
+    "set.effects": "Animaciones",
+    "set.effectsDesc": "Menos animaciones gastan menos energía. Automático significa menos con batería y cuando el sistema pide menos movimiento.",
+    "set.effects.auto": "Automático",
+    "set.effects.full": "Todas",
+    "set.effects.low": "Menos",
+    "set.graphics": "Gráficos",
+    "set.graphicsDesc": "Automático usa la tarjeta gráfica. Si la ventana parpadea o muestra fallos, elige Software: AgathOS dibuja entonces sin la tarjeta gráfica.",
+    "set.graphics.auto": "Automático",
+    "set.graphics.software": "Software",
+    "set.graphicsRestart": "Se aplica cuando AgathOS se reinicie.",
+    "set.restartNow": "Reiniciar ahora",
+    "gpu.fallback": "El controlador gráfico se bloqueó varias veces seguidas. Desde el próximo inicio, AgathOS dibuja sin la tarjeta gráfica (Ajustes > Rendimiento).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.es, d);

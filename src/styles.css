@@ -293,6 +293,8 @@ button, input, select { font: inherit; color: inherit; }
 .set-group h2 + .set { border-top: 0; }
 .set-label { display: grid; gap: 2px; }
 .set-label small { color: var(--dim); }
+.set-label small.set-now { color: var(--text); }
+.set-label small.set-now.is-slow { color: var(--watch); }
 .set-control { display: flex; align-items: center; gap: 8px; }
 .set-control input[type="number"] { width: 72px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 5px 8px; }
 .set-control select { background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 5px 8px; }
@@ -333,6 +335,9 @@ button, input, select { font: inherit; color: inherit; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
   .ring-ripple { display: none; }
 }
+/* "Fewer" animations (Settings > Performance, and automatically on battery or when the computer is hot): the same as the system's wish. */
+:root[data-fx="low"] *, :root[data-fx="low"] *::before, :root[data-fx="low"] *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+:root[data-fx="low"] .ring-ripple { display: none; }
 
 /* ---------- live scanner switch ---------- */
 .live-pill { background: none; cursor: pointer; -webkit-app-region: no-drag; font: inherit; font-size: 12px; }
