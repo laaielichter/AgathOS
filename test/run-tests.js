@@ -85,6 +85,13 @@ lines[1] = lines[1].replace('"b"', '"x"');
 fs.writeFileSync(st.eventsFile, lines.join('\n'));
 ok(!st.verify().ok, 'edited log line breaks the chain');
 ok(!new Store(sdir).chainOk, 'broken chain is noticed on start');
+ok(new Store(path.join(tmp, 'store-fresh')).settings.startWithWindows === true, 'a new install starts with Windows by default');
+{
+  const keep = path.join(tmp, 'store-keep');
+  fs.mkdirSync(keep, { recursive: true });
+  fs.writeFileSync(path.join(keep, 'state.json'), JSON.stringify({ settings: { startWithWindows: false } }));
+  ok(new Store(keep).settings.startWithWindows === false, 'an earlier choice to not start with Windows is kept');
+}
 
 // ---------- intent engine ----------
 const store = new Store(path.join(tmp, 'store2'));
