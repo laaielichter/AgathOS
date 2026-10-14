@@ -1,0 +1,21 @@
+{
+  "description": "Ask AgathOS before a tool runs, and look at what tools bring in. The first hook can only make Claude Code ask you or refuse a step; it never allows anything.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/pretool.js\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "WebFetch|WebSearch|Read|Grep|Bash|mcp__.*",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/posttool.js\"", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

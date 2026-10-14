@@ -1,0 +1,14 @@
+{
+  "name": "agathos",
+  "owner": { "name": "AgathOS contributors" },
+  "metadata": { "description": "AgathOS: watch this PC for rogue AI agents, poisoned MCP servers and hidden instructions." },
+  "plugins": [
+    {
+      "name": "agathos",
+      "source": "./plugins/agathos",
+      "description": "Ask AgathOS before you trust something: check text and files for hidden instructions, orders to copy an AI and install traps, and ask whether a step is safe. Only reads and asks.",
+      "category": "security",
+      "keywords": ["security", "ai-agents", "prompt-injection", "mcp"]
+    }
+  ]
+}

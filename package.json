@@ -31,12 +31,14 @@
       "preload.js",
       "core/**",
       "guard/**",
+      "plugins/**",
       "src/**",
       "package.json",
       "LICENSE"
     ],
     "asarUnpack": [
-      "guard/**"
+      "guard/**",
+      "plugins/**"
     ],
     "publish": null,
     "win": {

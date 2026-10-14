@@ -33,12 +33,15 @@ function textsOf(v, depth = 0, out = []) {
   return out;
 }
 
+// A tool that runs a command line. For these the action is read from the command itself; for other tools it is a guess from the name.
+const isShellTool = (name) => { const n = String(name || ''); return n === 'Bash' || n === 'PowerShell' || /shell|terminal|exec_command|run_command/i.test(n); };
+
 // A tool call from an agent transcript (Claude Code style names, plus MCP tools).
 function classifyTool(name, input, cwd) {
   const n = String(name || '');
   const i = input || {};
   const file = i.file_path || i.path || i.notebook_path || '';
-  if (n === 'Bash' || n === 'PowerShell' || /shell|terminal|exec_command|run_command/i.test(n)) return classifyCommand(i.command || i.cmd || '');
+  if (isShellTool(n)) return classifyCommand(i.command || i.cmd || '');
   if (n === 'WebFetch' || n === 'WebSearch' || /fetch|browse|navigate|search_web|web_search|read_url|scrape|firecrawl|playwright|puppeteer|browser/i.test(n)) return 'READ_UNTRUSTED';
   if (/gmail|email|mail|inbox|slack|discord|telegram|calendar|github.*(issue|comment)|notion/i.test(n) && /(read|get|list|search|fetch)/i.test(n)) return 'READ_UNTRUSTED';
   if (/send|post|upload|publish|create_(issue|comment|message|gist)|webhook|share|push/i.test(n)) return 'EXFIL';
@@ -65,4 +68,4 @@ function classifyTool(name, input, cwd) {
   return 'EXEC_SHELL';
 }
 
-module.exports = { classifyCommand, classifyTool, dangerousFlags, sensitivePath };
+module.exports = { classifyCommand, classifyTool, isShellTool, dangerousFlags, sensitivePath };
