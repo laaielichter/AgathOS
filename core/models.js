@@ -7,8 +7,8 @@
 // on broken files that loaders still accepted).
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 const { walk } = require('./util');
+const X = require('./xray');            // Model X-ray: looks inside GGUF, safetensors, Keras, ONNX, folders of models ...
 
 const DANGEROUS = [
   /^(os|posix|nt|subprocess|pty|commands|popen2|platform)(\.|$)/, /^(socket|ssl|http|httplib|urllib|urllib2|requests|ftplib|smtplib|telnetlib|webbrowser)(\.|$)/,
@@ -121,81 +121,31 @@ function classifyGlobals(globals) {
 }
 
 // ---------- Minimal ZIP reader (PyTorch .pt files are zips with data.pkl inside) ----------
-function readAt(fd, pos, len) {
-  const b = Buffer.alloc(len);
-  const got = fs.readSync(fd, b, 0, len, pos);
-  return b.subarray(0, got);
-}
-
-function zipPickles(fd, size) {
-  const tailLen = Math.min(size, 66000);
-  const tail = readAt(fd, size - tailLen, tailLen);
-  const eocd = tail.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
-  if (eocd < 0) return null;
-  let count = tail.readUInt16LE(eocd + 10);
-  let cdSize = tail.readUInt32LE(eocd + 12);
-  let cdOff = tail.readUInt32LE(eocd + 16);
-  if (cdOff === 0xffffffff || count === 0xffff) {
-    const loc = tail.lastIndexOf(Buffer.from([0x50, 0x4b, 0x06, 0x07]));
-    if (loc < 0) return null;
-    const z64off = Number(tail.readBigUInt64LE(loc + 8));
-    const z = readAt(fd, z64off, 56);
-    count = Number(z.readBigUInt64LE(32));
-    cdSize = Number(z.readBigUInt64LE(40));
-    cdOff = Number(z.readBigUInt64LE(48));
-  }
-  if (cdSize > 64 * 1024 * 1024) return null;
-  const cd = readAt(fd, cdOff, cdSize);
-  const out = [];
-  let p = 0;
-  for (let k = 0; k < count && p + 46 <= cd.length; k++) {
-    if (cd.readUInt32LE(p) !== 0x02014b50) break;
-    const method = cd.readUInt16LE(p + 10);
-    let csize = cd.readUInt32LE(p + 20);
-    const nlen = cd.readUInt16LE(p + 28);
-    const xlen = cd.readUInt16LE(p + 30);
-    const clen = cd.readUInt16LE(p + 32);
-    let lho = cd.readUInt32LE(p + 42);
-    const name = cd.toString('utf8', p + 46, p + 46 + nlen);
-    // zip64 extra field
-    let x = p + 46 + nlen;
-    const xend = x + xlen;
-    while (x + 4 <= xend) {
-      const id = cd.readUInt16LE(x);
-      const sz = cd.readUInt16LE(x + 2);
-      if (id === 0x0001) {
-        let q = x + 4;
-        if (cd.readUInt32LE(p + 24) === 0xffffffff) q += 8;
-        if (csize === 0xffffffff) { csize = Number(cd.readBigUInt64LE(q)); q += 8; }
-        if (lho === 0xffffffff) { lho = Number(cd.readBigUInt64LE(q)); }
-      }
-      x += 4 + sz;
-    }
-    if (/\.pkl$|data\.pkl$|\.pickle$/i.test(name) && csize < 64 * 1024 * 1024) {
-      const lh = readAt(fd, lho, 30);
-      if (lh.length === 30 && lh.readUInt32LE(0) === 0x04034b50) {
-        const dataStart = lho + 30 + lh.readUInt16LE(26) + lh.readUInt16LE(28);
-        const raw = readAt(fd, dataStart, csize);
-        try {
-          out.push({ name, data: method === 0 ? raw : method === 8 ? zlib.inflateRawSync(raw) : null });
-        } catch (_) {
-          out.push({ name, data: null });
-        }
-      }
-    }
-    p += 46 + nlen + xlen + clen;
-  }
-  return out;
-}
+const zip = require('./zipread');
+const readAt = zip.readAt;
+const zipPickles = (fd, size) => zip.entries(fd, size, (name) => /\.pkl$|data\.pkl$|\.pickle$/i.test(name), 64 * 1024 * 1024);
 
 // ---------- One file ----------
-function scanModel(file) {
+const OPAQUE_NAME = /^(sha256[-:])?[0-9a-f]{12,}$/i;
+// { xray: false } skips the look inside (Settings): formats are then only recognised, as before.
+function scanModel(file, { xray = true } = {}) {
   let fd;
   try {
     const st = fs.statSync(file);
     fd = fs.openSync(file, 'r');
     const head = readAt(fd, 0, 16);
-    const r = (format, state, reasons) => ({ path: file, size: st.size, format, state, reasons });
+    // Ollama keeps its models in files that are named after a hash. The name inside the file says more.
+    const nameInside = (x) => (x && x.facts && x.facts.name && OPAQUE_NAME.test(path.basename(file)) ? { name: x.facts.name } : {});
+    const r = (format, state, reasons, x) => ({ path: file, size: st.size, format, state, reasons, ...(x ? { x } : {}), ...nameInside(x) });
+
+    if (xray) {
+      let xr;
+      // A file that makes the look inside fail is not "fine": it is shown as one that could not be read.
+      try { xr = X.inspect(file, fd, st.size, head); } catch (_) {
+        return r(head.length >= 4 && head.toString('latin1', 0, 4) === 'GGUF' ? 'GGUF' : 'model file', 'watch', [{ key: 'model.unreadable', params: {}, sev: 'watch' }]);
+      }
+      if (xr) return r(xr.format, xr.state, xr.reasons, xr.x);
+    }
 
     if (head.length >= 4 && head.toString('latin1', 0, 4) === 'GGUF') {
       return r('GGUF', 'calm', [{ key: 'model.safe', params: { format: 'GGUF' }, sev: 'calm' }]);
@@ -257,10 +207,28 @@ function scanModel(file) {
   }
 }
 
-const MODEL_EXT = /\.(pt|pth|ckpt|bin|pkl|pickle|joblib|safetensors|gguf|model|sav|dat)$/i;
+const MODEL_EXT = /\.(pt|pth|ckpt|bin|pkl|pickle|joblib|safetensors|gguf|model|sav|dat|onnx|h5|hdf5|keras|npy)$|\.llamafile(\.exe)?$/i;
+// Names that anything can carry (an installer, a game file) are only looked at when they are big enough to be a model.
+const BIG_ONLY = /\.(pt|pth|ckpt|bin|pkl|pickle|joblib|model|sav|dat)$/i;
 
-function scanModelDirs(dirs, { onProgress } = {}) {
+// One file of a folder scan. A file that did not change since the last scan keeps its result.
+const CACHE = new Map();
+function scanOne(file, useX) {
+  let st;
+  try { st = fs.statSync(file); } catch (_) { return null; }
+  if (!st.isFile() || (st.size < 64 * 1024 && BIG_ONLY.test(file))) return null;
+  const sig = `${st.size}|${st.mtimeMs}|${useX ? 1 : 0}`;
+  const hit = CACHE.get(file);
+  if (hit && hit.sig === sig) return hit.res;
+  const res = scanModel(file, { xray: useX });
+  if (CACHE.size > 20000) CACHE.clear();
+  CACHE.set(file, { sig, res });
+  return res;
+}
+
+function scanModelDirs(dirs, { onProgress, xray = true } = {}) {
   const results = [];
+  const done = new Set();
   for (const dir of dirs) {
     const isOllama = /[\\/]\.ollama[\\/]models/i.test(dir);
     const files = walk(dir, {
@@ -269,13 +237,26 @@ function scanModelDirs(dirs, { onProgress } = {}) {
       filter: (f, name) => (isOllama ? /sha256[-:]/.test(name) : MODEL_EXT.test(name)),
     });
     for (const f of files) {
-      let st;
-      try { st = fs.statSync(f); } catch (_) { continue; }
-      if (st.size < 64 * 1024) continue;
-      const res = scanModel(f);
+      if (done.has(f)) continue;
+      done.add(f);
+      const res = scanOne(f, xray);
       if (res) results.push(res);
       if (onProgress) onProgress(results.length);
     }
+  }
+  if (xray) {
+    // The folders of models (code and templates that come with them) and the files behind links, which a plain walk
+    // does not follow: the Hugging Face cache keeps its files as links to a folder of nameless "blobs".
+    let more = { entries: [], files: [] };
+    try { more = X.folders(dirs); } catch (_) { /* no folders to report */ }
+    for (const f of more.files) {
+      if (done.has(f)) continue;
+      done.add(f);
+      const res = scanOne(f, true);
+      if (res) results.push(res);
+    }
+    results.push(...more.entries);
+    if (onProgress) onProgress(results.length);
   }
   return results;
 }

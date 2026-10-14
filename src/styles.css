@@ -390,6 +390,8 @@ button, input, select { font: inherit; color: inherit; }
 .an-sec h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--gold); margin: 0 0 6px; font-weight: 600; }
 .an-sec p { margin: 0 0 6px; }
 .an-sec .code { max-height: none; }
+/* Model X-ray: the text inside a model file, shown as text and never as markup */
+.xr-text { margin: 6px 0 0; padding: 10px 12px; font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; direction: ltr; text-align: left; }
 :root:lang(zh) .an-sec h3, :root:lang(ja) .an-sec h3, :root:lang(ko) .an-sec h3, :root:lang(ar) .an-sec h3, :root:lang(hi) .an-sec h3, :root:lang(bn) .an-sec h3 { text-transform: none; letter-spacing: 0; font-size: 13px; }
 
 .welcome { max-width: 640px; }

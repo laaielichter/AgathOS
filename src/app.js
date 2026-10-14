@@ -35,6 +35,7 @@
     if (p.fix) p.fix = t('fixact.' + p.fix);
     if (p.next) p.next = t('act.' + p.next);
     if (p.chain) p.chain = t('chain.' + p.chain);
+    if (p.part) p.part = t('xray.part.' + p.part);
     if (p.labels) p.labels = String(p.labels).split('+').map((l) => t('label.' + l)).join(' + ');
     if ('agents' in p) p.agents = p.agents ? `(${p.agents})` : '';
     if ('flags' in p) p.flags = p.flags ? `· ${p.flags}` : '';
@@ -401,6 +402,9 @@
     boardOrders: ['board.r.orders', 'board.r.ordersOnce'],
     boardOdd: ['board.r.chat', 'board.r.webhook', 'board.r.pubsub', 'board.r.paste', 'board.r.social', 'board.r.agentnet', 'board.r.viaMcp', 'board.live', 'board.added', 'board.moved'],
     model: ['model.pickleDanger', 'model.pickle', 'model.pickleUnknown', 'model.unreadable', 'model.flagged'],
+    xrayCode: ['xray.escape', 'xray.prog', 'xray.script', 'xray.llamafile', 'xray.keras.lambda', 'xray.onnx.path', 'xray.npy.object', 'xray.code.danger', 'xray.code.net', 'xray.code.present', 'xray.code.remote'],
+    xrayText: ['xray.hidden', 'xray.hiddenTags', 'xray.orders', 'xray.metaHidden', 'xray.metaOrders', 'xray.url', 'xray.blob', 'xray.big'],
+    xrayShape: ['xray.bad.table', 'xray.bad.short', 'xray.bad.trailing', 'xray.st.layout', 'xray.st.json'],
     port: ['port.open'],
     worm: ['worm.lanSweep', 'worm.portScan'],
     ext: ['ext.aiTheme', 'ext.aiChats', 'ext.allSites', 'ext.reads', 'ext.flagged'],
@@ -427,11 +431,11 @@
 
   // How sure AgathOS is per kind of finding, and the matching public technique IDs
   // (MITRE ATT&CK for classic attacks, MITRE ATLAS for attacks on AI systems).
-  const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', linkBad: 'high', tamper: 'high', boardBad: 'high',
-    linkOdd: 'medium', linkAgent: 'medium', boardOrders: 'medium', boardOdd: 'medium', inject: 'medium', worm: 'medium', ext: 'medium', pkg: 'medium', backup: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
+  const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', linkBad: 'high', tamper: 'high', boardBad: 'high', xrayCode: 'high',
+    xrayText: 'medium', xrayShape: 'medium', linkOdd: 'medium', linkAgent: 'medium', boardOrders: 'medium', boardOdd: 'medium', inject: 'medium', worm: 'medium', ext: 'medium', pkg: 'medium', backup: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
     chain: 'low', odd: 'low', generic: 'low' };
   const MITRE = { hidden: 'AML.T0051.001 · T1027', inject: 'AML.T0051.001', secret: 'T1552.001', mcpBad: 'T1195.002 · AML.T0053', supply: 'T1195.002 · T1195.001',
-    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', linkBad: 'T1557 · T1583.001 · T1090', linkOdd: 'T1090 · T1071.001', linkAgent: 'AML.T0053 · T1059', boardBad: 'T1102.002 · T1090.003 · T1027', boardOrders: 'T1102.001 · T1102.003 · AML.T0051.001', boardOdd: 'T1102.002 · T1567.004', model: 'AML.T0010.003 · T1204.002', port: 'T1133', worm: 'T1046 · T1210 · T1570', ext: 'T1176', pkg: 'T1195.002 · T1059 · T1552.001', backup: 'T1485 · M1053',
+    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', linkBad: 'T1557 · T1583.001 · T1090', linkOdd: 'T1090 · T1071.001', linkAgent: 'AML.T0053 · T1059', boardBad: 'T1102.002 · T1090.003 · T1027', boardOrders: 'T1102.001 · T1102.003 · AML.T0051.001', boardOdd: 'T1102.002 · T1567.004', model: 'AML.T0010.003 · T1204.002', xrayCode: 'AML.T0010.003 · T1204.002 · T1059', xrayText: 'AML.T0010.003 · AML.T0051', xrayShape: 'AML.T0010.003 · T1203', port: 'T1133', worm: 'T1046 · T1210 · T1570', ext: 'T1176', pkg: 'T1195.002 · T1059 · T1552.001', backup: 'T1485 · M1053',
     destroy: 'T1485', persist: 'T1053.005 · T1543.001 · T1547.001', cred: 'T1555 · T1552', secOff: 'T1562.001 · T1562.004', exfil: 'AML.T0057 · T1567 · T1041',
     chain: 'AML.T0051 · T1059', tamper: 'T1070' };
   let anLevel = null;     // 'simple' | 'deep'; follows the view until you pick a tab
@@ -451,7 +455,7 @@
       if (f) add(t('ev.file'), f.path);
     } else if (kind === 'model') {
       const m = snap.models.find((x) => planOf().some((s) => s.tkey === key && s.target && s.target.path === x.path)) || null;
-      if (m) { add(t('ev.file'), m.path); add(t('ev.format'), m.format); add(t('ev.size'), `${(m.size / 1048576).toFixed(1)} MB`); }
+      if (m) { add(t('ev.file'), m.path); add(t('ev.format'), m.format); if (m.size) add(t('ev.size'), `${(m.size / 1048576).toFixed(1)} MB`); add(t('ev.inside'), xrayFacts(m)); }
     } else if (kind === 'port') {
       const p = snap.ports.find((x) => String(x.port) === id);
       if (p) { add(t('ev.address'), `${p.addr}:${p.port}`); add(t('ev.process'), `${p.process || '?'} · PID ${p.pid}`); }
@@ -821,6 +825,7 @@
   const AI_TABS = [
     { id: 'links', has: () => !!(snap && snap.links), items: () => linkRows().filter((l) => !l.dupOf) },
     { id: 'boards', has: () => !!(snap && snap.links && snap.settings && snap.settings.boardCheck !== false), items: () => boardRows().filter((b) => !b.dupOf) },
+    { id: 'xray', has: () => !!(snap && snap.models), items: () => snap.models },
   ];
   const aiItems = () => AI_TABS.filter((x) => x.has()).flatMap((x) => x.items());
   function renderAi() {
@@ -834,6 +839,7 @@
     }));
     if (aiTab === 'links') renderLinks();
     else if (aiTab === 'boards') renderBoards();
+    else if (aiTab === 'xray') renderXray();
   }
 
   const linkName = (l) => (l.kind === 'mcp' ? `${l.app} → ${t('link.kind.mcp')} · ${l.label}` : l.kind === 'server' ? `${l.app} · ${l.label}` : `${l.app} → ${l.label}`);
@@ -918,6 +924,78 @@
       ul);
   }
 
+  // ---------- Model X-ray: what is inside the model files ----------
+  const modelName = (m) => m.name || m.path.split(/[\\/]/).pop();
+  // 7200000000 -> "7.2B"; the digits of a size are the same in every language
+  const bigNum = (n) => (n >= 1e9 ? `${+(n / 1e9).toFixed(n >= 1e10 ? 0 : 1)}B` : n >= 1e6 ? `${+(n / 1e6).toFixed(n >= 1e8 ? 0 : 1)}M` : n >= 1e3 ? `${+(n / 1e3).toFixed(1)}K` : String(n));
+  // One line about what a file is: kind of model, size of the numbers, layers, context, and what text and code it holds.
+  function xrayFacts(m) {
+    const f = (m.x && m.x.facts) || {};
+    const bits = [];
+    if (f.name && f.name !== m.name) bits.push(f.name);
+    if (f.arch) bits.push(f.arch);
+    if (f.quant || f.dtype) bits.push(f.quant || f.dtype);
+    if (f.params) bits.push(t('xray.f.params', { n: bigNum(f.params) }));
+    if (f.layers) bits.push(t('xray.f.layers', { n: f.layers }));
+    if (f.ctx) bits.push(t('xray.f.ctx', { n: f.ctx }));
+    if (f.tensors && !f.params) bits.push(t('xray.f.tensors', { n: f.tensors }));
+    if (f.template) bits.push(t('xray.f.template', { n: f.template }));
+    if (f.system) bits.push(t('xray.f.system', { n: f.system }));
+    if (f.code) bits.push(t('xray.f.code', { n: f.code }));
+    return bits.join(' · ');
+  }
+  // 'program (Windows)' and 'script' are our own words; the other formats are names of products and file types
+  const formatName = (f) => { const p = /^program \((.+)\)$/.exec(f || ''); return p ? t('xray.f.program', { kind: p[1] }) : f === 'script' ? t('xray.f.script') : f; };
+  function modelWhere(m) {
+    const bits = [formatName(m.format)];
+    if (m.size) bits.push(`${(m.size / 1048576).toFixed(m.size > 1e9 ? 0 : 1)} MB`);
+    const f = xrayFacts(m);
+    if (f) bits.push(f);
+    bits.push(m.short || m.path);
+    return bits.join(' · ');
+  }
+  // The texts inside a file, as the model gets them: invisible characters are shown as ‹U+200B›.
+  function viewInside(m) {
+    const texts = (m.x && m.x.texts) || [];
+    const reasons = (m.reasons || []).filter((r) => r.sev !== 'calm');
+    fill($('xrBody'),
+      h('div', { class: 'sheet-head' }, h('div', null, h('h2', { class: 'modal-title', text: modelName(m) }), h('p', { class: 'sheet-sub', text: modelWhere(m) }))),
+      h('p', { class: 'set-note', text: t('xray.viewNote') }),
+      reasons.length ? h('div', { class: 'an-sec' }, h('ul', { class: 'reasons' }, reasons.map((r) => h('li', null, h('span', { class: `dot ${r.sev}` }), h('div', { text: tp(r.key, r.params) }))))) : null,
+      texts.map((x) => h('div', { class: 'an-sec' },
+        h('h3', { text: [t('xray.part.' + x.part), x.name, t('xray.chars', { n: x.chars })].filter(Boolean).join(' · ') }),
+        h('pre', { class: 'xr-text', text: x.text }))),
+      h('div', { class: 'sheet-foot' }, h('span', { class: 'grow' }), h('button', { class: 'btn-ghost', type: 'button', text: t('close'), onclick: () => $('xrDlg').close() })));
+    if (!$('xrDlg').open) { $('xrDlg').showModal(); $('xrBody').scrollTop = 0; }
+  }
+  function renderXray() {
+    const all = snap ? snap.models : [];
+    const looked = all.filter((m) => m.x);
+    const reading = looked.filter((m) => m.x.texts && m.x.texts.length);
+    const bad = all.filter((m) => m.state === 'alarm' || m.state === 'watch');
+    const off = !!(snap && snap.settings && snap.settings.xrayCheck === false);
+    const ul = h('ul', { class: 'rows' });
+    rowList(ul, all, {
+      empty: t('xray.empty'),
+      step: (m) => planOf().find((x) => x.target && x.target.path === m.path) || null, key: (m) => keyOfItem('model', m),
+      name: modelName, where: modelWhere,
+      actions: (m) => [
+        m.x && m.x.texts && m.x.texts.length ? btn(t('xray.view'), () => viewInside(m)) : null,
+        btn(t('btn.open'), () => A.reveal(m.path)),
+        m.state !== 'calm' ? btn(t('btn.how'), () => modal(t('btn.how'), t('fix.xray'))) : null,
+      ],
+    });
+    fill($('aiBody'),
+      h('p', { class: 'set-note', text: t('xray.sub') }),
+      off ? h('p', { class: 'set-note', text: t('xray.off') }) : null,
+      looked.length || bad.length ? h('div', { class: 'link-sum' }, [
+        looked.length ? h('span', { class: 'chip', text: t('xray.sum.looked', { n: looked.length }) }) : null,
+        reading.length ? h('span', { class: 'chip', text: t('xray.sum.texts', { n: reading.length }) }) : null,
+        bad.length ? h('span', { class: 'chip bad', text: t('link.sum.bad', { n: bad.length }) }) : null]) : null,
+      ul,
+      h('p', { class: 'set-note', text: t('xray.limit') }));
+  }
+
   function renderMcp() {
     rowList($('mcpRows'), snap ? snap.mcp : [], {
       step: (m) => stepBy([`mcp:${m.id}`]), key: (m) => `mcp:${m.id}`,
@@ -987,8 +1065,7 @@
     rowList($('modelRows'), snap ? snap.models : [], {
       empty: t('empty.models'),
       step: (m) => planOf().find((s) => s.target && s.target.path === m.path) || null,
-      name: (m) => m.path.split(/[\\/]/).pop(),
-      where: (m) => `${m.format} · ${(m.size / 1048576).toFixed(m.size > 1e9 ? 0 : 1)} MB · ${m.short || m.path}`,
+      name: modelName, where: modelWhere,
       actions: (m) => [btn(t('btn.open'), () => A.reveal(m.path)), m.state !== 'calm' ? btn(t('btn.how'), () => modal(t('btn.how'), t('fix.model'))) : null],
     });
   }
@@ -1120,6 +1197,7 @@
         setRow(t('set.pkgCheck'), sw(s.pkgCheck !== false, () => save({ pkgCheck: s.pkgCheck === false })), t('set.pkgCheckDesc')),
         setRow(t('set.linkCheck'), sw(s.linkCheck !== false, () => save({ linkCheck: s.linkCheck === false })), t('set.linkCheckDesc')),
         setRow(t('set.boardCheck'), sw(s.boardCheck !== false, () => save({ boardCheck: s.boardCheck === false })), t('set.boardCheckDesc')),
+        setRow(t('set.xrayCheck'), sw(s.xrayCheck !== false, () => save({ xrayCheck: s.xrayCheck === false })), t('set.xrayCheckDesc')),
         setRow(t('set.backupCheck'), sw(s.backupCheck !== false, () => save({ backupCheck: s.backupCheck === false })), t('set.backupCheckDesc')),
         setRow(t('set.wormWatch'), sw(s.wormWatch !== false, () => save({ wormWatch: s.wormWatch === false })), t('set.wormWatchDesc')),
         setRow(t('set.dlGuard'), sw(s.downloadGuard !== false, () => save({ downloadGuard: s.downloadGuard === false })), t('set.dlGuardDesc')),

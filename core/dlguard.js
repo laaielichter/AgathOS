@@ -11,7 +11,7 @@ const U = require('./util');
 const models = require('./models');
 const { scanText } = require('./textscan');
 
-const MODEL_EXT = /\.(pt|pth|ckpt|bin|pkl|pickle|joblib|model|sav)$/i;
+const MODEL_EXT = /\.(pt|pth|ckpt|bin|pkl|pickle|joblib|model|sav|gguf|safetensors|onnx|h5|hdf5|keras|npy)$|\.llamafile(\.exe)?$/i;
 const TEXT_EXT = /\.(md|mdc|txt|prompt|json|ya?ml|toml|cursorrules|clinerules|windsurfrules)$/i;
 const TEXT_NAMES = /^(agents|claude|gemini|copilot-instructions|skill|readme)\.md$|^\.(cursorrules|clinerules|windsurfrules)$/i;
 const PARTIAL = /\.(crdownload|part|partial|download|tmp)$/i;
@@ -36,8 +36,9 @@ function fakeInstaller(base) {
 }
 
 class DownloadGuard {
-  constructor({ onFinding }) {
+  constructor({ onFinding, xray }) {
     this.onFinding = onFinding;
+    this.xray = xray || (() => true);        // Model X-ray on or off (Settings)
     this.watchers = [];
     this.pending = new Map();
     this.seen = new Map();
@@ -85,22 +86,24 @@ class DownloadGuard {
     if (this.seen.size > 2000) this.seen.clear();
     // This runs from a timer: a file that cannot be read, or a handler that fails, must not stop the others.
     try {
-      const res = inspect(file);
+      const res = inspect(file, { xray: this.xray() });
       if (res) this.onFinding(res);
     } catch (_) { /* nothing to report for this file */ }
   }
 }
 
 // Returns a finding or null (also used by tests).
-function inspect(file) {
+function inspect(file, { xray = true } = {}) {
   const base = path.basename(file);
   const fake = fakeInstaller(base);
   if (fake) return { key: 'dl.fakeInstaller', sev: fake.sev, params: { file: U.shortPath(file), tool: fake.tool }, path: file };
   if (MODEL_EXT.test(base)) {
-    const m = models.scanModel(file);
+    const m = models.scanModel(file, { xray });
     if (m && m.state === 'alarm') {
-      const calls = (m.reasons.find((r) => r.params && r.params.calls) || { params: {} }).params.calls || '';
-      return { key: 'dl.model', sev: 'alarm', params: { file: U.shortPath(file), calls }, path: file };
+      // Code that runs when the model is loaded keeps its own message; anything else found by the look inside has another one.
+      const code = m.reasons.find((r) => r.key.startsWith('model.pickle') && r.params && r.params.calls);
+      if (code || !m.reasons.some((r) => r.key.startsWith('xray.'))) return { key: 'dl.model', sev: 'alarm', params: { file: U.shortPath(file), calls: code ? code.params.calls : '' }, path: file };
+      return { key: 'dl.xray', sev: 'alarm', params: { file: U.shortPath(file) }, path: file };
     }
     return null;
   }

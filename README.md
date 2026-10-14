@@ -179,6 +179,22 @@ stored: only a one-way fingerprint is, so a swapped key is noticed. With Guard, 
 connects to a board that no file names is noticed as it happens. An approved board that changes is
 a danger again. Switch it off in Settings.
 
+**AI shield (model X-ray).** A model is supposed to be data, but the files and folders around it can
+carry more. AgathOS looks inside, without loading a model and without running anything: the chat
+template, system prompt and description fields of a GGUF file; the header and table of a
+safetensors file; the data references of an ONNX model; the Lambda layers of a Keras file; the
+objects in a NumPy file; the config, tokenizer and Python files of a Hugging Face folder; the
+layers of an Ollama model. It reports a chat template that tries to break out of its template
+engine, text hidden in invisible characters (decoded and shown), orders to the model such as
+"never tell the user", addresses and long coded blocks in a template, Python code that comes with a
+model (`trust_remote_code`), a program (Windows, Linux, Mac or a script) that has the name of a
+model file, a llamafile, a model that points to a data file outside its folder, and a file whose
+table does not add up (impossible sizes, gaps, bytes that nothing refers to, a file that ends too
+early). *Read inside* shows the text the way the model gets it, with invisible characters as
+`‹U+200B›`. *Fix it* puts the file or folder aside (it is renamed, nothing is deleted, and undo
+renames it back). Models that land in Downloads are looked into at once. Reading is bounded in time
+and size, so a hostile file cannot stall it. Switch it off in Settings.
+
 **Calm notifications.** No notification circus: by default only danger pops up (attention goes to
 the log and the tray dot), what happens at the same time comes as one notification, the same
 finding is not repeated within 6 hours, at most 3 per hour, and nothing pops up while the
@@ -279,6 +295,7 @@ Browsers are refused.
 - Codex transcripts compressed with zstd need a runtime with zstd support.
 - Grok Bot is recognised by its program name (`Grok Bot.app` on a Mac, `Grok Bot.exe` on Windows); the Windows name could not be tested here. Reading Grok Build sessions follows the public description of `updates.jsonl`: if xAI changes that format, the task and the honesty check for Grok go quiet, nothing else is affected.
 - Message boards are found by what files and settings say and by the names programs look up (with Guard). An agent that builds an address while it runs, or hides it in encrypted data, does not show up in the list.
+- Model X-ray reads headers, templates and code, not weights: a model trained to misbehave looks like any other and can only be found by testing it. TensorFlow SavedModel folders and `.npz` files are not looked into, ONNX is read at its top level only, and GGUF files of an older or unknown version are recognised by format only.
 - Smart TVs, ovens and other smart devices cannot run a watcher themselves. They come next, through the network (DNS sensor), Home Assistant and a phone app, using the local API.
 
 ## Translations

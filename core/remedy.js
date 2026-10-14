@@ -131,7 +131,7 @@ function plan(engine, fix, minSev = 'watch') {
   for (const m of inv.models) {
     if (m.state === 'calm') continue;
     const id = U.sha256(m.path).slice(0, 16);
-    add({ id: `model:${id}`, cat: 'model', sev: m.state, name: path.basename(m.path), where: U.shortPath(m.path), reasons: m.reasons, target: { type: 'model', path: m.path } });
+    add({ id: `model:${id}`, cat: 'model', sev: m.state, name: m.name || path.basename(m.path), where: U.shortPath(m.path), reasons: m.reasons, target: { type: 'model', path: m.path } });
   }
   // No sign of a backup: only you can turn one on.
   for (const b of inv.backups || []) {
