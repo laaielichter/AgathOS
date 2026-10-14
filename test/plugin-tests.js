@@ -100,7 +100,7 @@ module.exports = async function pluginTests({ ok, tmp, eng }) {
   ok(!stored.includes(k1.token) && /"hash": "[0-9a-f]{64}"/.test(stored) && private_(tokenFile), T + 'only a hash of an agent key is kept, in a file that only the person can read');
   const who = acc.authenticate('Bearer ' + k1.token);
   ok(who && who.kind === 'agent' && who.name === 'Codex' && who.scopes.join() === 'read,ask' && acc.authenticate(k1.token).id === k1.id, T + 'the key is known by its name and what it may do');
-  ok(!acc.authenticate('Bearer ' + k1.token.slice(0, -1) + 'x') && !acc.authenticate('') && !acc.authenticate(undefined) && !acc.authenticate('Bearer ' + 'é'.repeat(48)) && !acc.authenticate('Bearer ' + 'a'.repeat(500)), T + 'a wrong, empty, odd or too long key is refused without an error');
+  ok(!acc.authenticate('Bearer ' + k1.token.slice(0, -1) + (k1.token.endsWith('x') ? 'y' : 'x')) && !acc.authenticate('') && !acc.authenticate(undefined) && !acc.authenticate('Bearer ' + 'é'.repeat(48)) && !acc.authenticate('Bearer ' + 'a'.repeat(500)), T + 'a wrong, empty, odd or too long key is refused without an error');
   const adm = acc.authenticate('Bearer ' + owner);
   ok(adm && adm.kind === 'admin' && adm.scopes.includes('pause') && !who.scopes.includes('pause') && !who.scopes.includes('report'), T + 'only the owner key may press the stop button');
   ok(!JSON.stringify(acc.list()).includes('hash') && acc.list()[0].name === 'Codex' && acc.list()[0].calls === 0, T + 'the list for the window has no hashes');
