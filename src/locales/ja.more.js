@@ -287,6 +287,10 @@
     "an.backup.risk": "安全機能をすべて切って動かしたエージェントが、フォルダーやドライブごと消した例があります。ログインできないとホームフォルダーを消すワームもあります。2つ目のコピーがなければ、そのデータは戻せません。",
     "an.backup.todo": "今すぐバックアップを有効にしてください。Windows ではファイル履歴か OneDrive のフォルダーバックアップ、Mac では Time Machine か iCloud。コードは GitHub などの Git リモートにプッシュしてください。",
     "an.backup.deep": "AgathOS は、監視している各フォルダー（ダウンロードを除く）にコピーの形跡がないか調べます：フォルダーが OneDrive、Dropbox、Google Drive、iCloud のフォルダー内にある、中のすべての Git プロジェクトにリモートがある、または Mac で Time Machine がバックアップを作成している。ファイル履歴や他のバックアップソフトの中は見ず、外付けディスクも見えないため、「バックアップの形跡なし」としか言いません。ファイルの中身は読まず、何も変更しません。",
+    "upd.auto": "AgathOS を {v} に自動更新しています",
+    "upd.autoFailed": "{v} への自動更新はできませんでした。何も変更されていません。設定から手動で更新できます。",
+    "set.autoUpdate": "静かなときに自動で更新する",
+    "set.autoUpdateDesc": "エージェントが動いておらず、スキャン中でもなく、AgathOS のウィンドウも使われていないときに新しいバージョンをインストールします。そうでなければ20分後に再試行します。ダウンロードは先に SHA-256 チェックサムで確認します。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ja, d);

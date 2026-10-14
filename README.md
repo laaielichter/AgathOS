@@ -130,7 +130,9 @@ keep or share (Log > Save report).
 
 **Updates.** AgathOS checks GitHub Releases once a day. On Windows the installed app downloads
 the new installer, checks its SHA-256 against the checksum GitHub publishes, and only then
-installs it and starts again. On a Mac it opens the download page.
+installs it and starts again. By default it does this by itself, but only at a quiet moment: no
+agent active, no scan running, the window not in use (otherwise it tries again 20 minutes later),
+and after a calm notification. Switch it off at Settings > Updates. On a Mac it opens the download page.
 
 **Mini pop-up (Windows).** Click the AgathOS icon next to the clock and a small window opens
 right above it: the six watchers, the status, *Fix all*, *Scan now*, *Pause all agents*, the

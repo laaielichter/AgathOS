@@ -287,6 +287,10 @@
     "an.backup.risk": "在没有任何保护的情况下运行的代理，已经清空过整个文件夹和硬盘，有些蠕虫在无法登录时会删除主目录。没有第二份副本，这些数据就无法找回。",
     "an.backup.todo": "现在就开启备份：Windows 上用“文件历史记录”或 OneDrive 文件夹备份，Mac 上用 Time Machine 或 iCloud。代码请推送到 GitHub 或其他 Git 远程仓库。",
     "an.backup.deep": "AgathOS 会检查它监视的每个文件夹（下载文件夹除外）是否有副本的迹象：文件夹位于 OneDrive、Dropbox、Google Drive 或 iCloud 文件夹内，或其中每个 Git 项目都有远程仓库，或在 Mac 上 Time Machine 已做了备份。它不会查看文件历史记录或其他备份程序，也看不到外置硬盘，所以只会说“没有备份的迹象”。它不读取文件内容，也不改动任何东西。",
+    "upd.auto": "AgathOS 正在自行更新到 {v}",
+    "upd.autoFailed": "自动更新到 {v} 没有成功。没有改动任何东西。你可以在设置中手动更新。",
+    "set.autoUpdate": "在安静的时候自动更新",
+    "set.autoUpdateDesc": "当没有代理在运行、没有扫描在进行、AgathOS 窗口也没在使用时，安装新版本。否则 20 分钟后再试。下载内容会先用 SHA-256 校验和检查。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);

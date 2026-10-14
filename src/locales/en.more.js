@@ -288,6 +288,10 @@
     "an.backup.risk": "Agents that run with all safety switched off have wiped whole folders and drives, and some worms delete the home folder when they cannot log in. Without a second copy that data cannot be brought back.",
     "an.backup.todo": "Turn on a backup now: File History or OneDrive folder backup on Windows, Time Machine or iCloud on a Mac. For code, push your projects to GitHub or another Git remote.",
     "an.backup.deep": "AgathOS checks each folder it watches (except Downloads) for a sign of a copy: the folder lies inside a OneDrive, Dropbox, Google Drive or iCloud folder, or every Git project in it has a remote, or on a Mac Time Machine has made a backup. It does not look inside File History or other backup programs and cannot see external disks, so it only says 'no sign of a backup'. It reads no file contents and changes nothing.",
+    "upd.auto": "AgathOS is updating itself to {v}",
+    "upd.autoFailed": "The automatic update to {v} did not go through. Nothing was changed. You can update by hand in Settings.",
+    "set.autoUpdate": "Update by itself at a quiet moment",
+    "set.autoUpdateDesc": "Installs a new version when no agent is running, no scan is busy and the AgathOS window is not in use. Otherwise it tries again 20 minutes later. The download is checked against its SHA-256 checksum first.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);

@@ -287,6 +287,10 @@
     "an.backup.risk": "Agenten, die ohne jede Sicherung laufen, haben schon ganze Ordner und Laufwerke gelöscht, und manche Würmer löschen den Home-Ordner, wenn sie sich nicht anmelden können. Ohne zweite Kopie sind diese Daten nicht zurückzuholen.",
     "an.backup.todo": "Schalte jetzt ein Backup ein: Dateiversionsverlauf oder OneDrive-Ordnersicherung unter Windows, Time Machine oder iCloud auf dem Mac. Schiebe Code zu GitHub oder einem anderen Git-Remote.",
     "an.backup.deep": "AgathOS prüft jeden überwachten Ordner (außer Downloads) auf einen Hinweis auf eine Kopie: Der Ordner liegt in einem OneDrive-, Dropbox-, Google-Drive- oder iCloud-Ordner, oder jedes Git-Projekt darin hat ein Remote, oder auf dem Mac hat Time Machine ein Backup erstellt. Es sieht nicht in den Dateiversionsverlauf oder andere Backup-Programme und kann keine externen Festplatten sehen, deshalb sagt es nur „kein Hinweis auf ein Backup“. Es liest keine Dateiinhalte und ändert nichts.",
+    "upd.auto": "AgathOS aktualisiert sich selbst auf {v}",
+    "upd.autoFailed": "Das automatische Update auf {v} hat nicht geklappt. Es wurde nichts geändert. Du kannst in den Einstellungen von Hand aktualisieren.",
+    "set.autoUpdate": "Sich selbst aktualisieren, wenn es ruhig ist",
+    "set.autoUpdateDesc": "Installiert eine neue Version, wenn kein Agent läuft, kein Scan aktiv ist und das AgathOS-Fenster nicht benutzt wird. Sonst versucht es 20 Minuten später erneut. Der Download wird vorher mit seiner SHA-256-Prüfsumme geprüft.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.de, d);
