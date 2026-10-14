@@ -10,6 +10,7 @@
   let snap = null;
   let lang = 'en';
   let theme = 'dark';
+  const THEME_IDS = ['dark', 'light', 'palantyr'];   // same list as core/themes.js; Palantyr is chosen in Settings
   let view = 'overview';
   let fileTab = 'instruction';
   let introDone = false;
@@ -167,7 +168,9 @@
     $('panicBtn').classList.toggle('is-paused', !!paused);
     $('panicLabel').textContent = paused ? t('resumeAll') : t('panic');
     $('panicBtn').title = paused ? '' : t('panic.hold');
-    fill($('themeSeg'), ['dark', 'light'].map((th) => h('button', { class: `seg-btn${th === theme ? ' is-active' : ''}`, type: 'button', text: t('theme.' + th), onclick: () => setUi({ theme: th }) })));
+    // The side bar offers Dark and Light; Palantyr shows up there once it is on, so the way back is one click.
+    $('themeSeg').setAttribute('aria-label', t('set.theme'));
+    fill($('themeSeg'), (theme === 'palantyr' ? THEME_IDS : ['dark', 'light']).map((th) => h('button', { class: `seg-btn${th === theme ? ' is-active' : ''}`, type: 'button', text: t('theme.' + th), onclick: () => setUi({ theme: th }) })));
     const sel = $('langSel');
     if (sel.options.length !== window.LANGS.length) {
       fill(sel, window.LANGS.filter((l) => window.I18N[l.code]).map((l) => h('option', { value: l.code, lang: l.code, text: l.label })));
@@ -180,7 +183,7 @@
   }
   async function setUi(patch) {
     if (patch.lang) lang = patch.lang;
-    if (patch.theme) theme = patch.theme;
+    if (THEME_IDS.includes(patch.theme)) theme = patch.theme; else delete patch.theme;
     if (patch.mode) mode = patch.mode === 'simple' ? 'simple' : 'advanced';
     try { localStorage.setItem('agathos-ui', JSON.stringify({ lang, theme, mode, welcomed })); } catch (_) {}
     if (A.ui) A.ui(patch);
@@ -1027,6 +1030,7 @@
     const fixMin = h('select', { onchange: (e) => save({ fix: { minSev: e.target.value } }) }, ['alarm', 'watch'].map((n) => h('option', { value: n, selected: fix.minSev === n, text: t('set.fixMin.' + n) })));
     const custom = fix.level === 'custom' ? Object.entries(CATS).map(([cat, opts]) => setRow(t('fixcat.' + cat),
       h('select', { onchange: (e) => save({ fix: { custom: { [cat]: e.target.value } } }) }, opts.map((o) => h('option', { value: o, selected: (fix.custom || {})[cat] === o, text: t('fixact.' + o) }))))) : [];
+    const themeSeg = h('div', { class: 'seg' }, THEME_IDS.map((th) => h('button', { class: `seg-btn${theme === th ? ' is-active' : ''}`, type: 'button', text: t('theme.' + th), onclick: () => setUi({ theme: th }) })));
     const modeSeg = h('div', { class: 'seg' }, ['advanced', 'simple'].map((m) => h('button', { class: `seg-btn${mode === m ? ' is-active' : ''}`, type: 'button', text: t('mode.' + m), onclick: () => setUi({ mode: m }) })));
     const g = snap.guard || {};
     const guardBtn = g.installed ? guardControls(g) : btn(t('guard.install'), installGuard, 'fix');
@@ -1051,6 +1055,7 @@
             onclick: async () => { await A.snooze(k); toast(t('set.saved')); } }))),
         snap.snoozeUntil > Date.now() ? t('snooze.until', { t: clock(snap.snoozeUntil) }) : null)),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.view') }),
+        setRow(t('set.theme'), themeSeg, t('set.themeDesc')),
         setRow(t('set.view'), modeSeg, t('set.modeDesc')),
         setRow(t('set.welcome'), btn(t('set.welcomeBtn'), () => openWelcome()))),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.protection') }),
@@ -1415,7 +1420,7 @@
     try { local = JSON.parse(localStorage.getItem('agathos-ui') || '{}'); } catch (_) {}
     const guess = (navigator.language || 'en').slice(0, 2).toLowerCase();
     lang = ui.lang || local.lang || (window.I18N[guess] ? guess : 'en');
-    theme = ui.theme || local.theme || 'dark';
+    theme = [ui.theme, local.theme].find((x) => THEME_IDS.includes(x)) || 'dark';
     mode = (ui.mode || local.mode) === 'simple' ? 'simple' : 'advanced';
     welcomed = !!(ui.welcomed || local.welcomed);
     if (!ui.lang && A.ui) A.ui({ lang, theme });

@@ -424,6 +424,9 @@
     "guard.switchFailed": "Umschalten hat nicht geklappt oder wurde abgebrochen. Nichts wurde geändert.",
     "guard.evOff": "AgathOS Guard wurde ausgeschaltet",
     "guard.evOn": "AgathOS Guard wurde eingeschaltet",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr ist ein zusätzliches Design im Stil einer Einsatzzentrale: reines Schwarz für OLED-Bildschirme, dünne Linien, cyanfarbene Akzente und Code-Schrift. Logo und alle Funktionen bleiben gleich.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.de, d);

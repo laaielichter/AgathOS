@@ -424,6 +424,9 @@
     "guard.switchFailed": "切り替えに失敗したか取り消されました。何も変更していません。",
     "guard.evOff": "AgathOS Guard をオフにしました",
     "guard.evOn": "AgathOS Guard をオンにしました",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr は作戦指令室風の追加デザインです。OLED 画面向けの真っ黒な背景、細い線、シアンのアクセント、コード用フォントを使います。ロゴとすべての機能は変わりません。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ja, d);

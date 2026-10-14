@@ -425,6 +425,9 @@
     "guard.switchFailed": "Switching did not work or was cancelled. Nothing was changed.",
     "guard.evOff": "AgathOS Guard was switched off",
     "guard.evOn": "AgathOS Guard was switched on",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr is an extra look in the style of an operations console: pure black for OLED screens, thin lines, cyan accents and code type. The logo and all functions stay the same.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);

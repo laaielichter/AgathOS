@@ -127,6 +127,35 @@ async function until(fn, ms, every = 1500) {
     await page.evaluate(() => window.agathos.liveWatch(false, 0));
     check(live >= 2, 'the live view sends updates', live);
 
+    // The extra look (Palantyr): chosen in Settings, pure black behind the page and in the window itself,
+    // remembered, and the way back to the standard look is one click in the side bar.
+    const look = await page.evaluate(async () => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      [...document.querySelectorAll('.nav-item')].pop().click();   // Settings is the last page
+      await wait(500);
+      const pick = [...document.querySelectorAll('#settingsBody .seg-btn')].find((b) => b.textContent.trim() === 'Palantyr');
+      if (!pick) return { error: 'no Palantyr button in Settings' };
+      pick.click();
+      await wait(700);
+      return {
+        theme: document.documentElement.dataset.theme,
+        page: getComputedStyle(document.body).backgroundColor,
+        accent: getComputedStyle(document.documentElement).getPropertyValue('--gold').trim().toLowerCase(),
+        saved: (await window.agathos.uiState()).theme,
+        side: document.querySelectorAll('#themeSeg .seg-btn').length,
+        marks: getComputedStyle(document.querySelector('.ring-hud')).display,
+      };
+    });
+    const winColor = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBackgroundColor());
+    check(look.theme === 'palantyr' && look.page === 'rgb(0, 0, 0)' && look.accent === '#34d1f0' && look.saved === 'palantyr' && look.side === 3 && look.marks !== 'none' && /^#(?:ff)?000000$/i.test(winColor),
+      'Settings: the Palantyr look comes on (black page, cyan accent, black window, remembered)', { ...look, window: winColor });
+    const darkAgain = await page.evaluate(async () => {
+      document.querySelector('#themeSeg .seg-btn').click();          // Dark is the first button
+      await new Promise((r) => setTimeout(r, 600));
+      return { theme: document.documentElement.dataset.theme, page: getComputedStyle(document.body).backgroundColor, saved: (await window.agathos.uiState()).theme, side: document.querySelectorAll('#themeSeg .seg-btn').length };
+    });
+    check(darkAgain.theme === 'dark' && darkAgain.page === 'rgb(13, 16, 32)' && darkAgain.saved === 'dark' && darkAgain.side === 2, 'the standard look comes back with one click', darkAgain);
+
     // The tray line "Check for updates" sends the window a message. The window asks GitHub and shows the answer.
     // GitHub may be out of reach here, or answer "newest version": either way a window with an answer must come up.
     await app.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].webContents.send('agathos:navigate', 'updatecheck'); });

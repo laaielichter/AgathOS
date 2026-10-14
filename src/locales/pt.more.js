@@ -424,6 +424,9 @@
     "guard.switchFailed": "A troca não funcionou ou foi cancelada. Nada foi alterado.",
     "guard.evOff": "O AgathOS Guard foi desligado",
     "guard.evOn": "O AgathOS Guard foi ligado",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr é um visual extra no estilo de uma central de operações: preto puro para telas OLED, linhas finas, destaques em ciano e fonte de código. O logotipo e todas as funções continuam iguais.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pt, d);

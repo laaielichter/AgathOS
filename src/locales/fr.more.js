@@ -424,6 +424,9 @@
     "guard.switchFailed": "Le changement a échoué ou a été annulé. Rien n’a changé.",
     "guard.evOff": "AgathOS Guard a été désactivé",
     "guard.evOn": "AgathOS Guard a été activé",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr est un style en plus, façon centre d'opérations : noir pur pour les écrans OLED, traits fins, accents cyan et police de code. Le logo et toutes les fonctions restent les mêmes.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.fr, d);

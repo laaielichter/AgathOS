@@ -483,6 +483,9 @@
     "guard.switchFailed": "Değiştirme başarısız oldu ya da iptal edildi. Hiçbir şey değiştirilmedi.",
     "guard.evOff": "AgathOS Guard kapatıldı",
     "guard.evOn": "AgathOS Guard açıldı",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr, bir operasyon merkezi tarzında ek bir görünümdür: OLED ekranlar için saf siyah, ince çizgiler, camgöbeği vurgular ve kod yazı tipi. Logo ve tüm işlevler aynı kalır.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.tr, d);

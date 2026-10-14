@@ -1165,6 +1165,65 @@ const guardTests = async (eng) => {
   ok(!/guard/i.test(apiSrc), 'guard switch: the local API has no way to switch Guard');
 };
 
+// ---------- looks: Dark, Light and the extra one, Palantyr ----------
+const themeTests = () => {
+  const TH = require('../core/themes');
+  const read = (...p) => fs.readFileSync(path.join(__dirname, '..', ...p), 'utf8');
+  ok(TH.THEME_IDS.join() === 'dark,light,palantyr' && TH.THEME_IDS.every((id) => TH.isTheme(id)), 'looks: dark, light and palantyr are the known looks');
+  ok(!TH.isTheme('constructor') && !TH.isTheme('__proto__') && !TH.isTheme('') && !TH.isTheme(undefined) && !TH.isTheme(7) && !TH.isTheme('Palantyr '), 'looks: a name that is no look is refused');
+  ok(TH.themeOf('nope') === TH.THEMES.dark && TH.themeOf(undefined) === TH.THEMES.dark && TH.themeOf('palantyr') === TH.THEMES.palantyr, 'looks: an unknown look gives the standard dark colours');
+  ok(TH.THEMES.palantyr.color === '#000000', 'looks: Palantyr is pure black behind the page (OLED)');
+  const merged = TH.mergeUi({ lang: 'nl', theme: 'dark' }, { theme: 'palantyr', mode: 'simple' });
+  ok(merged.theme === 'palantyr' && merged.lang === 'nl' && merged.mode === 'simple', 'looks: a chosen look is saved next to the other window settings');
+  const refused = TH.mergeUi({ theme: 'light' }, { theme: '<img onerror=1>', lang: 'de' });
+  ok(refused.theme === 'light' && refused.lang === 'de' && Object.keys(TH.mergeUi(undefined, 'x')).length === 0, 'looks: a look that does not exist is never saved');
+
+  // The colours of the look, and how readable they are (WCAG contrast).
+  const css = read('src', 'theme-palantyr.css');
+  const tokens = {};
+  for (const m of /:root\[data-theme="palantyr"\]\s*\{([^}]*)\}/.exec(css)[1].matchAll(/--([\w-]+):\s*(#[0-9A-Fa-f]{6})\b/g)) tokens[m[1]] = m[2];
+  const lum = (hex) => { const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4))); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const need = ['bg', 'panel', 'raised', 'line', 'text', 'dim', 'gold', 'gold-ink', 'brand', 'calm', 'watch', 'alarm', 'ice'];
+  ok(need.every((k) => tokens[k]), 'looks: Palantyr sets every colour of the page');
+  ok(tokens.bg === '#000000', 'looks: the page of Palantyr is pure black (OLED pixels stay off)');
+  const grounds = ['bg', 'panel', 'raised'].map((k) => tokens[k]);
+  ok(grounds.every((g) => ratio(tokens.text, g) >= 7 && ratio(tokens.dim, g) >= 4.5), 'looks: text and dim text are easy to read on black, on a panel and on a raised row');
+  ok(['gold', 'calm', 'watch', 'alarm', 'ice'].every((k) => grounds.every((g) => ratio(tokens[k], g) >= 4.5)), 'looks: the accent and the three state colours are easy to read on every ground');
+  ok(ratio(tokens['gold-ink'], tokens.gold) >= 7, 'looks: the text on the cyan buttons is easy to read');
+  const dangerInk = /\.btn-primary\.danger\s*\{\s*color:\s*(#[0-9A-Fa-f]{6})/.exec(css);
+  ok(dangerInk && ratio(dangerInk[1], tokens.alarm) >= 4.5, 'looks: the text on the red button is easy to read');
+  ok(ratio(tokens.brand, tokens.bg) >= 3 && ratio(tokens.line, tokens.bg) >= 1.2, 'looks: the logo and the thin lines can be seen on black');
+  const dark = /:root,\s*:root\[data-theme="dark"\]\s*\{[^}]*--gold:\s*(#[0-9A-Fa-f]{6})/.exec(read('src', 'styles.css'));
+  ok(dark && dark[1].toLowerCase() === tokens.brand.toLowerCase(), 'looks: the logo keeps the gold of the standard look');
+
+  // The files: linked in both windows, nothing from outside, nobody else\'s name.
+  for (const page of ['index.html', 'mini.html']) {
+    const html = read('src', page);
+    ok(html.indexOf('styles.css') > -1 && html.indexOf('theme-palantyr.css') > html.indexOf('styles.css') && /theme-boot\.js/.test(html), `looks: ${page} loads the look after the standard styles, and the boot script`);
+  }
+  ok(!/url\(|@import|https?:/i.test(css), 'looks: the CSS of Palantyr loads nothing from outside (no font, no image, no address)');
+  ok(/\.ring-hud\s*\{\s*display:\s*none/.test(read('src', 'styles.css')) && /\.ring-hud\s*\{\s*display:\s*inline/.test(css), 'looks: the marks around the ring only show in Palantyr');
+  ok(/prefers-reduced-motion[^}]*\{[^}]*animation-duration:\s*\.001ms\s*!important/.test(read('src', 'styles.css')), 'looks: with reduced motion every animation of every look is stopped');
+  ok(['ar', 'hi', 'bn', 'th', 'zh', 'ja', 'ko'].every((l) => new RegExp(`:lang\\(${l}\\)`).test(css.split('@keyframes')[0])), 'looks: scripts that join letters or have no capitals get no extra space between letters');
+  const boot = read('src', 'theme-boot.js');
+  ok(/'light'/.test(boot) && /'palantyr'/.test(boot) && !/eval|innerHTML|document\.write/.test(boot), 'looks: the boot script only sets a known look');
+  const appIds = /const THEME_IDS = \[([^\]]*)\]/.exec(read('src', 'app.js'));
+  ok(appIds && appIds[1].match(/'(\w+)'/g).map((x) => x.slice(1, -1)).join() === TH.THEME_IDS.join(), 'looks: the page and the program know the same looks');
+  const mainSrc = read('main.js');
+  ok(/require\('\.\/core\/themes'\)/.test(mainSrc) && !/const THEMES\s*=/.test(mainSrc), 'looks: the program takes its window colours from core/themes.js');
+  // No logo, name or code of anybody else.
+  const files = [];
+  const walk = (dir) => { for (const f of fs.readdirSync(dir, { withFileTypes: true })) { const full = path.join(dir, f.name); if (f.isDirectory()) { if (!/node_modules|dist|\.git/.test(f.name)) walk(full); } else if (/\.(js|css|html|md|json)$/.test(f.name)) files.push(full); } };
+  ['src', 'core'].forEach((d) => walk(path.join(__dirname, '..', d)));
+  files.push(path.join(__dirname, '..', 'main.js'), path.join(__dirname, '..', 'preload.js'), path.join(__dirname, '..', 'README.md'));
+  const named = files.filter((f) => /palantir/i.test(fs.readFileSync(f, 'utf8')));
+  ok(named.length === 0, 'looks: the name of the other company is nowhere in the program, the page or the README');
+  // The texts, in every language.
+  const { I18N, LANGS } = require('../src/i18n.js');
+  ok(LANGS.every((l) => I18N[l.code]['theme.palantyr'] === 'Palantyr' && I18N[l.code]['set.themeDesc'] && I18N[l.code]['set.themeDesc'].length > 30 && I18N[l.code]['set.theme']), 'looks: the name and the explanation exist in every language');
+};
+
 (async () => {
   const { Engine } = require('../core/engine');
   const est = new Store(path.join(tmp, 'store4'));
@@ -1272,6 +1331,7 @@ const guardTests = async (eng) => {
   await updateTests();
   await linkTests(eng);
   await guardTests(eng);
+  themeTests();
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
   fs.rmSync(tmp, { recursive: true, force: true });

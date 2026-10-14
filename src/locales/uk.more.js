@@ -483,6 +483,9 @@
     "guard.switchFailed": "Перемкнути не вдалося або дію скасовано. Нічого не змінено.",
     "guard.evOff": "AgathOS Guard вимкнено",
     "guard.evOn": "AgathOS Guard увімкнено",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr — додатковий вигляд у стилі центру керування: суто чорний фон для OLED-екранів, тонкі лінії, блакитні акценти та шрифт для коду. Логотип і всі функції залишаються тими самими.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.uk, d);

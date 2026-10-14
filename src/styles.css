@@ -35,6 +35,7 @@
   color-scheme: light;
 }
 :root {
+  --brand: var(--gold);   /* the logo and the wordmark; a look may give the UI another accent and keep this */
   --serif: "Sitka Heading", "Sitka Display", "Sitka Text", Georgia, "Times New Roman", serif;
   --sans: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   --mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
@@ -71,9 +72,9 @@ button, input, select { font: inherit; color: inherit; }
 /* ---------- title bar ---------- */
 .titlebar { height: var(--titlebar); display: flex; align-items: center; padding: 0 16px; -webkit-app-region: drag; user-select: none; }
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand-mark { width: 18px; height: 18px; color: var(--gold); }
+.brand-mark { width: 18px; height: 18px; color: var(--brand); }
 .brand-name { font-family: var(--serif); font-size: 18px; letter-spacing: .01em; }
-.brand-os { font-family: var(--sans); font-weight: 700; font-size: 16px; letter-spacing: .02em; margin-left: 1px; color: var(--gold); }
+.brand-os { font-family: var(--sans); font-weight: 700; font-size: 16px; letter-spacing: .02em; margin-left: 1px; color: var(--brand); }
 .live-pill, .guard-pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--dim); border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px 1px 8px; }
 .guard-pill { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, transparent); }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
@@ -120,6 +121,7 @@ button, input, select { font: inherit; color: inherit; }
 .hero { display: grid; grid-template-columns: 300px 1fr; align-items: center; gap: 40px; padding: 12px 0 28px; }
 .ring-wrap { width: 300px; height: 300px; }
 .ring { width: 100%; height: 100%; overflow: visible; }
+.ring-hud { display: none; }
 .ring-glow { fill: none; stroke: var(--gold); stroke-width: 36; opacity: .06; }
 .ring-arc { fill: none; stroke-width: 14; stroke-linecap: round; cursor: pointer; stroke: var(--calm);
   transition: stroke .6s ease, stroke-width .2s ease, opacity .3s ease; stroke-dasharray: 200; stroke-dashoffset: 0; }
@@ -140,7 +142,7 @@ button, input, select { font: inherit; color: inherit; }
 .ring-pointer circle { fill: var(--gold); }
 .ring.is-scanning .ring-pointer { opacity: 1; }
 .key-base, .key-trace { fill: none; stroke-width: 8; stroke-linejoin: miter; stroke-linecap: square; }
-.key-base { stroke: var(--gold); transition: stroke .6s ease, opacity .3s ease; }
+.key-base { stroke: var(--brand); transition: stroke .6s ease, opacity .3s ease; }
 .ring.is-intro .key-base { stroke-dasharray: 100; animation: trace-in 1.1s ease-out both .25s; }
 @keyframes trace-in { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
 .key-trace { stroke: var(--text); stroke-dasharray: 18 82; stroke-dashoffset: 100; opacity: 0; }
@@ -392,7 +394,7 @@ button, input, select { font: inherit; color: inherit; }
 
 .welcome { max-width: 640px; }
 .wel-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
-.wel-brand svg { width: 40px; height: 40px; color: var(--gold); }
+.wel-brand svg { width: 40px; height: 40px; color: var(--brand); }
 .wel-grid { display: grid; gap: 0; margin-top: 14px; }
 .wel-grid .set { padding: 12px 0; }
 .wel-grid .seg { min-width: 240px; }
