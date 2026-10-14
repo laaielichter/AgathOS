@@ -209,6 +209,7 @@
     "set.dlGuardDesc": "立即检查“下载”文件夹中的新文件：可执行代码的模型和含有隐藏指令的文件。",
     "dl.model": "新下载的 {file} 是一个可执行代码的模型（{calls}）",
     "dl.text": "新下载的 {file} 含有隐藏文字或攻击文字",
+    "dl.fakeInstaller": "新下载的 {file} 假冒 {tool} 的安装程序。{tool} 是通过其官网上的命令或 npm 安装的，而不是这样的文件。在弄清它的来源之前，请不要打开。",
     "report.save": "保存报告",
     "report.saved": "报告已保存",
     "report.title": "AgathOS 安全报告",

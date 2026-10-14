@@ -2,6 +2,8 @@
 // AgathOS - download guard. Checks new files in Downloads the moment they land:
 //  * model files (pickle, PyTorch): walks the opcodes, no code is run
 //  * text an agent might read (rules, skills, prompts, READMEs): hidden characters and attack text
+//  * installers that pretend to be an AI tool which has no installer file (fake download pages
+//    for Claude Code, OpenClaw and others spread stealers this way)
 // No admin needed; uses fs.watch like the other watchers.
 const fs = require('fs');
 const path = require('path');
@@ -13,6 +15,25 @@ const MODEL_EXT = /\.(pt|pth|ckpt|bin|pkl|pickle|joblib|model|sav)$/i;
 const TEXT_EXT = /\.(md|mdc|txt|prompt|json|ya?ml|toml|cursorrules|clinerules|windsurfrules)$/i;
 const TEXT_NAMES = /^(agents|claude|gemini|copilot-instructions|skill|readme)\.md$|^\.(cursorrules|clinerules|windsurfrules)$/i;
 const PARTIAL = /\.(crdownload|part|partial|download|tmp)$/i;
+
+// AI tools that are installed with a command from their own website or with npm.
+// A downloaded installer file with one of these names is not how they come.
+const NO_INSTALLER_TOOLS = [
+  { tool: 'Claude Code', re: /claude[\s._-]*code/i },
+  { tool: 'OpenClaw', re: /open[\s._-]*claw/i },
+  { tool: 'Gemini CLI', re: /gemini[\s._-]*cli/i },
+  { tool: 'Codex CLI', re: /codex[\s._-]*cli|openai[\s._-]*codex/i },
+];
+const RUNNABLE_EXT = /\.(exe|msi|msix|scr|bat|cmd|ps1|vbs|hta|lnk|dmg|pkg)$/i;   // opens and runs: danger
+const PACKED_EXT = /\.(zip|7z|rar|iso|img|vhd|vhdx)$/i;                           // hides what is inside: attention
+
+function fakeInstaller(base) {
+  const hit = NO_INSTALLER_TOOLS.find((t) => t.re.test(base));
+  if (!hit) return null;
+  if (RUNNABLE_EXT.test(base)) return { tool: hit.tool, sev: 'alarm' };
+  if (PACKED_EXT.test(base)) return { tool: hit.tool, sev: 'watch' };
+  return null;
+}
 
 class DownloadGuard {
   constructor({ onFinding }) {
@@ -48,7 +69,7 @@ class DownloadGuard {
   queue(file) {
     if (PARTIAL.test(file)) return;
     const base = path.basename(file);
-    if (!MODEL_EXT.test(base) && !TEXT_EXT.test(base) && !TEXT_NAMES.test(base)) return;
+    if (!MODEL_EXT.test(base) && !TEXT_EXT.test(base) && !TEXT_NAMES.test(base) && !fakeInstaller(base)) return;
     clearTimeout(this.pending.get(file));
     this.pending.set(file, setTimeout(() => this.check(file, -1), 2500));
   }
@@ -70,6 +91,8 @@ class DownloadGuard {
 // Returns a finding or null (also used by tests).
 function inspect(file) {
   const base = path.basename(file);
+  const fake = fakeInstaller(base);
+  if (fake) return { key: 'dl.fakeInstaller', sev: fake.sev, params: { file: U.shortPath(file), tool: fake.tool }, path: file };
   if (MODEL_EXT.test(base)) {
     const m = models.scanModel(file);
     if (m && m.state === 'alarm') {
@@ -86,4 +109,4 @@ function inspect(file) {
   return { key: 'dl.text', sev: bad.some((x) => x.sev === 'alarm') ? 'alarm' : 'watch', params: { file: U.shortPath(file) }, path: file, reasons: bad };
 }
 
-module.exports = { DownloadGuard, inspect };
+module.exports = { DownloadGuard, inspect, fakeInstaller };

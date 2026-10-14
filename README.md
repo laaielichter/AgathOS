@@ -95,7 +95,10 @@ AgathOS shows hidden characters (and decodes them), attack text and keys, and co
 version for you.
 
 **Download guard.** New files in Downloads are checked the moment they land: models that can
-run code, and rules files or prompts with hidden instructions.
+run code, rules files or prompts with hidden instructions, and fake installers: an `.exe`, `.msi`
+or similar named after a tool that is not installed with a file (Claude Code, OpenClaw, Gemini CLI,
+Codex CLI) is an alarm, a zip of it is a warning. Fake download pages for these tools spread
+password stealers this way. It only warns; it never opens or runs the file.
 
 **Calm notifications.** No notification circus: by default only danger pops up (attention goes to
 the log and the tray dot), what happens at the same time comes as one notification, the same

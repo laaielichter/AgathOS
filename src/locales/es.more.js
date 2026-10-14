@@ -209,6 +209,7 @@
     "set.dlGuardDesc": "Revisa al momento los archivos nuevos en Descargas: modelos que pueden ejecutar código y archivos con instrucciones ocultas.",
     "dl.model": "La nueva descarga {file} es un modelo que puede ejecutar código ({calls})",
     "dl.text": "La nueva descarga {file} contiene texto oculto o texto de ataque",
+    "dl.fakeInstaller": "La nueva descarga {file} se hace pasar por el instalador de {tool}. {tool} se instala con un comando de su propia web o con npm, no con un archivo así. No lo abras antes de saber de dónde viene.",
     "report.save": "Guardar informe",
     "report.saved": "Informe guardado",
     "report.title": "Informe de seguridad de AgathOS",

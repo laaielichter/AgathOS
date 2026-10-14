@@ -209,6 +209,7 @@
     "set.dlGuardDesc": "Langsung memeriksa berkas baru di Downloads: model yang bisa menjalankan kode dan berkas berisi instruksi tersembunyi.",
     "dl.model": "Unduhan baru {file} adalah model yang bisa menjalankan kode ({calls})",
     "dl.text": "Unduhan baru {file} berisi teks tersembunyi atau teks serangan",
+    "dl.fakeInstaller": "Unduhan baru {file} berpura-pura menjadi installer {tool}. {tool} dipasang dengan perintah dari situs resminya atau dengan npm, bukan dengan file seperti ini. Jangan buka sebelum kamu tahu dari mana asalnya.",
     "report.save": "Simpan laporan",
     "report.saved": "Laporan disimpan",
     "report.title": "Laporan keamanan AgathOS",
