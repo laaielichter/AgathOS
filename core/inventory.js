@@ -6,6 +6,7 @@ const path = require('path');
 const U = require('./util');
 const C = require('./catalog');
 const { scanText, findSecrets } = require('./textscan');
+const links = require('./links');
 
 // ---------- MCP configs ----------
 function tomlVal(v) {
@@ -131,6 +132,9 @@ function analyseServer(name, def, app, file, store) {
     }
   }
   const joined = [command, ...args, url, ...Object.values(env).map(String), ...Object.values(headers).map(String)].join(' ');
+  // An MCP server that is itself an agent: the program that calls it hands part of its work to another AI.
+  const agentServer = links.agentMcpReason([command, ...args].join(' '));
+  if (agentServer) { reasons.push(agentServer); bump('watch'); }
   const secrets = findSecrets(joined);
   if (secrets.length) { reasons.push({ key: 'mcp.inlineSecret', params: { kinds: [...new Set(secrets.map((s) => s.kind))].join(', ') }, sev: 'watch' }); bump('watch'); }
   if (url) {
@@ -138,6 +142,8 @@ function analyseServer(name, def, app, file, store) {
     try { host = new URL(url).hostname; } catch (_) {}
     if (/^http:/i.test(url) && !/^(localhost|127\.|\[::1\])/.test(host)) { reasons.push({ key: 'mcp.remoteHttp', params: { host }, sev: 'watch' }); bump('watch'); }
     else reasons.push({ key: 'mcp.remote', params: { host }, sev: 'calm' });
+    // A tunnel, a site that only collects what is sent to it, or a name that pretends to be a provider.
+    if (!(store.settings && store.settings.linkCheck === false)) for (const r of links.hostReasons(String(host).toLowerCase())) { reasons.push(r); bump(r.sev); }
   }
   if (/\\(temp|tmp|downloads)\\/i.test(joined)) { reasons.push({ key: 'mcp.oddPath', params: {}, sev: 'watch' }); bump('watch'); }
   if (/(curl|wget|iwr|irm)[^|]*\|\s*(bash|sh|iex|powershell)|-enc(odedcommand)?\s/i.test(joined)) {
@@ -223,6 +229,32 @@ async function envBaseUrls() {
   return out;
 }
 
+// The addresses of language models that are set as variables: in this program's own environment, in the user variables of Windows,
+// and in the startup files of the shell (macOS, Linux). [{ v, url, app }]
+async function envEndpoints() {
+  const out = [];
+  const app = U.IS_WIN ? 'Windows' : U.IS_MAC ? 'macOS' : 'Linux';
+  const seen = new Set();
+  const add = (v, url) => {
+    const k = `${v}|${url}`;
+    if (!url || seen.has(k)) return;
+    seen.add(k);
+    out.push({ v, url: String(url), app });
+  };
+  const names = [...links.ENDPOINT_VARS];
+  for (const v of names) if (process.env[v]) add(v, process.env[v]);
+  if (U.IS_WIN) {
+    const rows = await U.ps.json(`Get-ItemProperty -Path 'HKCU:\\Environment' | Select-Object ${names.join(',')} | ConvertTo-Json -Compress`);
+    for (const r of rows) for (const v of names) if (r && r[v]) add(v, r[v]);
+  } else {
+    for (const rc of require('./mac').SHELL_RC) {
+      const t = U.readText(rc, 256 * 1024);
+      if (t) for (const e of links.extractEndpoints(t)) add(e.name, e.url);
+    }
+  }
+  return out;
+}
+
 // ---------- Instruction files, skills, .env, project configs ----------
 function isInstructionFile(full, name) {
   const n = name.toLowerCase();
@@ -247,6 +279,7 @@ function scanFiles(roots, store) {
   const files = [];
   const configs = [];
   const projectMcp = [];
+  const linkFiles = [];
   const seenPaths = new Set();
   const check = (file, kind) => {
     if (seenPaths.has(file.toLowerCase())) return;
@@ -270,11 +303,14 @@ function scanFiles(roots, store) {
       filter: (full, name) => {
         const n = name.toLowerCase();
         return isInstructionFile(full, name) || /^\.env(\..+)?$/.test(n) || n === '.mcp.json' || isProjectMcp(full) ||
-          (/[\\/]\.(claude|vscode|cursor|gemini|codex|grok)[\\/]/i.test(full) && /\.(json|toml)$/.test(n));
+          (/[\\/]\.(claude|vscode|cursor|gemini|codex|grok)[\\/]/i.test(full) && /\.(json|toml)$/.test(n)) || links.PROJECT_FILE.test(full);
       },
     });
     for (const f of found) {
       const n = path.basename(f).toLowerCase();
+      // Files that can hold the address of a language model (AI links look at them; a file with only settings is not an instruction file).
+      if (links.PROJECT_FILE.test(f)) linkFiles.push({ path: f, app: `Project ${projectName(f)}` });
+      if (/\.ya?ml$/.test(n) && !isInstructionFile(f, path.basename(f))) continue;
       if (/^\.env(\..+)?$/.test(n)) { if (!/\.example$|\.sample$|\.template$/.test(n)) check(f, 'env'); continue; }
       const isMcpFile = n === '.mcp.json' || isProjectMcp(f);
       if (isMcpFile) projectMcp.push({ app: `Project ${projectName(f)}`, path: f, format: projectMcpFormat(f) });
@@ -294,7 +330,7 @@ function scanFiles(roots, store) {
     if (!U.exists(d)) continue;
     for (const f of U.walk(d, { maxDepth: 5, maxFiles: 5000, filter: (full, n) => /\.(md|mdc|txt|sh|ps1|py|js|ts|json|ya?ml)$/i.test(n) })) check(f, 'skill');
   }
-  return { files, configs, projectMcp };
+  return { files, configs, projectMcp, linkFiles };
 }
 
 function scanGlobalConfigs() {
@@ -388,6 +424,6 @@ $b = @(Get-ScheduledTask | Where-Object { $_.State -ne 'Disabled' -and $_.TaskPa
 }
 
 module.exports = {
-  isProjectMcp, scanMcp, scanFiles, scanGlobalConfigs, envBaseUrls, installedAgents, exeVersion, signature, autostarts,
-  parseTomlMcp, serversFromJson, analyseServer, pkgFrom, cmpVersion, scanConfigText,
+  isProjectMcp, scanMcp, scanFiles, scanGlobalConfigs, envBaseUrls, envEndpoints, installedAgents, exeVersion, signature, autostarts,
+  parseTomlMcp, serversFromJson, analyseServer, pkgFrom, cmpVersion, scanConfigText, projectName,
 };

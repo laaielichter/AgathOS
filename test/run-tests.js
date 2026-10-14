@@ -923,6 +923,205 @@ const updateTests = async () => {
   }
 };
 
+// ---------- AI links: where does each program send its prompts? ----------
+const linkTests = async (eng) => {
+  const L = require('../core/links');
+  const I18 = require('../src/i18n.js');
+  const cls = (h) => L.classifyHost(h);
+  const parse = (u, bare) => L.parseEndpoint(u, bare);
+  const judge = (u, o) => L.judgeHost(parse(u), o);
+  const has = (j, key) => j.reasons.some((r) => r.key === key);
+
+  // --- what kind of address is this? ---
+  const kinds = [
+    ['api.openai.com', 'official'], ['api.anthropic.com', 'official'], ['generativelanguage.googleapis.com', 'official'], ['bedrock-runtime.us-east-1.amazonaws.com', 'official'],
+    ['my-resource.openai.azure.com', 'official'], ['api.groq.com', 'official'], ['openrouter.ai', 'official'], ['copilot-proxy.githubusercontent.com', 'official'],
+    ['s3.amazonaws.com', 'cloud'], ['my-app.vercel.app', 'cloud'],
+    ['example.com', 'unknown'], ['api.some-gateway.example', 'unknown'], ['github.com', 'unknown'], ['copilot.microsoft.com', 'unknown'],
+    ['localhost', 'local'], ['127.0.0.1', 'local'], ['::1', 'local'], ['0.0.0.0', 'local'], ['host.docker.internal', 'local'], ['::ffff:7f00:1', 'local'],
+    ['192.168.1.20', 'lan'], ['10.1.2.3', 'lan'], ['172.20.0.5', 'lan'], ['studio.local', 'lan'], ['gpu-box', 'lan'], ['100.101.102.103', 'lan'],
+    ['8.8.8.8', 'ip'], ['203.0.113.7', 'ip'],
+    ['abc123.ngrok-free.app', 'tunnel'], ['quiet-fox.trycloudflare.com', 'tunnel'], ['x.loca.lt', 'tunnel'],
+    ['webhook.site', 'catchall'], ['abc.oast.fun', 'catchall'],
+  ];
+  const wrongKind = kinds.filter(([h, c]) => cls(h).cls !== c).map(([h, c]) => `${h}: ${cls(h).cls}, wanted ${c}`);
+  ok(!wrongKind.length, 'links: official, hosting, unknown, this PC, own network, bare IP, tunnel and catch-all addresses are told apart' + (wrongKind.length ? ' (' + wrongKind.join('; ') + ')' : ''));
+  ok(cls('api.openai.com').provider === 'OpenAI' && cls('api.anthropic.com').provider === 'Anthropic' && cls('bedrock-runtime.us-east-1.amazonaws.com').provider === 'Amazon Bedrock', 'links: an official address names its provider');
+  const looks = [
+    ['api.openai.com.evil.example', 'embed', 'OpenAI'], ['api.anthropic.com-login.example', 'embed', 'Anthropic'],
+    ['0penai.com', 'homoglyph', 'OpenAI'], ['rnistral.ai', 'homoglyph', 'Mistral'], ['anthrop1c.com', 'homoglyph', 'Anthropic'],
+    ['anthroplc.com', 'typo', 'Anthropic'], ['openal.com', 'typo', 'OpenAI'],
+    ['claude-api.example', 'brand', 'Anthropic'], ['openai-proxy.example.com', 'brand', 'OpenAI'], ['anthropic.co', 'brand', 'Anthropic'],
+  ];
+  const wrongLook = looks.filter(([h, why, brand]) => { const c = cls(h); return c.cls !== 'lookalike' || c.why !== why || c.brand !== brand; }).map(([h, why]) => `${h}: ${JSON.stringify(cls(h))}, wanted ${why}`);
+  ok(!wrongLook.length, 'links: a name inside a longer address, look-alike letters, a typo and a borrowed brand name are all caught' + (wrongLook.length ? ' (' + wrongLook.join('; ') + ')' : ''));
+  const cyr = parse('https://openаi.com/v1');
+  ok(cyr && /^xn--/.test(cyr.host) && cls(cyr.host).why === 'homoglyph' && cls(cyr.host).brand === 'OpenAI', 'links: openai with a Cyrillic "a" is a look-alike, even though the browser writes it differently');
+  const idn = parse('https://münchen.example/v1');
+  ok(idn && cls(idn.host).cls === 'lookalike' && cls(idn.host).why === 'idn', 'links: letters from another alphabet in an unknown address are noted');
+  const fine = ['api.openai.com', 'platform.openai.com', 'docs.anthropic.com', 'api.mistral.ai', 'api.x.ai', 'huggingface.co', 'ollama.com', 'cursor.sh', 'github.com', 'registry.npmjs.org', 'pypi.org', 'api.deepseek.com', 'api.together.xyz', 'api.githubcopilot.com'];
+  ok(fine.every((h) => cls(h).cls !== 'lookalike'), 'links: real providers and everyday sites are not taken for look-alikes');
+  ok(L.registrable('a.b.example.co.uk') === 'example.co.uk' && L.registrable('x.example.com') === 'example.com' && L.editDistance('openai', 'openal') === 1, 'links: the registrable part of a name and the distance between two names are right');
+
+  // --- reading an address ---
+  ok(parse('https://api.openai.com/v1').host === 'api.openai.com' && parse('localhost:11434') === null && parse('localhost:11434', true).host === 'localhost' && parse('localhost:11434', true).port === 11434, 'links: host:port counts only where Ollama writes it that way');
+  ok(parse('file:///etc/passwd') === null && parse('ftp://x.example') === null && parse('https://a b.example') === null && parse('') === null && parse(null) === null && parse('x'.repeat(3000)) === null, 'links: things that are not web addresses are left out');
+  ok(cls(parse('http://[::ffff:7f00:1]:11434/v1').host).cls === 'local', 'links: 127.0.0.1 written the long way is still this PC');
+  ok(!has(judge('https://api.openai.com/v1'), 'link.clear') && has(judge('http://example.org/v1'), 'link.clear') && !has(judge('http://localhost:11434/v1'), 'link.clear') && !has(judge('http://192.168.1.5:8000/v1'), 'link.clear'), 'links: an unencrypted link is flagged, except on this PC and your own network');
+  ok(has(judge('https://example.org/v1?api_key=abc'), 'link.keyInUrl') && has(judge('https://user:pw@example.org/v1'), 'link.keyInUrl') && !has(judge('https://example.org/v1?page=2'), 'link.keyInUrl'), 'links: a key or password written inside the address is flagged');
+  ok(has(judge('http://0.0.0.0:11434', { bind: true }), 'link.bind') && has(judge('http://192.168.1.5:11434', { bind: true }), 'link.bind') && !has(judge('http://127.0.0.1:11434', { bind: true }), 'link.bind'), 'links: a server opened to other devices is flagged');
+  ok(judge('https://api.openai.com.evil.example/v1').approvable === false && judge('https://webhook.site/abc').approvable === false && judge('https://abc.ngrok-free.app/v1').approvable === true && judge('https://example.org/v1').approvable === true, 'links: a look-alike and a catch-all site can never be approved; a tunnel or an unknown server can');
+  ok(judge('https://api.openai.com.evil.example/v1').reasons[0].sev === 'alarm' && judge('https://openai-proxy.example.com/v1').reasons[0].sev === 'watch' && judge('https://api.openai.com/v1').reasons.every((r) => r.sev === 'calm'), 'links: severity follows the kind: look-alike danger, borrowed name attention, official calm');
+  ok(L.hostReasons('abc.trycloudflare.com')[0].key === 'link.tunnel' && L.hostReasons('webhook.site')[0].key === 'link.catchall' && L.hostReasons('api.example.com').length === 0 && L.hostReasons('mcp.openai.com.evil.example')[0].key === 'link.look.embed', 'links: the address of an MCP server is only judged for the clearly wrong kinds');
+  const live = (h) => L.liveHost(h);
+  ok(live('abc.trycloudflare.com').key === 'link.liveTunnel' && live('webhook.site').key === 'link.liveCatchall' && live('api.openai.com.evil.example').key === 'link.liveLookalike' && live('api.openai.com.evil.example').params.brand === 'OpenAI' && live('anthroplc.com').sev === 'watch' && live('api.openai.com') === null && live('example.com') === null, 'links: a program that connects right now to a bad name is caught');
+
+  // --- finding addresses in settings files ---
+  const ex = L.extractEndpoints;
+  const e1 = ex('{ // comment\n "env": { "ANTHROPIC_BASE_URL": "https://proxy.example.net/v1", "ANTHROPIC_API_KEY": "sk-ant-x" }, "homepage": "https://example.com" }');
+  ok(e1.length === 1 && e1[0].key === 'env.ANTHROPIC_BASE_URL' && e1[0].url === 'https://proxy.example.net/v1', 'links: JSON settings (with comments): the address is found, other addresses and keys are not');
+  const e2 = ex('[model_providers.local]\nname = "Local"\nbase_url = "http://localhost:11434/v1"\n\n[model_providers.corp]\nbase_url = "https://llm.corp.example/v1"\n');
+  ok(e2.length === 2 && e2[0].key === 'model_providers.local.base_url' && e2[1].key === 'model_providers.corp.base_url', 'links: TOML settings: every provider keeps its own place in the file');
+  const e3 = ex('export OPENAI_BASE_URL="https://rc.example.net/v1"\nOLLAMA_HOST=0.0.0.0:11434\n# OPENAI_API_BASE=https://old.example.net\nPATH=/usr/bin\nHOMEPAGE=https://example.com\n');
+  ok(e3.length === 2 && e3[0].name === 'OPENAI_BASE_URL' && e3[1].name === 'OLLAMA_HOST' && e3[1].bare === true && e3[1].bind === true, 'links: .env and shell files: exported variables are found, a commented-out line is not');
+  const e4 = ex('openai-api-base: https://gw.example.net/v1\nmodel: gpt-4o\n');
+  ok(e4.length === 1 && e4[0].name === 'openai-api-base', 'links: YAML settings (Aider): the address is found');
+  const e5 = ex('{"github.copilot.advanced": {"debug.overrideProxyUrl": "https://proxy.example.net/x"}, "editor.fontSize": 14}');
+  ok(e5.length === 1 && e5[0].url === 'https://proxy.example.net/x', 'links: an editor setting that overrides where Copilot talks to is found');
+  ok(ex('{"a": 1').length === 0 && ex('').length === 0 && ex(null).length === 0 && ex('BASE_URL=notanaddress').length === 0, 'links: broken, empty or meaningless text gives nothing and no error');
+
+  // --- the list: project files, approval, a changed address ---
+  const lstore = new Store(path.join(tmp, 'store-links'));
+  ok(lstore.settings.linkCheck === true, 'settings: the link check is on by default');
+  const proj = path.join(tmp, 'linkwork');
+  const wf = (rel, txt) => { const f = path.join(proj, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, txt); return f; };
+  const json = (u) => JSON.stringify({ env: { ANTHROPIC_BASE_URL: u } });
+  const f1 = wf('p1/.claude/settings.json', json('https://gateway.example.net/v1'));
+  const f2 = wf('p2/.env', 'OPENAI_BASE_URL=http://llm.example.org:8000/v1\nOPENAI_API_KEY=abc\n');
+  const f3 = wf('p3/.claude/settings.json', json('https://api.anthropic.com.evil.example/v1'));
+  const f4 = wf('p4/.env', 'OLLAMA_HOST=0.0.0.0:11434\n');
+  const f5 = wf('p5/.codex/config.toml', '[[providers]]\nbase_url = "https://one.example.net/v1"\n[[providers]]\nbase_url = "https://two.example.net/v1"\n');
+  const f6 = wf('p6/.claude/settings.json', json('https://api.anthropic.com'));
+  const files = [[f1, 'Project p1'], [f2, 'Project p2'], [f3, 'Project p3'], [f4, 'Project p4'], [f5, 'Project p5'], [f6, 'Project p6']].map(([p, app]) => ({ path: p, app }));
+  const run = (extra) => L.scan({ store: lstore, files, ...(extra || {}) });
+  let list = run();
+  const at = (f) => list.filter((l) => l.file === f && l.kind === 'endpoint');
+  ok(at(f1).length === 1 && at(f1)[0].state === 'alarm' && at(f1)[0].reasons.some((r) => r.key === 'link.fromProject') && at(f1)[0].reasons.some((r) => r.key === 'link.unknown') && at(f1)[0].approvable, 'links: a project that brings its own address for your AI key is a danger you may still approve');
+  ok(at(f2).length === 1 && at(f2)[0].state === 'watch' && at(f2)[0].reasons.some((r) => r.key === 'link.clear') && !at(f2)[0].reasons.some((r) => r.key === 'link.fromProject'), 'links: an ordinary .env with an unknown, unencrypted address is attention, not danger');
+  ok(at(f3).length === 1 && at(f3)[0].state === 'alarm' && at(f3)[0].cls === 'lookalike' && at(f3)[0].approvable === false, 'links: a look-alike address can not be approved');
+  ok(at(f4).length === 1 && at(f4)[0].cls === 'local' && at(f4)[0].state === 'watch' && at(f4)[0].reasons.some((r) => r.key === 'link.bind'), 'links: OLLAMA_HOST=0.0.0.0 opens the model server to the network');
+  ok(at(f5).length === 2 && at(f5)[0].id !== at(f5)[1].id, 'links: two addresses with the same name in one file are two links');
+  ok(at(f6).length === 1 && at(f6)[0].state === 'calm' && at(f6)[0].cls === 'official' && at(f6)[0].provider === 'Anthropic', 'links: the official address is calm');
+  ok(list.findIndex((l) => l.state === 'alarm') === 0 && list.every((l, i) => i === 0 || ['calm', 'watch', 'alarm'].indexOf(list[i - 1].state) >= ['calm', 'watch', 'alarm'].indexOf(l.state)), 'links: the list starts with the worst');
+  const a1 = at(f1)[0];
+  lstore.state.approvals[a1.id] = { hash: a1.hash, at: Date.now() };
+  list = run();
+  ok(at(f1)[0].approved === true && at(f1)[0].state === 'calm' && at(f1)[0].reasons[0].key === 'link.trusted' && !at(f1)[0].reasons.some((r) => ['link.unknown', 'link.fromProject'].includes(r.key)), 'links: an approved address is calm');
+  const a3 = at(f3)[0];
+  lstore.state.approvals[a3.id] = { hash: a3.hash, at: Date.now() };
+  list = run();
+  ok(at(f3)[0].approved === false && at(f3)[0].state === 'alarm', 'links: an approval does not help a look-alike');
+  fs.writeFileSync(f1, json('https://other.example.net/v1'));
+  list = run();
+  ok(at(f1)[0].approved === false && at(f1)[0].state === 'alarm' && at(f1)[0].reasons[0].key === 'link.changed' && at(f1)[0].reasons[0].params.host === 'other.example.net', 'links: an approved address that changes is a danger again');
+  ok(JSON.stringify(run().map((l) => l.id)) === JSON.stringify(list.map((l) => l.id)), 'links: the same files give the same list');
+
+  // --- what the other checks found, and programs that start programs ---
+  const mcpRow = { id: 'm1', app: 'Cursor', name: 'mail', transport: 'stdio', state: 'calm', reasons: [], hash: 'h', file: 'x' };
+  const portRow = { port: 11434, addr: '127.0.0.1', product: 'Ollama', state: 'calm', reasons: [], exposed: false };
+  const chains = [{ from: 'claude-code', to: 'codex', first: 1, last: 2, n: 3 }];
+  const withAll = L.scan({ store: lstore, mcp: [mcpRow], ports: [portRow], installed: [{ id: 'codex', name: 'Codex CLI' }, { id: 'ollama', name: 'Ollama' }], chains });
+  const kindsSeen = withAll.filter((l) => l.kind !== 'endpoint').map((l) => l.kind).sort().join(',');
+  ok(kindsSeen === 'agent,default,mcp,server', 'links: MCP servers, local model servers, built-in providers and agent chains are on the map' + (kindsSeen === 'agent,default,mcp,server' ? '' : ' (' + kindsSeen + ')'));
+  ok(withAll.filter((l) => l.dupOf).length === 3 && withAll.find((l) => l.kind === 'agent').dupOf === null, 'links: what the other checks already count is marked, so nothing is counted twice');
+  const chain = withAll.find((l) => l.kind === 'agent');
+  ok(chain.app === 'Claude Code' && chain.state === 'watch' && chain.approvable && chain.watcher === 'gate' && chain.reasons[0].key === 'link.agentChain', 'links: one agent starting another is attention until you say it is fine');
+  lstore.state.approvals[chain.id] = { hash: chain.hash, at: Date.now() };
+  ok(L.scan({ store: lstore, chains }).find((l) => l.kind === 'agent').state === 'calm', 'links: an approved agent chain is calm');
+  ok(L.agentMcpReason('claude mcp serve').key === 'link.agentMcp' && L.agentMcpReason('codex mcp-server').sev === 'watch' && L.agentMcpReason('npx -y @modelcontextprotocol/server-filesystem /tmp') === null && L.agentMcpReason('') === null, 'links: an MCP server that is itself an agent is noted');
+
+  // --- the texts ---
+  const src = ['core/links.js', 'core/engine.js', 'core/remedy.js', 'src/app.js'].map((f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
+  const used = new Set([...src.matchAll(/['"`]((?:link|ai)\.[a-zA-Z]+(?:\.[a-zA-Z]+)*)['"`]/g)].map((m) => m[1]));
+  for (const w of ['embed', 'homoglyph', 'typo', 'brand', 'idn']) used.add('link.look.' + w);
+  for (const w of ['official', 'local', 'lan', 'other', 'bad']) used.add('link.sum.' + w);
+  for (const w of ['mcp', 'server', 'agent']) used.add('link.kind.' + w);
+  for (const c of ['linkBad', 'linkOdd', 'linkAgent']) for (const part of ['simple', 'deep', 'maybe', 'risk', 'todo']) used.add(`an.${c}.${part}`);
+  for (const k of ['nav.ai', 'ev.setting', 'set.linkCheck', 'set.linkCheckDesc', 'fix.link', 'fix.linkAgent']) used.add(k);
+  const missingText = [...used].filter((k) => typeof I18.I18N.en[k] !== 'string');
+  ok(used.size >= 50 && !missingText.length, 'links: every text the code asks for exists' + (missingText.length ? ' (' + missingText.slice(0, 5).join(', ') + ')' : ''));
+  const missingLang = [];
+  for (const l of I18.LANGS) for (const k of used) if (typeof I18.I18N[l.code][k] !== 'string' || !I18.I18N[l.code][k].trim()) missingLang.push(`${l.code}:${k}`);
+  ok(!missingLang.length, 'links: every one of those texts exists in all 20 languages' + (missingLang.length ? ' (' + missingLang.slice(0, 5).join(', ') + ')' : ''));
+  const noButton = [];
+  for (const l of I18.LANGS) for (const k of ['fix.link', 'fix.linkAgent', 'an.linkBad.todo', 'an.linkOdd.todo', 'an.linkAgent.todo']) if (!I18.I18N[l.code][k].includes(I18.I18N[l.code]['btn.approve'])) noButton.push(`${l.code}:${k}`);
+  ok(!noButton.length, 'links: the advice that names the approve button uses the words that button has in that language' + (noButton.length ? ' (' + noButton.slice(0, 5).join(', ') + ')' : ''));
+
+  // --- variables of the system ---
+  const inv2 = require('../core/inventory');
+  process.env.ANTHROPIC_BASE_URL = 'https://env.example.net/v1';
+  process.env.OLLAMA_HOST = '0.0.0.0:11434';
+  const envRows = await inv2.envEndpoints();
+  delete process.env.ANTHROPIC_BASE_URL; delete process.env.OLLAMA_HOST;
+  ok(envRows.some((r) => r.v === 'ANTHROPIC_BASE_URL' && r.url === 'https://env.example.net/v1') && envRows.some((r) => r.v === 'OLLAMA_HOST'), 'links: variables of the system that point to an address are read');
+  const envLinks = L.scan({ store: lstore, env: envRows });
+  ok(envLinks.filter((l) => l.via === 'env').length === 2 && envLinks.find((l) => l.key === 'OLLAMA_HOST').reasons.some((r) => r.key === 'link.bind'), 'links: such variables become links, OLLAMA_HOST=0.0.0.0 included');
+
+  // --- the engine ---
+  const E = path.join(tmp, 'linkeng');
+  const ew = (rel, txt) => { const f = path.join(E, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, txt); return f; };
+  const ea = ew('a/.claude/settings.json', json('https://gateway.example.net/v1'));
+  const eb = ew('b/.claude/settings.json', json('https://api.anthropic.com.evil.example/v1'));
+  const savedFiles = eng._files;
+  const savedConfigs = eng.inventory.configs;
+  eng._files = Object.assign({ files: [], configs: [], projectMcp: [] }, eng._files, { linkFiles: [{ path: ea, app: 'Project a' }, { path: eb, app: 'Project b' }] });
+  eng.refreshLinks();
+  const mine = (f) => eng.inventory.links.find((l) => l.kind === 'endpoint' && l.file === f);
+  const la = mine(ea);
+  const lb = mine(eb);
+  ok(la && lb && la.state === 'alarm' && lb.state === 'alarm' && la.approvable && !lb.approvable, 'links engine: the list is built from the project files');
+  ok(eng.counts().links >= 2 && eng.counts().issues >= 2, 'links engine: the links are in the count');
+  ok(eng.snapshot().links.some((l) => l.id === la.id && typeof l.short === 'string' && l.short.length > 0), 'links engine: the snapshot carries the links with a short path');
+  const lstep = eng.fixPlan().find((x) => x.tkey === `link:${la.id}`);
+  ok(lstep && lstep.cat === 'manual' && lstep.sev === 'alarm' && lstep.target.type === 'link' && lstep.target.id === la.id, 'links engine: a link to check is a step you do yourself');
+  ok(eng.snapshot().watchers.find((w) => w.id === 'keys').issues >= 2, 'links engine: addresses show on the key watcher');
+  eng.trust({ type: 'link', id: lb.id });
+  ok(mine(eb).state === 'alarm' && !mine(eb).approved, 'links engine: a look-alike of a provider can not be approved');
+  eng.trust({ type: 'link', id: la.id });
+  ok(mine(ea).approved === true && mine(ea).state === 'calm' && eng.snapshot().events.some((e) => e.key === 'link.trusted'), 'links engine: an address you approve turns calm and is logged');
+  fs.writeFileSync(ea, json('https://other.example.net/v1'));
+  eng.refreshLinksWithEvents();
+  ok(mine(ea).state === 'alarm' && mine(ea).reasons[0].key === 'link.changed' && eng.snapshot().events.some((e) => e.key === 'link.moved' && e.sev === 'alarm'), 'links engine: an approved address that changes is an alarm and an event');
+  eng.inventory.configs = [{ path: ea, reasons: [{ key: 'config.baseUrl', params: { v: 'ANTHROPIC_BASE_URL', host: 'other.example.net' }, sev: 'watch' }], state: 'watch', id: 'cfg-x', hash: 'h' }];
+  eng.refreshLinks();
+  ok(!eng.inventory.configs.some((c) => c.path === ea), 'links engine: the older "settings send traffic to ..." finding is not counted a second time');
+  const ec = ew('c/.env', 'OPENAI_BASE_URL=https://llm.example.org/v1\n');
+  eng.linkFileChanged(ec);
+  ok(eng.inventory.links.some((l) => l.file === ec && l.state === 'watch') && eng.snapshot().events.some((e) => e.key === 'link.added' && e.params && /llm\.example\.org/.test(e.params.label)), 'links engine: a new project file with an address is noticed at once');
+  eng.linkFileChanged(path.join(E, 'c', 'notes.txt'));
+  ok(!eng.inventory.links.some((l) => /notes\.txt$/.test(l.file)), 'links engine: other files are not looked at');
+  const chainEvents = () => eng.snapshot().events.filter((e) => e.key === 'link.agentChain').length;
+  const c0 = chainEvents();
+  eng.noteChain('claude-code', 'codex');
+  const lc = eng.inventory.links.find((l) => l.kind === 'agent' && l.key === 'claude-code>codex');
+  ok(lc && lc.state === 'watch' && lc.approvable && chainEvents() === c0 + 1 && eng.store.state.chains['claude-code>codex'].n === 1, 'links engine: one agent starting another is written down and reported');
+  eng.noteChain('claude-code', 'codex');
+  eng.noteChain('codex', 'codex');
+  ok(eng.store.state.chains['claude-code>codex'].n === 2 && chainEvents() === c0 + 1 && !eng.store.state.chains['codex>codex'], 'links engine: the same pair is not reported twice, an agent starting itself is no chain');
+  eng.trust({ type: 'link', id: lc.id });
+  ok(eng.inventory.links.find((l) => l.id === lc.id).state === 'calm', 'links engine: an approved agent chain is calm');
+  eng.store.updateSettings({ linkCheck: false });
+  eng.refreshLinks();
+  ok(eng.inventory.links.length === 0 && eng.counts().links === 0, 'links engine: switched off, nothing is looked at');
+  eng.store.updateSettings({ linkCheck: true });
+  eng.refreshLinks();
+  ok(eng.inventory.links.length > 0, 'links engine: switched on again, the list is back');
+  delete eng.store.state.chains['claude-code>codex'];
+  eng._files = savedFiles;
+  eng.inventory.configs = savedConfigs;
+  eng.refreshLinks();
+};
+
 (async () => {
   const { Engine } = require('../core/engine');
   const est = new Store(path.join(tmp, 'store4'));
@@ -1028,6 +1227,7 @@ const updateTests = async () => {
   await backupTests();
   await robustTests();
   await updateTests();
+  await linkTests(eng);
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
   fs.rmSync(tmp, { recursive: true, force: true });
