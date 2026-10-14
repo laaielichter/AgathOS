@@ -424,6 +424,9 @@
     "guard.switchFailed": "전환에 실패했거나 취소되었습니다. 바뀐 것은 없습니다.",
     "guard.evOff": "AgathOS Guard를 껐습니다",
     "guard.evOn": "AgathOS Guard를 켰습니다",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr는 작전 상황실 스타일의 추가 디자인입니다. OLED 화면을 위한 순수한 검은색, 가는 선, 청록색 강조, 코드용 글꼴을 씁니다. 로고와 모든 기능은 그대로입니다.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);

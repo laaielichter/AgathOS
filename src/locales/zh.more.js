@@ -424,6 +424,9 @@
     "guard.switchFailed": "切换失败或已取消。没有任何更改。",
     "guard.evOff": "AgathOS Guard 已关闭",
     "guard.evOn": "AgathOS Guard 已开启",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr 是一种额外的外观，风格类似作战指挥台：为 OLED 屏幕准备的纯黑背景、细线条、青色点缀和代码字体。标志和所有功能保持不变。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);

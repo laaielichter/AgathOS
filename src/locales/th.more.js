@@ -483,6 +483,9 @@
     "guard.switchFailed": "สลับไม่สำเร็จหรือถูกยกเลิก ไม่มีอะไรเปลี่ยนแปลง",
     "guard.evOff": "ปิด AgathOS Guard แล้ว",
     "guard.evOn": "เปิด AgathOS Guard แล้ว",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr เป็นหน้าตาเสริมสไตล์ศูนย์ปฏิบัติการ: สีดำสนิทสำหรับจอ OLED เส้นบาง สีเน้นฟ้าเขียว และฟอนต์แบบโค้ด โลโก้และฟังก์ชันทั้งหมดยังเหมือนเดิม",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.th, d);

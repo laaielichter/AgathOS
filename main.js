@@ -18,10 +18,7 @@ const { Notifier } = require('./core/notifier');
 const errlog = require('./core/errlog');
 const { I18N } = require('./src/i18n.js');
 
-const THEMES = {
-  dark: { color: '#0D1020', symbolColor: '#E8EBF5' },
-  light: { color: '#F2F3F8', symbolColor: '#151A2E' },
-};
+const { isTheme, themeOf, mergeUi } = require('./core/themes');
 
 const IS_MAC = process.platform === 'darwin';
 let win = null;
@@ -54,7 +51,7 @@ const tt = (key, params = {}) => {
 };
 
 function createWindow() {
-  const theme = THEMES[(store.state.ui && store.state.ui.theme) || 'dark'] || THEMES.dark;
+  const theme = themeOf(store.state.ui && store.state.ui.theme);
   win = new BrowserWindow({
     width: 1320, height: 860, minWidth: 1000, minHeight: 660,
     backgroundColor: theme.color, title: 'AgathOS',
@@ -81,7 +78,7 @@ function createWindow() {
 const MINI_W = 340;
 const MINI_H = 468;
 function createMini() {
-  const theme = THEMES[(store.state.ui && store.state.ui.theme) || 'dark'] || THEMES.dark;
+  const theme = themeOf(store.state.ui && store.state.ui.theme);
   mini = new BrowserWindow({
     width: MINI_W, height: MINI_H, show: false, frame: false, resizable: false, movable: false, minimizable: false, maximizable: false,
     fullscreenable: false, skipTaskbar: true, alwaysOnTop: true, backgroundColor: theme.color, title: 'AgathOS',
@@ -441,12 +438,13 @@ function wireIpc() {
     return s;
   });
   h('ui', (patch) => {
-    store.state.ui = { ...(store.state.ui || {}), ...(patch || {}) };
+    store.state.ui = mergeUi(store.state.ui, patch);
     store.saveState();
     if (patch && patch.lang && I18N[patch.lang]) { uiLang = patch.lang; buildTray(); }
-    if (patch && patch.theme && THEMES[patch.theme] && win) {
-      try { if (!IS_MAC) win.setTitleBarOverlay({ ...THEMES[patch.theme], height: 40 }); win.setBackgroundColor(THEMES[patch.theme].color); } catch (_) {}
-      try { if (mini) mini.setBackgroundColor(THEMES[patch.theme].color); } catch (_) {}
+    if (patch && isTheme(patch.theme) && win) {
+      const look = themeOf(patch.theme);
+      try { if (!IS_MAC) win.setTitleBarOverlay({ ...look, height: 40 }); win.setBackgroundColor(look.color); } catch (_) {}
+      try { if (mini) mini.setBackgroundColor(look.color); } catch (_) {}
     }
     return store.state.ui;
   });

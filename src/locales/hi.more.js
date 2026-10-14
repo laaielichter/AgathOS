@@ -424,6 +424,9 @@
     "guard.switchFailed": "बदलाव नहीं हो पाया या रद्द हुआ। कुछ नहीं बदला।",
     "guard.evOff": "AgathOS Guard बंद किया गया",
     "guard.evOn": "AgathOS Guard चालू किया गया",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr एक अतिरिक्त रूप है, जो ऑपरेशन्स कंसोल की शैली में है: OLED स्क्रीन के लिए गहरा काला रंग, पतली रेखाएँ, सियान रंग के निशान और कोड वाला फ़ॉन्ट। लोगो और सभी सुविधाएँ वैसी ही रहती हैं।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.hi, d);

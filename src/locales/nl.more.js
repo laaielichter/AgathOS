@@ -425,6 +425,9 @@
     "guard.switchFailed": "Schakelen is niet gelukt of geannuleerd. Er is niets veranderd.",
     "guard.evOff": "AgathOS Guard is uitgezet",
     "guard.evOn": "AgathOS Guard is aangezet",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr is een extra uiterlijk in de stijl van een commandocentrum: zuiver zwart voor OLED-schermen, dunne lijnen, cyaan accenten en codelettertype. Het logo en alle functies blijven hetzelfde.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.nl, d);

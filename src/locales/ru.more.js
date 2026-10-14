@@ -424,6 +424,9 @@
     "guard.switchFailed": "Переключить не удалось или действие отменено. Ничего не изменено.",
     "guard.evOff": "AgathOS Guard выключен",
     "guard.evOn": "AgathOS Guard включён",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr — дополнительный вид в стиле центра управления: чисто чёрный фон для OLED-экранов, тонкие линии, голубые акценты и шрифт для кода. Логотип и все функции остаются прежними.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ru, d);

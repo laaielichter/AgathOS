@@ -424,6 +424,9 @@
     "guard.switchFailed": "Pengalihan gagal atau dibatalkan. Tidak ada yang diubah.",
     "guard.evOff": "AgathOS Guard dimatikan",
     "guard.evOn": "AgathOS Guard dinyalakan",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr adalah tampilan tambahan bergaya pusat komando: hitam pekat untuk layar OLED, garis tipis, aksen sian, dan huruf kode. Logo dan semua fungsi tetap sama.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);

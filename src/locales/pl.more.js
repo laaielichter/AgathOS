@@ -483,6 +483,9 @@
     "guard.switchFailed": "Przełączenie się nie udało lub zostało anulowane. Nic nie zmieniono.",
     "guard.evOff": "AgathOS Guard został wyłączony",
     "guard.evOn": "AgathOS Guard został włączony",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr to dodatkowy wygląd w stylu centrum dowodzenia: czysta czerń dla ekranów OLED, cienkie linie, cyjanowe akcenty i czcionka do kodu. Logo i wszystkie funkcje pozostają bez zmian.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pl, d);

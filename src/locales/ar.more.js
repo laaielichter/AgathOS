@@ -424,6 +424,9 @@
     "guard.switchFailed": "لم ينجح التبديل أو أُلغي. لم يتغيّر شيء.",
     "guard.evOff": "تم إيقاف AgathOS Guard",
     "guard.evOn": "تم تشغيل AgathOS Guard",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr مظهر إضافي بأسلوب غرفة عمليات: أسود نقي لشاشات OLED، وخطوط رفيعة، ولمسات سماوية، وخط برمجي. يبقى الشعار وكل الوظائف كما هي.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ar, d);

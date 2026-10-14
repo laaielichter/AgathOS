@@ -424,6 +424,9 @@
     "guard.switchFailed": "বদলানো যায়নি বা বাতিল হয়েছে। কিছুই বদলায়নি।",
     "guard.evOff": "AgathOS Guard বন্ধ করা হয়েছে",
     "guard.evOn": "AgathOS Guard চালু করা হয়েছে",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr একটি বাড়তি চেহারা, অপারেশন কনসোলের ধাঁচে: OLED স্ক্রিনের জন্য খাঁটি কালো, সরু রেখা, সায়ান রঙের ছোঁয়া আর কোডের ফন্ট। লোগো ও সব কাজ আগের মতোই থাকে।",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.bn, d);

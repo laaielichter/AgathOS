@@ -483,6 +483,9 @@
     "guard.switchFailed": "Chuyển đổi không thành công hoặc đã bị hủy. Không có gì bị thay đổi.",
     "guard.evOff": "AgathOS Guard đã được tắt",
     "guard.evOn": "AgathOS Guard đã được bật",
+
+    "theme.palantyr": "Palantyr",
+    "set.themeDesc": "Palantyr là một giao diện thêm theo phong cách trung tâm điều hành: màu đen tuyền cho màn hình OLED, đường nét mảnh, điểm nhấn xanh lơ và phông chữ mã. Logo và mọi chức năng vẫn như cũ.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.vi, d);
