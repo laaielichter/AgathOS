@@ -414,6 +414,17 @@
     "an.linkAgent.maybe": "Many people let one agent ask another for a second opinion, on purpose.",
     "an.linkAgent.risk": "A planted instruction can use a trusted agent to reach a second agent with more rights, so the damage is harder to trace.",
     "an.linkAgent.todo": "If you wanted this, choose “This is OK”. If not, stop the agent that started it and read what it was asked to do.",
+
+    "guard.off": "Switched off",
+    "guard.offDesc": "Guard is switched off. Its files stay, but it does nothing and stays off after a restart. Firewall rules it made stay in place.",
+    "guard.onOff": "Guard on or off",
+    "guard.uacOff": "Windows will ask for admin permission to switch Guard off. Choose Yes.",
+    "guard.uacOn": "Windows will ask for admin permission to switch Guard on. Choose Yes.",
+    "guard.switchedOn": "Guard is switched on.",
+    "guard.switchedOff": "Guard is switched off. It stays off until you switch it on.",
+    "guard.switchFailed": "Switching did not work or was cancelled. Nothing was changed.",
+    "guard.evOff": "AgathOS Guard was switched off",
+    "guard.evOn": "AgathOS Guard was switched on",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);

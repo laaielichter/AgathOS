@@ -472,6 +472,17 @@
     "an.linkAgent.maybe": "Molti lasciano di proposito che un agente chieda un secondo parere a un altro.",
     "an.linkAgent.risk": "Un’istruzione piantata può usare un agente fidato per raggiungerne un secondo con più diritti, e il danno è più difficile da ricostruire.",
     "an.linkAgent.todo": "Se lo volevi, scegli «Va bene così». Altrimenti ferma l’agente che l’ha avviato e leggi cosa gli era stato chiesto.",
+
+    "guard.off": "Spento",
+    "guard.offDesc": "Guard è spento. I suoi file restano, ma non fa nulla e resta spento dopo un riavvio. Le regole del firewall che ha creato restano al loro posto.",
+    "guard.onOff": "Guard acceso o spento",
+    "guard.uacOff": "Windows chiederà il permesso di amministratore per spegnere Guard. Scegli Sì.",
+    "guard.uacOn": "Windows chiederà il permesso di amministratore per accendere Guard. Scegli Sì.",
+    "guard.switchedOn": "Guard è acceso.",
+    "guard.switchedOff": "Guard è spento. Resta spento finché non lo riaccendi.",
+    "guard.switchFailed": "Il cambio non è riuscito o è stato annullato. Non è stato modificato nulla.",
+    "guard.evOff": "AgathOS Guard è stato spento",
+    "guard.evOn": "AgathOS Guard è stato acceso",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.it, d);

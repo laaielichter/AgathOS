@@ -51,7 +51,7 @@ class Engine {
     this.pidDomains = new Map();    // pid -> [domain]
     this.deletes = new Map();       // agentId -> [ts]
     this.signatures = new Map();    // exe -> signature
-    this.guardState = { installed: guard.installed(), running: false, sysmon: false, elevated: false, seq: 0 };
+    this.guardState = { installed: guard.installed(), enabled: !store.state.guardOff, running: false, sysmon: false, elevated: false, seq: 0 };
     this.timers = [];
     this.startedAt = Date.now();
     this.updateTimer = null;
@@ -418,6 +418,30 @@ class Engine {
     this.event({ ...a, agentId });
   }
 
+  // Guard on or off, without removing it. Only a person in the window can do this: it is not part of the local API or of the
+  // agent tools, and Windows asks for admin permission each time, so a program running as you cannot switch Guard off by itself.
+  async guardSwitch(on) {
+    on = !!on;
+    if (!this.guardState.installed) return { ok: false, notInstalled: true };
+    const ok = await guard.setEnabled(on);
+    if (!ok) return { ok: false };
+    this.store.state.guardOff = !on;
+    this.guardState.enabled = on;
+    if (!on) { this.guardState.running = false; this.guardState.sysmon = false; }
+    this.store.saveState();
+    this.event({ key: on ? 'guard.evOn' : 'guard.evOff', sev: on ? 'calm' : 'watch', watcher: 'net', params: {} }, true);
+    this.changed(true);
+    if (on) this.pollGuard().catch(() => {});
+    return { ok: true, enabled: on };
+  }
+
+  // After Guard was installed or removed it is on again by definition.
+  guardReset() {
+    this.store.state.guardOff = false;
+    this.guardState.enabled = true;
+    this.store.saveState();
+  }
+
   async pollGuard() {
     // The token file is the sign that Guard is installed; if it is gone (Guard was removed) the state follows.
     this.guardState.installed = guard.installed();
@@ -428,6 +452,8 @@ class Engine {
     const st = await guard.status();
     this.guardState.running = !!st;
     if (!st) { this.changed(); return; }
+    // It answers, so it is on, whatever was written down (it was started from outside, say).
+    if (this.guardState.enabled === false) { this.guardState.enabled = true; this.store.state.guardOff = false; this.store.saveState(); }
     this.guardState.sysmon = !!st.sysmon;
     this.guardState.elevated = !!st.elevated;
     if (st.seq < this.guardState.seq) this.guardState.seq = 0;      // guard restarted
@@ -793,7 +819,7 @@ class Engine {
   liveView(since = 0) {
     return {
       ...this.tel.view(since),
-      guard: { installed: !!this.guardState.installed, running: !!this.guardState.running, sysmon: !!this.guardState.sysmon },
+      guard: { installed: !!this.guardState.installed, enabled: this.guardState.enabled !== false, running: !!this.guardState.running, sysmon: !!this.guardState.sysmon },
       scanning: this.scanning ? { watcher: this.scanning.watcher, done: this.scanning.done, total: this.scanning.total } : null,
       pausedAll: !!this.pausedAll, realtime: this.store.settings.realtime !== false, heartbeat: this.procs.lastPoll,
     };

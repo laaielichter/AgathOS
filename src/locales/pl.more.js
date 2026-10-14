@@ -472,6 +472,17 @@
     "an.linkAgent.maybe": "Wiele osób celowo pozwala jednemu agentowi poprosić drugiego o drugą opinię.",
     "an.linkAgent.risk": "Podrzucone polecenie może wykorzystać zaufanego agenta, by dotrzeć do drugiego, z większymi uprawnieniami, a szkodę trudniej wtedy wyśledzić.",
     "an.linkAgent.todo": "Jeśli to zamierzone, wybierz „To jest w porządku”. Jeśli nie, zatrzymaj agenta, który go uruchomił, i przeczytaj, co miał zrobić.",
+
+    "guard.off": "Wyłączony",
+    "guard.offDesc": "Guard jest wyłączony. Jego pliki zostają, ale nic nie robi i po ponownym uruchomieniu nadal jest wyłączony. Reguły zapory, które utworzył, zostają na miejscu.",
+    "guard.onOff": "Guard włączony lub wyłączony",
+    "guard.uacOff": "Windows poprosi o zgodę administratora, aby wyłączyć Guard. Wybierz Tak.",
+    "guard.uacOn": "Windows poprosi o zgodę administratora, aby włączyć Guard. Wybierz Tak.",
+    "guard.switchedOn": "Guard jest włączony.",
+    "guard.switchedOff": "Guard jest wyłączony. Pozostanie wyłączony, dopóki go nie włączysz.",
+    "guard.switchFailed": "Przełączenie się nie udało lub zostało anulowane. Nic nie zmieniono.",
+    "guard.evOff": "AgathOS Guard został wyłączony",
+    "guard.evOn": "AgathOS Guard został włączony",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pl, d);

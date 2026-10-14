@@ -413,6 +413,17 @@
     "an.linkAgent.maybe": "Viele lassen einen Agenten absichtlich einen anderen um eine zweite Meinung bitten.",
     "an.linkAgent.risk": "Eine eingeschleuste Anweisung kann einen vertrauten Agenten nutzen, um an einen zweiten mit mehr Rechten zu kommen, sodass sich der Schaden schwerer zurückverfolgen lässt.",
     "an.linkAgent.todo": "Wolltest du das, wähle „Das ist OK“. Wenn nicht, beende den Agenten, der ihn gestartet hat, und lies, was er tun sollte.",
+
+    "guard.off": "Ausgeschaltet",
+    "guard.offDesc": "Guard ist ausgeschaltet. Die Dateien bleiben, aber er tut nichts und bleibt nach einem Neustart aus. Firewall-Regeln, die er erstellt hat, bleiben bestehen.",
+    "guard.onOff": "Guard an oder aus",
+    "guard.uacOff": "Windows fragt gleich nach Adminrechten, um Guard auszuschalten. Wähle Ja.",
+    "guard.uacOn": "Windows fragt gleich nach Adminrechten, um Guard einzuschalten. Wähle Ja.",
+    "guard.switchedOn": "Guard ist eingeschaltet.",
+    "guard.switchedOff": "Guard ist ausgeschaltet. Er bleibt aus, bis du ihn wieder einschaltest.",
+    "guard.switchFailed": "Umschalten hat nicht geklappt oder wurde abgebrochen. Nichts wurde geändert.",
+    "guard.evOff": "AgathOS Guard wurde ausgeschaltet",
+    "guard.evOn": "AgathOS Guard wurde eingeschaltet",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.de, d);

@@ -475,8 +475,10 @@ function wireIpc() {
   h('rollback', () => engine.intent.rollbackBaseline());
   h('forget', () => { engine.intent.resetBaseline(); return true; });
   h('judgeModels', () => judge.models());
-  h('guardInstall', async () => { if (process.platform !== 'win32') return { ok: false, unsupported: true }; const ok = await guard.install(__dirname.replace(/app\.asar$/, 'app.asar.unpacked')); engine.guardState.installed = guard.installed(); engine.changed(true); return { ok }; });
-  h('guardUninstall', async () => { const ok = await guard.uninstall(); engine.guardState = { installed: guard.installed(), running: false, sysmon: false, elevated: false, seq: 0 }; engine.changed(true); return { ok }; });
+  h('guardInstall', async () => { if (process.platform !== 'win32') return { ok: false, unsupported: true }; const ok = await guard.install(__dirname.replace(/app\.asar$/, 'app.asar.unpacked')); engine.guardState.installed = guard.installed(); if (ok) engine.guardReset(); engine.changed(true); return { ok }; });
+  h('guardUninstall', async () => { const ok = await guard.uninstall(); engine.guardState = { installed: guard.installed(), enabled: true, running: false, sysmon: false, elevated: false, seq: 0 }; if (ok) engine.guardReset(); engine.changed(true); return { ok }; });
+  // On or off without removing it (Windows asks for permission each time). Only from the window; there is no other way in.
+  h('guardSwitch', async (on) => { if (process.platform !== 'win32') return { ok: false, unsupported: true }; return engine.guardSwitch(!!on); });
   h('addFolder', async (kind) => {
     const r = await dialog.showOpenDialog(parentWin(), { properties: ['openDirectory'] });
     if (r.canceled || !r.filePaths[0]) return store.settings;

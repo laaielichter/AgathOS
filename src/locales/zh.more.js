@@ -413,6 +413,17 @@
     "an.linkAgent.maybe": "很多人会有意让一个智能体向另一个征求第二意见。",
     "an.linkAgent.risk": "被植入的指令可以借助受信任的智能体，触达权限更大的第二个智能体，使损害更难追查。",
     "an.linkAgent.todo": "如果这是你想要的，请选择“这是正常的”。如果不是，请停止启动它的智能体，并读一读它被要求做什么。",
+
+    "guard.off": "已关闭",
+    "guard.offDesc": "Guard 已关闭。其文件仍保留，但它不做任何事，重启后也保持关闭。它创建的防火墙规则保持不变。",
+    "guard.onOff": "Guard 开关",
+    "guard.uacOff": "Windows 将请求管理员权限以关闭 Guard。请选择“是”。",
+    "guard.uacOn": "Windows 将请求管理员权限以开启 Guard。请选择“是”。",
+    "guard.switchedOn": "Guard 已开启。",
+    "guard.switchedOff": "Guard 已关闭。在你重新开启之前，它会一直保持关闭。",
+    "guard.switchFailed": "切换失败或已取消。没有任何更改。",
+    "guard.evOff": "AgathOS Guard 已关闭",
+    "guard.evOn": "AgathOS Guard 已开启",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);

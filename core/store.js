@@ -78,6 +78,7 @@ class Store {
     s.baselineVersions = s.baselineVersions || [];
     s.seen = s.seen || {};             // inventory fingerprints from the last scan
     s.chains = s.chains || {};         // 'from>to' -> { from, to, first, last, n }: an agent that started another agent
+    s.guardOff = s.guardOff === true;  // Guard is installed but you switched it off (it stays off after a restart)
     s.firstRun = s.firstRun !== false;
     s.updateSlot = Number.isFinite(s.updateSlot) ? s.updateSlot : 0;                      // the last 23:00 (Dutch time) that got its update check
     s.updateAnnounced = typeof s.updateAnnounced === 'string' ? s.updateAnnounced.slice(0, 40) : '';   // the version we showed a pop-up for

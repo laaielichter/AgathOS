@@ -472,6 +472,17 @@
     "an.linkAgent.maybe": "Nhiều người cố ý để một tác nhân hỏi ý kiến thứ hai từ tác nhân khác.",
     "an.linkAgent.risk": "Một chỉ dẫn cài sẵn có thể lợi dụng tác nhân đáng tin để với tới tác nhân thứ hai có nhiều quyền hơn, và thiệt hại càng khó lần ra.",
     "an.linkAgent.todo": "Nếu bạn muốn như vậy, chọn “Cái này ổn”. Nếu không, hãy dừng tác nhân đã khởi chạy nó và đọc xem nó được yêu cầu làm gì.",
+
+    "guard.off": "Đã tắt",
+    "guard.offDesc": "Guard đang tắt. Các tệp của nó vẫn còn, nhưng nó không làm gì và vẫn tắt sau khi khởi động lại. Các quy tắc tường lửa nó đã tạo vẫn được giữ nguyên.",
+    "guard.onOff": "Bật hoặc tắt Guard",
+    "guard.uacOff": "Windows sẽ hỏi quyền quản trị để tắt Guard. Hãy chọn Có.",
+    "guard.uacOn": "Windows sẽ hỏi quyền quản trị để bật Guard. Hãy chọn Có.",
+    "guard.switchedOn": "Guard đã được bật.",
+    "guard.switchedOff": "Guard đã được tắt. Nó sẽ tắt cho đến khi bạn bật lại.",
+    "guard.switchFailed": "Chuyển đổi không thành công hoặc đã bị hủy. Không có gì bị thay đổi.",
+    "guard.evOff": "AgathOS Guard đã được tắt",
+    "guard.evOn": "AgathOS Guard đã được bật",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.vi, d);

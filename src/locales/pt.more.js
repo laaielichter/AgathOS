@@ -413,6 +413,17 @@
     "an.linkAgent.maybe": "Muita gente deixa de propósito um agente pedir uma segunda opinião a outro.",
     "an.linkAgent.risk": "Uma instrução plantada pode usar um agente de confiança para chegar a um segundo agente com mais direitos, e o dano fica mais difícil de rastrear.",
     "an.linkAgent.todo": "Se você queria isso, escolha “Isto está OK”. Se não, pare o agente que o iniciou e leia o que ele foi mandado fazer.",
+
+    "guard.off": "Desligado",
+    "guard.offDesc": "O Guard está desligado. Os arquivos dele ficam, mas ele não faz nada e continua desligado após reiniciar. As regras de firewall que ele criou continuam.",
+    "guard.onOff": "Guard ligado ou desligado",
+    "guard.uacOff": "O Windows vai pedir permissão de administrador para desligar o Guard. Escolha Sim.",
+    "guard.uacOn": "O Windows vai pedir permissão de administrador para ligar o Guard. Escolha Sim.",
+    "guard.switchedOn": "O Guard está ligado.",
+    "guard.switchedOff": "O Guard está desligado. Ele fica assim até você ligá-lo.",
+    "guard.switchFailed": "A troca não funcionou ou foi cancelada. Nada foi alterado.",
+    "guard.evOff": "O AgathOS Guard foi desligado",
+    "guard.evOn": "O AgathOS Guard foi ligado",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pt, d);

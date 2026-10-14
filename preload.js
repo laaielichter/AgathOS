@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('agathos', {
   judgeModels: call('judgeModels'),
   guardInstall: call('guardInstall'),
   guardUninstall: call('guardUninstall'),
+  guardSwitch: call('guardSwitch'),
   addFolder: call('addFolder'),
   removeFolder: call('removeFolder'),
   reveal: call('reveal'),

@@ -413,6 +413,17 @@
     "an.linkAgent.maybe": "Beaucoup de gens laissent exprès un agent demander un deuxième avis à un autre.",
     "an.linkAgent.risk": "Une instruction implantée peut se servir d’un agent de confiance pour atteindre un second agent aux droits plus larges, ce qui rend les dégâts plus difficiles à retracer.",
     "an.linkAgent.todo": "Si vous le vouliez, choisissez « C’est normal ». Sinon, arrêtez l’agent qui l’a démarré et lisez ce qu’on lui a demandé.",
+
+    "guard.off": "Désactivé",
+    "guard.offDesc": "Guard est désactivé. Ses fichiers restent, mais il ne fait rien et reste désactivé après un redémarrage. Les règles de pare-feu qu’il a créées restent en place.",
+    "guard.onOff": "Guard activé ou désactivé",
+    "guard.uacOff": "Windows va demander l’autorisation administrateur pour désactiver Guard. Choisissez Oui.",
+    "guard.uacOn": "Windows va demander l’autorisation administrateur pour activer Guard. Choisissez Oui.",
+    "guard.switchedOn": "Guard est activé.",
+    "guard.switchedOff": "Guard est désactivé. Il le reste jusqu’à ce que vous le réactiviez.",
+    "guard.switchFailed": "Le changement a échoué ou a été annulé. Rien n’a changé.",
+    "guard.evOff": "AgathOS Guard a été désactivé",
+    "guard.evOn": "AgathOS Guard a été activé",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.fr, d);
