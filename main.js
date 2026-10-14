@@ -99,12 +99,15 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   win = w;
-  w.once('ready-to-show', () => { if (!w.isDestroyed()) w.show(); });
+  // "Ready to show" is for a window that has not been shown yet. A window that was sent to the tray before its page was ready
+  // (closed, or hidden by something else) must stay there instead of jumping back on screen a moment later.
+  let sentAway = false;
+  w.once('ready-to-show', () => { if (!w.isDestroyed() && !sentAway) w.show(); });
   w.loadFile(path.join(__dirname, 'src', 'index.html'));
   w.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://')) shell.openExternal(url).catch(() => {}); return { action: 'deny' }; });
   w.webContents.on('will-navigate', (e) => e.preventDefault());
   w.on('close', (e) => {
-    if (!quitting && store.settings.closeToTray && store.settings.realtime) { e.preventDefault(); w.hide(); }
+    if (!quitting && store.settings.closeToTray && store.settings.realtime) { e.preventDefault(); sentAway = true; w.hide(); armWinRelease(); }
   });
   // While the window is out of sight nothing is pushed to it. When it comes back it gets the latest state at once.
   winStale = true;
@@ -113,11 +116,11 @@ function createWindow() {
     winStale = false;
     w.webContents.send('agathos:update', engine.lastSnap);
   };
-  w.on('show', () => { clearTimeout(winReleaseTimer); latest(); liveSync(); });
+  w.on('show', () => { sentAway = false; clearTimeout(winReleaseTimer); latest(); liveSync(); });
   w.on('restore', () => { latest(); liveSync(); });
   w.on('focus', () => { latest(); liveSync(); });
   w.on('minimize', () => liveSync());
-  w.on('hide', () => { liveSync(); armWinRelease(); });
+  w.on('hide', () => { sentAway = true; liveSync(); armWinRelease(); });
   w.on('closed', () => { if (win === w) win = null; clearTimeout(winReleaseTimer); liveSync(); });
 }
 
@@ -213,6 +216,7 @@ function showWindow(view) {
   if (fresh) createWindow();
   if (!win || win.isDestroyed()) return;
   if (win.isMinimized()) win.restore();
+  clearTimeout(winReleaseTimer);                        // not every system tells when a window is shown or hidden; this one does not depend on it
   win.show();
   win.focus();
   if (!view) return;

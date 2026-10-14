@@ -488,12 +488,14 @@ async function until(fn, ms, every = 1500) {
         }), 30000, 1000);
         check(!!talks, 'the window made on request talks to the engine and the state knows about power');
         await page2.evaluate(() => window.agathos.settings({ realtime: true, closeToTray: true }));
-        await app2.evaluate(({ BrowserWindow }) => { for (const w of BrowserWindow.getAllWindows()) w.hide(); });
+        // The X of the window (with closing to the tray on) sends it to the tray, like the person would.
+        await app2.evaluate(({ BrowserWindow }) => { for (const w of BrowserWindow.getAllWindows()) w.close(); });
         await sleep(1500);
         const early = await windows();
         check(early === 1, 'a window that was just sent to the tray is still there', early);
         const gone = await until(async () => (await windows()) === 0, 20000, 500);
-        check(!!gone, 'a window that sits in the tray is closed for real after the wait');
+        const left = gone ? null : await app2.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => ({ visible: w.isVisible(), minimized: w.isMinimized(), loading: w.webContents.isLoading() })));
+        check(!!gone, 'a window that sits in the tray is closed for real after the wait', left);
         freed = await idleLoadOf(app2, 20);
         say(`idle, window closed after the wait:        ${freed.total}% of one core, ${freed.mb} MB   (${freed.text})`);
         await app2.evaluate(({ app: a }) => { a.emit('second-instance'); });
