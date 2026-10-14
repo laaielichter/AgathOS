@@ -26,6 +26,7 @@ const { DownloadGuard } = require('./dlguard');
 const { LanScanWatch } = require('./worm');
 const links = require('./links');
 const boards = require('./boards');
+const copies = require('./copies');
 
 const WATCHERS = ['gate', 'files', 'net', 'keys', 'traps', 'proc'];
 const RANK = { calm: 0, watch: 1, alarm: 2 };
@@ -46,7 +47,7 @@ class Engine {
     this.appDir = appDir;
     this.onUpdate = onUpdate || (() => {});
     this.notify = notify || (() => {});
-    this.inventory = { agents: [], mcp: [], files: [], configs: [], models: [], ports: [], autostarts: [], extensions: [], backups: [], packages: [], links: [] };
+    this.inventory = { agents: [], mcp: [], files: [], configs: [], models: [], ports: [], autostarts: [], extensions: [], backups: [], packages: [], links: [], copies: [] };
     this.scanning = null;
     this.lastScan = store.state.lastScan || 0;
     this.paused = new Map();        // agentId -> { pids, at }
@@ -70,6 +71,10 @@ class Engine {
     this._boardCache = new Map();   // file -> { sig, res }: the search of a file, kept until the file changes
     this._boardPending = new Map(); // files that changed and wait for one common look
     this._boardTimer = null;
+    this._copyGlobal = new Map();   // file -> { sig, res }: the look of Copy Guard at an instruction file in your home folder, kept until the file changes
+    this._copyPlaces = [];          // models and agent folders in places where copies leave the PC (the last look)
+    this._copyPending = new Map();  // files that changed and wait for one common look
+    this._copyTimer = null;
 
     this.intent = new IntentEngine(store, { onAlert: (a) => this.event(a) });
     this.procs = new ProcessWatch({
@@ -77,6 +82,7 @@ class Engine {
       onAgentStart: (info, initial) => this.agentStarted(info, initial),
       onAgentStop: (info) => this.agentStopped(info),
       onAlert: (a) => { this.event(a); if (a.agentId) this.intent.addSignal(a.agentId, { key: a.key, params: a.params, sev: a.sev, points: a.sev === 'alarm' ? 45 : 25 }); },
+      onClone: (c) => this.cloneSeen(c),
     });
     this.transcripts = new Transcripts({
       startedAt: this.startedAt,
@@ -113,6 +119,7 @@ class Engine {
     this.files.stop();
     this.downloads.stop();
     clearTimeout(this._boardTimer);
+    clearTimeout(this._copyTimer);
     U.ps.stop();
   }
 
@@ -169,7 +176,7 @@ class Engine {
 
   // What else is watched for message boards: the instruction files of agents in your home folder, the workspaces of agents, the folders of skills and plugins.
   boardWatch() {
-    if (this.store.settings.boardCheck === false) return { files: [], dirs: [] };
+    if (this.store.settings.boardCheck === false && this.store.settings.copyGuard === false) return { files: [], dirs: [] };
     try {
       return {
         files: boards.globalFiles().filter((f) => f.kind === 'instruction').map((f) => f.path),
@@ -202,7 +209,10 @@ class Engine {
         this.inventory.autostarts = await inv.autostarts();
         for (const a of this.procs.runningAgents()) this.loadSignature(a.proc.e);
       }],
-      ['files', async () => { this.inventory.models = models.scanModelDirs(this.store.settings.modelDirs, { xray: this.store.settings.xrayCheck !== false }); }],
+      ['files', async () => {
+        this.inventory.models = models.scanModelDirs(this.store.settings.modelDirs, { xray: this.store.settings.xrayCheck !== false });
+        await this.scanCopyPlaces();
+      }],
     ];
     this.scanning = { reason, watcher: steps[0][0], done: 0, total: steps.length };
     try {
@@ -219,6 +229,7 @@ class Engine {
         this.scanning.done++;
       }
       this.refreshLinks();
+      this.refreshCopies(true);
       this.diffInventory(reason);
       this.lastScan = Date.now();
       this.store.state.lastScan = this.lastScan;
@@ -238,10 +249,10 @@ class Engine {
   counts() {
     const i = this.inventory;
     const own = (i.links || []).filter((l) => !l.dupOf);
-    const issues = [...i.mcp, ...i.files, ...i.configs, ...i.models, ...i.ports, ...i.autostarts, ...(i.extensions || []), ...(i.backups || []), ...(i.packages || []), ...own].filter((x) => x.state !== 'calm').length;
+    const issues = [...i.mcp, ...i.files, ...i.configs, ...i.models, ...i.ports, ...i.autostarts, ...(i.extensions || []), ...(i.backups || []), ...(i.packages || []), ...own, ...(i.copies || [])].filter((x) => x.state !== 'calm').length;
     const all = i.links || [];
     return { agents: i.agents.length, mcp: i.mcp.length, files: i.files.length, models: i.models.length, links: all.filter((l) => l.kind !== 'board').length,
-      boards: all.filter((l) => l.kind === 'board').length, issues };
+      boards: all.filter((l) => l.kind === 'board').length, copies: (i.copies || []).length, issues };
   }
 
   // ---------- AI links ----------
@@ -327,6 +338,7 @@ class Engine {
 
   // A file that agents read was created or changed. Several changes at once (a plugin that was installed) get one common look.
   boardFileChanged(file) {
+    this.copyFileChanged(file);
     if (this.store.settings.boardCheck === false || !file) return;
     this._boardPending.set(String(file).toLowerCase(), String(file));
     if (this._boardPending.size > 400) this._boardPending.delete(this._boardPending.keys().next().value);
@@ -349,6 +361,157 @@ class Engine {
       if (res) this._boardFiles.set(key, res); else this._boardFiles.delete(key);
     }
     this.refreshLinksWithEvents();
+  }
+
+  // ---------- Copy Guard ----------
+  // Is anything making copies of AI? Orders to copy in the files agents read, the same long text turning up in more and more folders,
+  // models and agent folders in places where copies leave the PC, and agents that start copies of themselves.
+  copyOn() { return this.store.settings.copyGuard !== false; }
+
+  // The instruction files in your home folder (the project folders come with the scan): looked at once and kept until the file changes.
+  copyGlobals() {
+    const out = [];
+    try {
+      for (const g of boards.globalFiles()) {
+        if (g.kind !== 'instruction') continue;
+        const r = this.copyHitsOf(g.path, 'instruction', g.app);
+        if (r) out.push(r);
+      }
+    } catch (_) { /* no files in the home folder to look at */ }
+    return out;
+  }
+
+  copyHitsOf(file, kind, app) {
+    let st;
+    try { st = fs.statSync(file); } catch (_) { return null; }
+    if (!st.isFile() || st.size > 4 * 1024 * 1024) return null;
+    const key = String(file).toLowerCase();
+    const sig = `${st.mtimeMs}:${st.size}:${kind}`;
+    const c = this._copyGlobal.get(key);
+    if (c && c.sig === sig) return c.res;
+    const text = U.readText(file, 4 * 1024 * 1024);
+    const res = text ? copies.fileHits(file, text, { kind, app }) : null;
+    if (this._copyGlobal.size > 3000) this._copyGlobal.clear();
+    this._copyGlobal.set(key, { sig, res });
+    return res;
+  }
+
+  // Everything Copy Guard has read: the project folders and skills (from the scan) and the files in your home folder.
+  copyFiles() {
+    const out = [];
+    const seen = new Set();
+    for (const f of (this._files && this._files.copyFiles) || []) { seen.add(String(f.file).toLowerCase()); out.push(f); }
+    for (const f of this.copyGlobals()) if (!seen.has(String(f.file).toLowerCase())) out.push(f);
+    return out;
+  }
+
+  // Models and agent folders in the places where copies leave the PC (cloud folders, web server folders, public folders, external drives).
+  async scanCopyPlaces() {
+    this._copyPlaces = [];
+    if (!this.copyOn()) return;
+    try {
+      const watched = this.inventory.models.filter((m) => m && m.size > 0).map((m) => ({ path: m.path, size: m.size, name: m.name || path.basename(m.path) }));
+      this._copyPlaces = await copies.scanPlaces({ watched });
+    } catch (_) { this._copyPlaces = []; }
+  }
+
+  // The list of Copy Guard. A full look (full = true) also writes down how many places hold each long text, for the next look.
+  refreshCopies(full = false) {
+    if (!this.copyOn()) {
+      this.inventory.copies = [];
+      if (full) this.store.state.copyBase = { at: 0, n: {} };
+      return;
+    }
+    try {
+      const files = this.copyFiles();
+      this.inventory.copies = copies.scan({ store: this.store, files, places: this._copyPlaces, clones: this.store.state.cloneLog });
+      if (full) { this.store.state.copyBase = copies.nextBase(this.store, files, this.inventory.copies); this.store.saveState(); }
+    } catch (_) { this.inventory.copies = []; }
+  }
+
+  // Copy Guard was switched on or off in Settings: off clears the list at once, on makes a full look.
+  copySwitched() {
+    clearTimeout(this._copyTimer);
+    this._copyTimer = null;
+    this._copyPending.clear();
+    if (!this.copyOn()) {
+      this._copyPlaces = [];
+      this.refreshCopies(true);
+      this.changed(true);
+      return;
+    }
+    this.fullScan('user').catch(() => {});
+  }
+
+  // The event for a new or changed entry of the list.
+  copyEvent(c, how) {
+    return { key: `copy.${how}.${c.ctype}`, sev: c.state, watcher: c.watcher, params: { name: c.name, app: c.app || '', n: c.n || 0, folders: c.folders || 0, where: c.where || '' }, target: { type: 'copy', id: c.id } };
+  }
+
+  // A file that agents read was created or changed. Several changes at once (a plugin that was installed) get one common look.
+  copyFileChanged(file) {
+    if (!file || !this.copyOn()) return;
+    this._copyPending.set(String(file).toLowerCase(), String(file));
+    if (this._copyPending.size > 400) this._copyPending.delete(this._copyPending.keys().next().value);
+    clearTimeout(this._copyTimer);
+    this._copyTimer = setTimeout(() => this.copyFlush(), 900);
+  }
+
+  copyFlush() {
+    clearTimeout(this._copyTimer);
+    this._copyTimer = null;
+    const items = [...this._copyPending.values()];
+    this._copyPending.clear();
+    if (!this.copyOn() || !items.length) return;
+    const skillDirs = C.SKILL_DIRS.map(U.expand).map((d) => d.toLowerCase());
+    if (!this._files) this._files = { files: [], configs: [], projectMcp: [], linkFiles: [] };
+    const list = this._files.copyFiles || (this._files.copyFiles = []);
+    for (const file of items) {
+      const key = file.toLowerCase();
+      const at = list.findIndex((f) => String(f.file).toLowerCase() === key);
+      if (at >= 0) list.splice(at, 1);
+      this._copyGlobal.delete(key);
+      if (!U.exists(file)) continue;
+      const inSkill = skillDirs.some((d) => key.startsWith(d + path.sep) || key.startsWith(d + '/'));
+      const kind = boards.kindOf(file, inSkill);
+      if (kind === 'code' || kind === 'config') continue;
+      const text = U.readText(file, 4 * 1024 * 1024);
+      let h = null;
+      try { h = text ? copies.fileHits(file, text, { kind: inSkill ? 'skill' : 'instruction', app: boards.appOf(file, inv.projectName(file)) }) : null; } catch (_) { h = null; }
+      if (h) list.push(h);
+    }
+    this.refreshCopiesWithEvents();
+  }
+
+  refreshCopiesWithEvents() {
+    const before = new Map((this.inventory.copies || []).map((c) => [c.id, c.hash]));
+    this.refreshCopies();
+    for (const c of this.inventory.copies) {
+      if (c.ctype === 'clone' || before.get(c.id) === c.hash) continue;
+      this.store.state.seen[`copy:${c.id}`] = c.hash;
+      if (c.state === 'calm') continue;
+      this.event(this.copyEvent(c, before.has(c.id) ? 'changed' : 'added'));
+    }
+    this.changed();
+  }
+
+  // The process watch saw an agent start a copy of itself. One is a note in the list; three within two minutes are attention, eight an alarm.
+  cloneSeen(c) {
+    if (!this.copyOn() || !c) return;
+    const r = copies.noteClone(this.store.state.cloneLog, c);
+    this.store.state.cloneLog = r.log;
+    this.store.saveState();
+    this.refreshCopies();
+    if (r.changed) {
+      const params = { agent: c.agentName, n: r.entry.n, s: r.entry.seconds };
+      this.event({ key: 'copy.burst', sev: r.changed, watcher: 'proc', params, agentId: c.agentId, pid: c.pid, target: { type: 'copy', id: r.entry.id } });
+      this.intent.addSignal(c.agentId, { key: 'copy.burst', params, sev: r.changed, points: r.changed === 'alarm' ? 45 : 25 });
+      const a = { agentId: c.agentId, rootPid: c.parentPid, pid: c.pid, action: 'SELF_COPY', source: 'process', detail: `${c.agentName} x${r.entry.n}`, sensitive: false, ts: c.ts };
+      this.intent.addAction(a);
+      this.liveAction(a);
+      this.maybeJudge(c.agentId);
+    }
+    this.changed();
   }
 
   // The older "settings send traffic to ..." finding is now part of AI links, where you can also approve an address.
@@ -446,6 +609,10 @@ class Engine {
     for (const l of this.inventory.links || []) {
       if (l.dupOf) continue;
       note('link', l.id, l.hash, (how) => l.state !== 'calm' && this.event(this.linkEvent(l, how === 'new' ? 'added' : 'moved')));
+    }
+    for (const c of this.inventory.copies || []) {
+      if (c.ctype === 'clone') continue;
+      note('copy', c.id, c.hash, (how) => c.state !== 'calm' && this.event(this.copyEvent(c, how === 'new' ? 'added' : 'changed')));
     }
     for (const p of this.inventory.ports) note('port', p.id, p.exposed ? 'open' : 'local', (how) => p.exposed && this.event({ key: 'port.open', sev: 'alarm', watcher: 'net', params: { product: p.product, addr: p.addr, port: p.port }, target: { type: 'port', port: p.port } }));
     if (first) {
@@ -874,6 +1041,13 @@ class Engine {
         this.refreshLinks();
         this.event({ key: l.kind === 'board' ? 'board.trusted' : 'link.trusted', sev: 'calm', watcher: l.watcher || 'keys', params: { app: l.app, label: l.label, name: l.name || '' }, target: { type: 'link', id: l.id } });
       }
+    } else if (target.type === 'copy') {
+      const c = (this.inventory.copies || []).find((x) => x.id === target.id);
+      if (c && c.approvable) {
+        this.store.state.approvals[c.id] = { hash: c.hash, at: Date.now() };
+        this.refreshCopies();
+        this.event({ key: 'copy.trusted', sev: 'calm', watcher: c.watcher, params: { name: c.name }, target: { type: 'copy', id: c.id } });
+      }
     } else if (target.type === 'file' || target.type === 'auto') {
       this.store.state.ignored[target.id] = Date.now();
       for (const list of [this.inventory.files, this.inventory.autostarts]) {
@@ -1004,11 +1178,11 @@ class Engine {
     const issues = (list) => list.filter((x) => x.state !== 'calm');
     const st = {
       gate: { list: [...i.mcp, ...(i.extensions || []), ...(i.packages || []), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.autoApprove')), ...(i.links || []).filter((l) => l.watcher === 'gate')] },
-      files: { list: [...i.models, ...(i.backups || [])], ev: recent('files') },
+      files: { list: [...i.models, ...(i.backups || []), ...(i.copies || []).filter((c) => c.watcher === 'files')], ev: recent('files') },
       net: { list: [...i.ports, ...(i.links || []).filter((l) => l.watcher === 'net')], ev: recent('net') },
       keys: { list: [...i.files.filter((f) => f.kind === 'env'), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.baseUrl')), ...(i.links || []).filter((l) => l.watcher === 'keys')] },
-      traps: { list: [...i.files.filter((f) => f.kind !== 'env'), ...(i.links || []).filter((l) => l.watcher === 'traps')] },
-      proc: { list: [...agents.map((a) => ({ state: a.state })), ...i.autostarts], ev: recent('proc', 1800000) },
+      traps: { list: [...i.files.filter((f) => f.kind !== 'env'), ...(i.links || []).filter((l) => l.watcher === 'traps'), ...(i.copies || []).filter((c) => c.watcher === 'traps')] },
+      proc: { list: [...agents.map((a) => ({ state: a.state })), ...i.autostarts, ...(i.copies || []).filter((c) => c.watcher === 'proc')], ev: recent('proc', 1800000) },
     };
     return WATCHERS.map((id) => {
       const s = st[id];
@@ -1036,6 +1210,7 @@ class Engine {
       backups: (i.backups || []).map((b) => mark(`backup:${b.id}`, b)),
       packages: (i.packages || []).map((p) => mark(`pkg:${p.id}`, p)),
       links: (i.links || []).map((l) => (l.dupOf ? l : mark(`link:${l.id}`, l))),
+      copies: (i.copies || []).map((c) => mark(`copy:${c.id}`, c)),
     };
     return { agents, view };
   }
@@ -1062,6 +1237,7 @@ class Engine {
       extensions: i.extensions.map((x) => ({ ...x, short: U.shortPath(x.path) })),
       backups: i.backups.map((b) => ({ ...b, short: U.shortPath(b.path) })),
       packages: (i.packages || []).map((p) => ({ ...p, short: U.shortPath(p.path) })),
+      copies: (i.copies || []).map((c) => ({ ...c, short: c.file ? U.shortPath(c.file) : '', ...(c.files ? { shorts: c.files.map((f) => U.shortPath(f)) } : {}) })),
       links: (i.links || []).map((l) => ({ ...l, short: l.file && l.file !== 'Environment' ? U.shortPath(l.file) : '', ...(l.uses ? { uses: l.uses.map((u) => ({ app: u.app, kind: u.kind, short: U.shortPath(u.file) })) } : {}) })),
       events: this.store.events.slice(-250).reverse(),
       settings: this.store.settings,

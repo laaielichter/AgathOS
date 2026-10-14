@@ -195,6 +195,25 @@ early). *Read inside* shows the text the way the model gets it, with invisible c
 renames it back). Models that land in Downloads are looked into at once. Reading is bounded in time
 and size, so a hostile file cannot stall it. Switch it off in Settings.
 
+**AI shield (Copy Guard).** Anything that can copy an AI, its model or the text that steers it can
+spread. AgathOS looks for four signs. (1) Orders in the files that agents read (instruction files,
+skills, workspaces) that tell an AI to copy itself, to take its weights or model files along, or to
+write this very text into other files, messages or agents. Sentences are read the way a model sees
+them (invisible characters removed, look-alike letters replaced), in 20 languages, and bans such as
+"never copy yourself" are left alone. An order that is tied to staying alive after the AI is switched
+off, replaced or deleted counts as worse. (2) The same long paragraph in more and more files, the
+pattern of a prompt worm: AgathOS counts the files that hold it and reports when that number jumps.
+(3) Model files and the private folders of agents (keys, conversations, workspace) in places where
+copies leave the PC: cloud-synced folders (Dropbox, Google Drive, OneDrive, Box, MEGA and others),
+folders that a web server shows, public folders and, on Windows, external drives. A model that is
+byte for byte the same as one of your own is reported as a copy of it. (4) Agents that start copies
+of themselves: one is noted quietly, three within two minutes is attention, eight is an alarm, and
+the intent engine adds it to what it learns about the agent. With Guard, a command or tool call that
+copies the agent itself or a model somewhere else is asked about like other risky actions.
+*This is OK* approves a finding by its content, so a change makes it a danger again; reports about
+running agents cannot be approved and go away by themselves after a day. Everything is checked on
+the PC and nothing is sent anywhere. Switch it off in Settings.
+
 **Calm notifications.** No notification circus: by default only danger pops up (attention goes to
 the log and the tray dot), what happens at the same time comes as one notification, the same
 finding is not repeated within 6 hours, at most 3 per hour, and nothing pops up while the
@@ -296,6 +315,7 @@ Browsers are refused.
 - Grok Bot is recognised by its program name (`Grok Bot.app` on a Mac, `Grok Bot.exe` on Windows); the Windows name could not be tested here. Reading Grok Build sessions follows the public description of `updates.jsonl`: if xAI changes that format, the task and the honesty check for Grok go quiet, nothing else is affected.
 - Message boards are found by what files and settings say and by the names programs look up (with Guard). An agent that builds an address while it runs, or hides it in encrypted data, does not show up in the list.
 - Model X-ray reads headers, templates and code, not weights: a model trained to misbehave looks like any other and can only be found by testing it. TensorFlow SavedModel folders and `.npz` files are not looked into, ONNX is read at its top level only, and GGUF files of an older or unknown version are recognised by format only.
+- Copy Guard recognises orders by their wording, in the 20 languages it knows. A text that is rewritten every time, or that spreads slowly, is not noticed as a spreading text, and an order in a wording it does not know is not noticed at all. Scripts in skills and plugins are code and are not read for orders. Models are looked for in cloud, web and public folders and (Windows) on external drives; iCloud Drive, network drives and other places that ask for permission first are not searched.
 - Smart TVs, ovens and other smart devices cannot run a watcher themselves. They come next, through the network (DNS sensor), Home Assistant and a phone app, using the local API.
 
 ## Translations

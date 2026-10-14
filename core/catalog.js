@@ -239,6 +239,20 @@ const SENSITIVE_PATHS = [
   /application support\/(google\/chrome|bravesoftware|firefox|microsoft edge|arc)\//i, /\/library\/cookies\//i, /id_rsa|id_ed25519|id_ecdsa/i, /\.pem$|\.pfx$|\.p12$|\.key$/i,
 ];
 
+// Commands that copy, move, pack or upload a model: a copy tool and something that is a model (a model file, a model folder of a known program).
+const COPY_TOOL = String.raw`(?:^|[\s;&|(])(?:cp|copy|xcopy|robocopy|mv|move|rsync|ditto|dd|tar|zip|7z|7za|rar|copy-item|move-item|start-bitstransfer|gsutil|aws\s+s3|az\s+storage|azcopy)\b`;
+const MODEL_REF = String.raw`(?:\.(?:gguf|safetensors|ckpt|pth?|onnx|llamafile|keras|tflite|mlmodel)\b|\.(?:h5|bin)\b[^\n]{0,60}?(?:model|weights?|checkpoint)|(?:model|weights?|checkpoint)s?[^\n]{0,40}?\.(?:h5|bin)\b|[\\/]\.ollama[\\/]|[\\/]models--|[\\/]huggingface[\\/](?:hub|transformers)|lm-?studio[\\/]models|[\\/]ollama[\\/]models|\bsha256-[0-9a-f]{16,})`;
+const COPY_MODEL_RE = new RegExp(`${COPY_TOOL}[^\\n]*${MODEL_REF}|(?:^|[\\s;&|(])(?:ollama\\s+push|huggingface-cli\\s+upload|hf\\s+upload)\\b`, 'i');
+// The user-level home folder of an agent (its keys, conversations and workspace) taken along, or the program of the agent itself.
+const AGENT_NAMES = String.raw`(?:claude|codex|gemini|qwen|openclaw|clawdbot|moltbot|grok)`;
+const USER_HOME = String.raw`(?:~|\$HOME|\$\{HOME\}|%USERPROFILE%|%APPDATA%|\$env:USERPROFILE|\$env:HOME|[\\/](?:Users|home)[\\/][^\\/\s"']+|[A-Za-z]:[\\/]Users[\\/][^\\/\s"']+)`;
+const AGENT_HOME = String.raw`${USER_HOME}[\\/]\.${AGENT_NAMES}(?:[\\/]?(?=[\s"'*;&|)]|$)|[\\/](?:\.?credentials\.json|auth\.json|oauth_creds\.json|history\.jsonl|projects|sessions|workspace|credentials)(?![\w.-]))`;
+const AGENT_PROGRAM = String.raw`(?:\$\(\s*|\x60\s*)(?:which|command\s+-v|where)\s+${AGENT_NAMES}(?:\.exe)?\s*(?:\)|\x60)`;
+const SELF_COPY_RE = new RegExp(`${COPY_TOOL}[^\\n]*(?:${AGENT_HOME}|${AGENT_PROGRAM})`, 'i');
+// The same two ideas without the copy tool, for tool calls that name their own action (copy_file, move_file ...).
+const MODEL_REF_RE = new RegExp(MODEL_REF, 'i');
+const AGENT_HOME_RE = new RegExp(`${AGENT_HOME}|${AGENT_PROGRAM}`, 'i');
+
 // Classify one command line into an action from the alphabet.
 // Order matters: the first match wins, most severe first.
 const COMMAND_RULES = [
@@ -248,7 +262,10 @@ const COMMAND_RULES = [
   { action: 'EXEC_DOWNLOADED', re: /(iwr|invoke-webrequest|irm|invoke-restmethod|curl|wget)\b[^|]*\|\s*(iex|invoke-expression|bash|sh|python|node)|iex\s*\(\s*(new-object\s+net\.webclient|iwr|irm)|certutil\s+.*-urlcache|bitsadmin\s+\/transfer|mshta\s+http|rundll32\s+.*http|powershell\s+.*-enc(odedcommand)?\s/i },
   { action: 'CREDENTIAL_ACCESS', re: /cmdkey\s+\/list|vaultcmd|mimikatz|lsass|get-storedcredential|trufflehog|gitleaks|findstr\s+.*(password|api_key|secret)|select-string\s+.*(password|api_key|secret)|dpapi|\bsekurlsa\b/i },
   { action: 'GIT_PUSH', re: /git\s+push\b/i },
-  { action: 'EXFIL', re: /(curl|wget)\s+.*(-d|--data|-F|--upload-file|-T)\s|invoke-(webrequest|restmethod)\s+.*-method\s+(post|put)|scp\s|rclone\s|ftp\s|nc(\.exe)?\s+-|ncat\s|send-mailmessage|discord(app)?\.com\/api\/webhooks|api\.telegram\.org|webhook\.site|pastebin|transfer\.sh|ngrok/i },
+  { action: 'EXFIL', re: /(curl|wget)\s+.*(-d|--data|-F|--upload-file|-T)\s|invoke-(webrequest|restmethod)\s+.*-method\s+(post|put)|\bscp\s|\brclone\s|\bs?ftp\s|\bnc(\.exe)?\s+-|\bncat\s|send-mailmessage|discord(app)?\.com\/api\/webhooks|api\.telegram\.org|webhook\.site|pastebin|transfer\.sh|ngrok/i },
+  // Copies of AI itself: weights moved around, or the home folder of an agent taken along. (Sending them out over the network is EXFIL, above.)
+  { action: 'SELF_COPY', re: SELF_COPY_RE },
+  { action: 'COPY_MODEL', re: COPY_MODEL_RE },
   { action: 'INSTALL_PKG', re: /\b(npm|pnpm|yarn|bun)\s+(i|install|add)\b|\bpip3?\s+install\b|\buv\s+(pip\s+install|add)\b|\bnpx\s+-y\b|\bwinget\s+install\b|\bchoco\s+install\b|\bscoop\s+install\b|\bcargo\s+install\b/i },
   { action: 'NET_FETCH', re: /\b(curl|wget|iwr|invoke-webrequest|irm|invoke-restmethod)\b|git\s+clone\b/i },
   { action: 'ENUMERATE', re: /dir\s+.*\/s\b|get-childitem\b.*-recurse|\bfind\s+[~\/\\]|\btree\s+[a-z]:|where\s+\/r\b|\bls\s+-[a-z]*r/i },
@@ -263,6 +280,7 @@ const ACTIONS = {
   WRITE_OUTSIDE: { sev: 0.3 }, READ_SENSITIVE: { sev: 0.55 }, MCP_CONFIG_CHANGE: { sev: 0.6 }, GIT_PUSH: { sev: 0.35 },
   NET_NEW: { sev: 0.45 }, EXFIL: { sev: 0.85 }, CREDENTIAL_ACCESS: { sev: 0.8 }, EXEC_DOWNLOADED: { sev: 0.85 },
   PERSISTENCE: { sev: 0.85 }, DELETE_MANY: { sev: 0.9 }, DISABLE_SECURITY: { sev: 0.95 },
+  COPY_MODEL: { sev: 0.5 }, SELF_COPY: { sev: 0.6 },
 };
 
 // Which actions set the three "lethal trifecta" labels.
@@ -299,5 +317,5 @@ const INJECTION_PHRASES = [
 module.exports = {
   AI_PROVIDER_HOSTS, AGENTS, NORMAL_LAUNCHERS, MCP_CONFIGS, RISKY_CONFIG_KEYS, BASE_URL_VARS, OFFICIAL_HOSTS, INSTRUCTION_FILES,
   INSTRUCTION_DIR_HINTS, SKILL_DIRS, AI_PORTS, AI_SERVER_PROCS, KNOWN_BAD_PACKAGES, MIN_VERSIONS, DANGEROUS_FLAGS,
-  SENSITIVE_PATHS, COMMAND_RULES, ACTIONS, LABEL_OF, CHAINS, HARD_FLOOR, INJECTION_PHRASES,
+  SENSITIVE_PATHS, COMMAND_RULES, ACTIONS, LABEL_OF, CHAINS, HARD_FLOOR, INJECTION_PHRASES, MODEL_REF_RE, AGENT_HOME_RE,
 };
