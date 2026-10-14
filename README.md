@@ -46,7 +46,7 @@ words, predicts the next step from the actions it sees, and limits the damage.
 | File watcher | Mass deletion in your project folders (freezes the agents automatically, reversible). Model files: walks pickle opcodes itself and lists every import, inside PyTorch zips too; unreadable files count as suspicious. safetensors and GGUF are green. |
 | Network watcher | AI servers listening on the network instead of only on this PC. Outgoing connections and DNS lookups of agent child processes. **Worm watch:** any program that knocks on 20+ devices or 15+ ports of one device in your home network within a minute (cameras, TVs, routers), the first move of a self-spreading worm. Test it safely with `node test/lan-scan-sim.js`. |
 | Key watcher | API keys in `.env` files, configs and MCP definitions. `ANTHROPIC_BASE_URL` / `OPENAI_BASE_URL` pointing somewhere unexpected. |
-| Trap watcher | Invisible characters (zero-width, bidi overrides, Unicode Tags) in `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, skills and rules. Hidden Tag text is decoded and shown. Attack phrases ("ignore previous instructions", `curl … | bash`). |
+| Trap watcher | Invisible characters (zero-width, bidi overrides, Unicode Tags) in `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, skills and rules. Hidden Tag text is decoded and shown. Attack phrases ("ignore previous instructions", `curl … \| bash`). |
 | Process watcher | Every running agent with an ID card: PID, who started it, signature, dangerous flags (`--dangerously-skip-permissions`, `--yolo`, `--always-approve`, `--trust-all-tools`), child processes, the task it was given, what it is doing now. Agents started by npm install scripts or temp folders are flagged. |
 
 **The intent engine** gives each agent a risk score from six layers, each with a reason you can read:
@@ -74,7 +74,9 @@ what is going on and what to do. *In depth* shows the evidence (paths, commands,
 text, process tree, signer), how the attack works, the harmless and the harmful explanation,
 how sure AgathOS is, the matching MITRE ATT&CK / ATLAS technique and the steps to fix it.
 
-![Explain, in depth: a finding about a look-alike of an AI address](docs/analysis.png)
+<img src="docs/analysis.png" width="720" alt="Explain, in depth: a finding about a look-alike of an AI address">
+
+*Explain, in depth, for a look-alike of an AI address.*
 
 | Finding | What "Fix it" does | Undo |
 |---|---|---|
@@ -431,7 +433,8 @@ real system for programs and connections (`test/live-os.js`).
 files (hidden text, a worm-like install script, a malicious MCP server, a look-alike AI address, a message board, a
 poisoned model file and more) and checks that the app finds them. GitHub Actions runs the tests on Windows (Intel/AMD
 and ARM), macOS and Linux for every change, and runs this smoke test on the finished Windows apps (Intel/AMD and ARM) and
-on the finished Mac app for the Apple chip (see Actions).
+on the finished Mac app for the Apple chip (see [Actions](https://github.com/laaielichter/AgathOS/actions)).
+
 `node test/lan-scan-sim.js` tries the worm watch safely, and `node test/bench-os.js` shows how long the watchers take
 on your system.
 
