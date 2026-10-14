@@ -426,8 +426,8 @@
     "guard.evOff": "AgathOS Guard is uitgezet",
     "guard.evOn": "AgathOS Guard is aangezet",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr is een extra uiterlijk in de stijl van een commandocentrum: zuiver zwart voor OLED-schermen, dunne lijnen, cyaan accenten en codelettertype. Het logo en alle functies blijven hetzelfde.",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth is een extra uiterlijk in de stijl van een commandocentrum: zuiver zwart voor OLED-schermen, dunne lijnen, cyaan accenten en codelettertype. Het logo en alle functies blijven hetzelfde.",
 
     "ai.tab.boards": "Borden",
     "board.sub": "Agents kunnen opdrachten halen van en berichten achterlaten op plekken zoals chatkanalen, openbare tekstpagina’s en netwerken van AI-agents. Wie daar kan schrijven, kan de agent sturen. Hier staat elke zo’n plek die in je bestanden en instellingen staat, ook in bestanden die je nooit hebt geopend.",

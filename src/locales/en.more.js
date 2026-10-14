@@ -426,8 +426,8 @@
     "guard.evOff": "AgathOS Guard was switched off",
     "guard.evOn": "AgathOS Guard was switched on",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr is an extra look in the style of an operations console: pure black for OLED screens, thin lines, cyan accents and code type. The logo and all functions stay the same.",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth is an extra look in the style of an operations console: pure black for OLED screens, thin lines, cyan accents and code type. The logo and all functions stay the same.",
 
     "ai.tab.boards": "Boards",
     "board.sub": "Agents can take orders from, and leave messages on, places like chat channels, public text pages and networks of AI agents. Whoever can write there can steer the agent. Here is every such place found in your files and settings, also in files you never opened.",

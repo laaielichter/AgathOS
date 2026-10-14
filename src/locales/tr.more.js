@@ -484,8 +484,8 @@
     "guard.evOff": "AgathOS Guard kapatıldı",
     "guard.evOn": "AgathOS Guard açıldı",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr, bir operasyon merkezi tarzında ek bir görünümdür: OLED ekranlar için saf siyah, ince çizgiler, camgöbeği vurgular ve kod yazı tipi. Logo ve tüm işlevler aynı kalır.",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth, bir operasyon merkezi tarzında ek bir görünümdür: OLED ekranlar için saf siyah, ince çizgiler, camgöbeği vurgular ve kod yazı tipi. Logo ve tüm işlevler aynı kalır.",
 
     "ai.tab.boards": "Panolar",
     "board.sub": "Ajanlar sohbet kanalları, herkese açık metin sayfaları ve yapay zekâ ajanlarının ağları gibi yerlerden emir alabilir ve oralara mesaj bırakabilir. Orada yazabilen herkes ajanı yönlendirebilir. Burada dosyalarında ve ayarlarında bulunan böyle her yeri görürsün; hiç açmadığın dosyalar da buna dahil.",

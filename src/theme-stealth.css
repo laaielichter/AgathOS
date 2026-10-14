@@ -1,13 +1,12 @@
-/* AgathOS - Palantyr.
+/* AgathOS - Stealth.
    An extra look in the style of an operations console: pure black for OLED screens, thin steel
    lines, one cyan accent, code type and small marks in the corners of the panels.
    It changes colours, type and shapes and nothing else: same logo, same pages, same functions.
    Nothing moves for show. The only motion is the ring while it scans.
-   It is off until it is chosen in Settings (the page then sets data-theme="palantyr").
-   The name is a play on the seeing stone of fantasy stories; the look is our own and uses no
-   logo, font or code from anyone else. */
+   It is off until it is chosen in Settings (the page then sets data-theme="stealth").
+   The look is our own and uses no logo, font or code from anyone else. */
 
-:root[data-theme="palantyr"] {
+:root[data-theme="stealth"] {
   --bg: #000000;
   --panel: #05080B;
   --raised: #0D141B;
@@ -36,13 +35,13 @@
   color-scheme: dark;
 }
 /* Scripts that join letters or have no capitals must not get extra space between letters. */
-:root[data-theme="palantyr"]:lang(ar), :root[data-theme="palantyr"]:lang(hi), :root[data-theme="palantyr"]:lang(bn),
-:root[data-theme="palantyr"]:lang(th), :root[data-theme="palantyr"]:lang(zh), :root[data-theme="palantyr"]:lang(ja),
-:root[data-theme="palantyr"]:lang(ko) { --track: 0em; --track-tight: 0em; }
+:root[data-theme="stealth"]:lang(ar), :root[data-theme="stealth"]:lang(hi), :root[data-theme="stealth"]:lang(bn),
+:root[data-theme="stealth"]:lang(th), :root[data-theme="stealth"]:lang(zh), :root[data-theme="stealth"]:lang(ja),
+:root[data-theme="stealth"]:lang(ko) { --track: 0em; --track-tight: 0em; }
 
 @keyframes hud-spin { to { transform: rotate(360deg); } }
 
-:root[data-theme="palantyr"] {
+:root[data-theme="stealth"] {
   /* ---------- the window ---------- */
   body { background: var(--bg); }
   & * { scrollbar-width: thin; scrollbar-color: #26343F transparent; }

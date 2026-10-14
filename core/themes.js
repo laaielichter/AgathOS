@@ -1,14 +1,14 @@
 'use strict';
 // AgathOS - the looks of the window.
-// Dark and Light are the standard ones. Palantyr is an extra look in the style of an operations
+// Dark and Light are the standard ones. Stealth is an extra look in the style of an operations
 // console (pure black for OLED screens); it is switched on in Settings and is off until then.
 // The colours here are the ones of the window itself: the background before the page has drawn
 // and the Windows buttons in the title bar. The rest of the look is in src/styles.css and
-// src/theme-palantyr.css.
+// src/theme-stealth.css.
 const THEMES = {
   dark: { color: '#0D1020', symbolColor: '#E8EBF5' },
   light: { color: '#F2F3F8', symbolColor: '#151A2E' },
-  palantyr: { color: '#000000', symbolColor: '#D3DDE7' },
+  stealth: { color: '#000000', symbolColor: '#D3DDE7' },
 };
 const THEME_IDS = Object.keys(THEMES);
 

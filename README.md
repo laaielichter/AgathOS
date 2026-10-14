@@ -104,7 +104,7 @@ app of xAI, shows under *Active now* like the command line agents. It works most
 cloud computer, so AgathOS only sees the app, its network traffic and the files it touches on
 this computer, and says so on its card.
 
-**Palantyr (extra look, off by default).** Settings > View > Theme offers a third look next to Dark and Light: an operations console in pure black for OLED screens, thin steel lines, one cyan accent, code type and small marks in the corners of the panels. A ring of ticks turns around the status ring while a scan runs; nothing else moves for show. The logo keeps its own gold, the pages and functions are the same, and the small window next to the clock follows. Dark and Light stay in the side bar, and once Palantyr is on it shows there too, so the way back is one click. It brings no fonts of its own (it uses the code font your system has), loads nothing from the internet, keeps the letters of Arabic, Thai, Hindi, Bengali and the East Asian languages unspaced, and its colours are tested for contrast on every ground. The name is a play on the seeing stone of fantasy stories; the look is our own and uses no logo, font or code from anyone else.
+**Stealth (extra look, off by default).** Settings > View > Theme offers a third look next to Dark and Light: an operations console in pure black for OLED screens, thin steel lines, one cyan accent, code type and small marks in the corners of the panels. A ring of ticks turns around the status ring while a scan runs; nothing else moves for show. The logo keeps its own gold, the pages and functions are the same, and the small window next to the clock follows. Dark and Light stay in the side bar, and once Stealth is on it shows there too, so the way back is one click. It brings no fonts of its own (it uses the code font your system has), loads nothing from the internet, keeps the letters of Arabic, Thai, Hindi, Bengali and the East Asian languages unspaced, and its colours are tested for contrast on every ground. The look is our own and uses no logo, font or code from anyone else.
 
 **Mini pop-up (Windows).** Click the AgathOS icon next to the clock and a small window opens
 right above it: the six watchers, the status, *Fix all*, *Scan now*, *Pause all agents*, the
@@ -213,7 +213,7 @@ prediction. The simple view keeps four pages and plain words.
 **Welcome screen.** The first start asks for your language, the view, the live scanner,
 starting with Windows, deep protection (AgathOS Guard) and auto-fix.
 
-**Also:** a tamper-evident log (hash chain), notifications, tray icon, start with Windows, 20 languages (the top 10 world languages English, 中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский and Bahasa Indonesia, plus 日本語, 한국어, Deutsch, Nederlands, Italiano, Türkçe, Polski, Tiếng Việt, Українська and ไทย; Arabic right-to-left), dark and light mode (plus the extra Palantyr look), and a local API on `127.0.0.1:47612` for hooks and future add-ons.
+**Also:** a tamper-evident log (hash chain), notifications, tray icon, start with Windows, 20 languages (the top 10 world languages English, 中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский and Bahasa Indonesia, plus 日本語, 한국어, Deutsch, Nederlands, Italiano, Türkçe, Polski, Tiếng Việt, Українська and ไทย; Arabic right-to-left), dark and light mode (plus the extra Stealth look), and a local API on `127.0.0.1:47612` for hooks and future add-ons.
 
 ## Install
 

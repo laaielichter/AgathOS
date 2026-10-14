@@ -425,8 +425,8 @@
     "guard.evOff": "AgathOS Guard 已关闭",
     "guard.evOn": "AgathOS Guard 已开启",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr 是一种额外的外观，风格类似作战指挥台：为 OLED 屏幕准备的纯黑背景、细线条、青色点缀和代码字体。标志和所有功能保持不变。",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth 是一种额外的外观，风格类似作战指挥台：为 OLED 屏幕准备的纯黑背景、细线条、青色点缀和代码字体。标志和所有功能保持不变。",
 
     "ai.tab.boards": "留言板",
     "board.sub": "智能体可以在聊天频道、公开文本页和 AI 智能体网络这类地方接收指令、留下消息。能在那里写字的人，就能操控智能体。这里列出在你的文件和设置中找到的每一处这样的地方，包括你从未打开过的文件里的。",

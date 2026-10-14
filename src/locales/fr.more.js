@@ -425,8 +425,8 @@
     "guard.evOff": "AgathOS Guard a été désactivé",
     "guard.evOn": "AgathOS Guard a été activé",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr est un style en plus, façon centre d'opérations : noir pur pour les écrans OLED, traits fins, accents cyan et police de code. Le logo et toutes les fonctions restent les mêmes.",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth est un style en plus, façon centre d'opérations : noir pur pour les écrans OLED, traits fins, accents cyan et police de code. Le logo et toutes les fonctions restent les mêmes.",
 
     "ai.tab.boards": "Tableaux",
     "board.sub": "Les agents peuvent recevoir des ordres et laisser des messages dans des lieux comme des canaux de discussion, des pages de texte publiques et des réseaux d’agents IA. Qui peut y écrire peut diriger l’agent. Voici chaque lieu de ce genre trouvé dans vos fichiers et réglages, y compris dans des fichiers que vous n’avez jamais ouverts.",

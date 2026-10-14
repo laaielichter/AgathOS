@@ -425,8 +425,8 @@
     "guard.evOff": "AgathOS Guard wurde ausgeschaltet",
     "guard.evOn": "AgathOS Guard wurde eingeschaltet",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr ist ein zusätzliches Design im Stil einer Einsatzzentrale: reines Schwarz für OLED-Bildschirme, dünne Linien, cyanfarbene Akzente und Code-Schrift. Logo und alle Funktionen bleiben gleich.",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth ist ein zusätzliches Design im Stil einer Einsatzzentrale: reines Schwarz für OLED-Bildschirme, dünne Linien, cyanfarbene Akzente und Code-Schrift. Logo und alle Funktionen bleiben gleich.",
 
     "ai.tab.boards": "Pinnwände",
     "board.sub": "Agenten können an Orten wie Chatkanälen, öffentlichen Textseiten und Netzwerken von KI-Agenten Befehle abholen und Nachrichten hinterlassen. Wer dort schreiben kann, kann den Agenten lenken. Hier steht jeder solche Ort aus deinen Dateien und Einstellungen, auch aus Dateien, die du nie geöffnet hast.",
