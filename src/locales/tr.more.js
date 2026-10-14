@@ -472,6 +472,17 @@
     "an.linkAgent.maybe": "Birçok kişi bir ajanın başka bir ajandan ikinci görüş istemesine bilerek izin verir.",
     "an.linkAgent.risk": "Yerleştirilmiş bir talimat, güvenilen bir ajanı kullanarak daha fazla hakka sahip ikinci bir ajana ulaşabilir; zararın izini sürmek de zorlaşır.",
     "an.linkAgent.todo": "Bunu sen istediysen “Sorun yok” seç. İstemediysen onu başlatan ajanı durdur ve ondan ne istendiğini oku.",
+
+    "guard.off": "Kapatıldı",
+    "guard.offDesc": "Guard kapalı. Dosyaları kalır ama hiçbir şey yapmaz ve yeniden başlatmadan sonra da kapalı kalır. Oluşturduğu güvenlik duvarı kuralları yerinde durur.",
+    "guard.onOff": "Guard açık veya kapalı",
+    "guard.uacOff": "Windows, Guard’ı kapatmak için yönetici izni isteyecek. Evet’i seç.",
+    "guard.uacOn": "Windows, Guard’ı açmak için yönetici izni isteyecek. Evet’i seç.",
+    "guard.switchedOn": "Guard açıldı.",
+    "guard.switchedOff": "Guard kapatıldı. Sen açana kadar kapalı kalır.",
+    "guard.switchFailed": "Değiştirme başarısız oldu ya da iptal edildi. Hiçbir şey değiştirilmedi.",
+    "guard.evOff": "AgathOS Guard kapatıldı",
+    "guard.evOn": "AgathOS Guard açıldı",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.tr, d);

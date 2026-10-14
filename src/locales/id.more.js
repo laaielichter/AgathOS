@@ -413,6 +413,17 @@
     "an.linkAgent.maybe": "Banyak orang sengaja membiarkan satu agen meminta pendapat kedua dari agen lain.",
     "an.linkAgent.risk": "Instruksi yang ditanam bisa memakai agen tepercaya untuk menjangkau agen kedua dengan hak lebih besar, sehingga kerusakannya lebih sulit dilacak.",
     "an.linkAgent.todo": "Jika Anda memang menginginkannya, pilih “Ini wajar”. Jika tidak, hentikan agen yang menjalankannya dan baca apa yang diminta darinya.",
+
+    "guard.off": "Dimatikan",
+    "guard.offDesc": "Guard dimatikan. Filenya tetap ada, tetapi tidak melakukan apa-apa dan tetap mati setelah restart. Aturan firewall yang dibuatnya tetap berlaku.",
+    "guard.onOff": "Guard nyala atau mati",
+    "guard.uacOff": "Windows akan meminta izin admin untuk mematikan Guard. Pilih Ya.",
+    "guard.uacOn": "Windows akan meminta izin admin untuk menyalakan Guard. Pilih Ya.",
+    "guard.switchedOn": "Guard dinyalakan.",
+    "guard.switchedOff": "Guard dimatikan. Guard tetap mati sampai kamu menyalakannya.",
+    "guard.switchFailed": "Pengalihan gagal atau dibatalkan. Tidak ada yang diubah.",
+    "guard.evOff": "AgathOS Guard dimatikan",
+    "guard.evOn": "AgathOS Guard dinyalakan",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);

@@ -98,6 +98,22 @@ if ($prev) {
 Remove-Item -LiteralPath $dst -Recurse -Force
 `;
 
+// ---------- on / off (one UAC prompt each) ----------
+// Off stops the task and disables it, so Guard also stays off after a restart. Nothing is removed: the files, the token
+// and the Windows logging stay as they are, and so do the firewall rules Guard made. On enables the task and starts it.
+const SWITCH_OFF = `
+$ErrorActionPreference = 'Stop'
+Disable-ScheduledTask -TaskName 'AgathOS Guard' | Out-Null
+$ErrorActionPreference = 'SilentlyContinue'
+Stop-ScheduledTask -TaskName 'AgathOS Guard'
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*agathos-guard.ps1*' } | Invoke-CimMethod -MethodName Terminate | Out-Null
+`;
+const SWITCH_ON = `
+$ErrorActionPreference = 'Stop'
+Enable-ScheduledTask -TaskName 'AgathOS Guard' | Out-Null
+Start-ScheduledTask -TaskName 'AgathOS Guard'
+`;
+
 function runElevated(script) {
   if (!U.IS_WIN) return Promise.resolve(false);
   const enc = Buffer.from(script, 'utf16le').toString('base64');
@@ -121,4 +137,15 @@ async function install(appDir) {
 const uninstall = () => runElevated(UNINSTALL);
 const installed = () => U.exists(TOKEN_FILE);
 
-module.exports = { status, events, connections, fwList, fwBlock, fwUnblock, fwLocalOnly, procOp, install, uninstall, installed, PORT };
+// Switch Guard on or off without removing it. True when Windows agreed and Guard really answers (on) or is silent (off).
+async function setEnabled(on) {
+  if (!U.IS_WIN || !installed()) return false;
+  if (!(await runElevated(on ? SWITCH_ON : SWITCH_OFF))) return false;
+  for (let i = 0; i < (on ? 20 : 10); i++) {
+    if (!!(await status()) === !!on) return true;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return false;
+}
+
+module.exports = { status, events, connections, fwList, fwBlock, fwUnblock, fwLocalOnly, procOp, install, uninstall, installed, setEnabled, SWITCH_ON, SWITCH_OFF, PORT };

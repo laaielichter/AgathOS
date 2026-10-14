@@ -1122,6 +1122,49 @@ const linkTests = async (eng) => {
   eng.refreshLinks();
 };
 
+// ---------- Guard on and off ----------
+const guardTests = async (eng) => {
+  const guardMod = require('../core/guard');
+  const real = { setEnabled: guardMod.setEnabled, installed: guardMod.installed, status: guardMod.status, events: guardMod.events };
+  let asked = 0;
+  guardMod.setEnabled = async () => { asked++; return true; };
+  eng.guardState.installed = false;
+  let r = await eng.guardSwitch(false);
+  ok(r.ok === false && r.notInstalled === true && asked === 0, 'guard switch: nothing to switch when Guard is not installed, Windows is not asked');
+  eng.guardState.installed = true; eng.guardState.enabled = true; eng.guardState.running = true; eng.guardState.sysmon = true;
+  r = await eng.guardSwitch(false);
+  ok(r.ok === true && r.enabled === false && asked === 1 && eng.guardState.enabled === false && eng.guardState.running === false && eng.store.state.guardOff === true, 'guard switch: off is remembered and Guard counts as not running');
+  ok(eng.snapshot().guard.enabled === false && eng.snapshot().guard.running === false && eng.liveView(0).guard.enabled === false, 'guard switch: the window sees that it was switched off on purpose');
+  ok(eng.store.events.some((e) => e.key === 'guard.evOff' && e.sev === 'watch'), 'guard switch: switching off is written in the log');
+  ok(new Store(path.join(tmp, 'store4')).state.guardOff === true, 'guard switch: off is still off after a restart');
+  guardMod.setEnabled = async () => false;
+  r = await eng.guardSwitch(true);
+  ok(r.ok === false && eng.guardState.enabled === false && eng.store.state.guardOff === true, 'guard switch: when Windows says no, nothing changes');
+  guardMod.setEnabled = async () => true;
+  r = await eng.guardSwitch(true);
+  ok(r.ok === true && r.enabled === true && eng.guardState.enabled === true && eng.store.state.guardOff === false, 'guard switch: on is remembered');
+  ok(eng.store.events.some((e) => e.key === 'guard.evOn' && e.sev === 'calm'), 'guard switch: switching on is written in the log');
+  // installing or removing Guard makes it "on" again; a Guard that answers is on, whatever was written down
+  eng.guardState.enabled = false; eng.store.state.guardOff = true;
+  eng.guardReset();
+  ok(eng.guardState.enabled === true && eng.store.state.guardOff === false, 'guard switch: after an install or a removal it is on again');
+  guardMod.installed = () => true;
+  guardMod.status = async () => ({ seq: 0, sysmon: false, elevated: true });
+  guardMod.events = async () => [];
+  eng.guardState.enabled = false; eng.store.state.guardOff = true;
+  await eng.pollGuard();
+  ok(eng.guardState.running === true && eng.guardState.enabled === true && eng.store.state.guardOff === false, 'guard switch: a Guard that answers counts as on');
+  Object.assign(guardMod, real);
+  eng.guardState.installed = guardMod.installed(); eng.guardState.running = false; eng.guardState.enabled = true;
+  // the two Windows scripts: off stops it and disables it (so it stays off after a restart) and removes nothing; on enables and starts it
+  ok(/Disable-ScheduledTask/.test(guardMod.SWITCH_OFF) && /Stop-ScheduledTask/.test(guardMod.SWITCH_OFF) && /Enable-ScheduledTask/.test(guardMod.SWITCH_ON) && /Start-ScheduledTask/.test(guardMod.SWITCH_ON), 'guard switch: off stops and disables the task, on enables and starts it');
+  ok(!/Unregister|Remove-Item|Remove-NetFirewallRule|auditpol|wevtutil|Set-ItemProperty/i.test(guardMod.SWITCH_OFF + guardMod.SWITCH_ON), 'guard switch: switching removes nothing and leaves the Windows logging as it is');
+  ok((await guardMod.setEnabled(true)) === false && (await guardMod.setEnabled(false)) === false, 'guard switch: without Windows or without Guard nothing happens');
+  // only the window can do it: the local API and the agent checks have no route to it
+  const apiSrc = fs.readFileSync(path.join(__dirname, '..', 'core', 'api.js'), 'utf8');
+  ok(!/guard/i.test(apiSrc), 'guard switch: the local API has no way to switch Guard');
+};
+
 (async () => {
   const { Engine } = require('../core/engine');
   const est = new Store(path.join(tmp, 'store4'));
@@ -1228,6 +1271,7 @@ const linkTests = async (eng) => {
   await robustTests();
   await updateTests();
   await linkTests(eng);
+  await guardTests(eng);
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
   fs.rmSync(tmp, { recursive: true, force: true });

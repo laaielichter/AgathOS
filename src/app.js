@@ -96,7 +96,7 @@
   }
   async function run(p, okMsg) {
     const r = await p;
-    if (r && r.needGuard) { modal(t('guard.title'), t('net.guardNeeded')); return r; }
+    if (r && r.needGuard) { modal(t('guard.title'), t('net.guardNeeded') + (guardIsOff(snap && snap.guard) ? ' ' + t('guard.offDesc') : '')); return r; }
     if (okMsg && r && r.ok !== false) toast(okMsg);
     return r;
   }
@@ -156,7 +156,8 @@
     const gp = $('guardPill');
     gp.hidden = !(gs && gs.installed);
     gp.classList.toggle('is-on', !!(gs && gs.running));
-    gp.title = gs && gs.running ? t('guard.running') : t('guard.stopped');
+    gp.classList.toggle('is-off', guardIsOff(gs));
+    gp.title = gs && gs.running ? t('guard.running') : guardIsOff(gs) ? t('guard.off') : t('guard.stopped');
     if (snap && snap.heartbeat && snap.heartbeat !== lastBeat) {
       lastBeat = snap.heartbeat;
       const d = $('liveDot');
@@ -952,7 +953,7 @@
         h('div', { class: 'box' }, h('div', { class: 'box-row' }, h('h2', { text: t('guard.title') })), h('p', { text: t('mac.guard') }))));
       return;
     }
-    const guardChip = g.running ? h('span', { class: 'status-chip on', text: t('guard.running') }) : g.installed ? h('span', { class: 'status-chip warn', text: t('guard.stopped') }) : h('span', { class: 'status-chip', text: t('guard.none') });
+    const guardChip = g.running ? h('span', { class: 'status-chip on', text: t('guard.running') }) : guardIsOff(g) ? h('span', { class: 'status-chip', text: t('guard.off') }) : g.installed ? h('span', { class: 'status-chip warn', text: t('guard.stopped') }) : h('span', { class: 'status-chip', text: t('guard.none') });
     fill($('networkBody'), h('div', { class: 'stack' },
       h('div', null, h('h2', { class: 'panel-title', style: 'margin-left:0', text: t('net.ports') }), ports),
       h('div', { class: 'box' },
@@ -963,9 +964,24 @@
         h('div', { class: 'box-row' }, h('h2', { text: t('guard.title') }), guardChip),
         h('p', { text: t('guard.desc') }),
         g.running ? h('p', { text: g.sysmon ? t('guard.sysmon') : t('guard.basic') }) : null,
-        g.installed
-          ? btn(t('guard.uninstall'), async () => { const r = await A.guardUninstall(); toast(r && r.ok ? t('guard.removed') : t('guard.failed')); })
-          : btn(t('guard.install'), installGuard, 'fix'))));
+        guardIsOff(g) ? h('p', { text: t('guard.offDesc') }) : null,
+        g.installed ? h('div', { class: 'box-row' }, h('span', { text: t('guard.onOff') }), guardControls(g)) : btn(t('guard.install'), installGuard, 'fix'))));
+  }
+  // Switched off on purpose: installed, not running, and the switch says off.
+  function guardIsOff(g) { return !!(g && g.installed && g.enabled === false && !g.running); }
+  // The switch plus the button that removes Guard for good.
+  function guardControls(g) {
+    const on = g.enabled !== false;
+    return h('span', { class: 'set-control' },
+      sw(on, () => switchGuard(!on)),
+      btn(t('guard.uninstall'), async () => { const r = await A.guardUninstall(); toast(r && r.ok ? t('guard.removed') : t('guard.failed')); }));
+  }
+  // Windows asks for permission each time, so a program running as you cannot do this behind your back.
+  async function switchGuard(on) {
+    modal(t('guard.title'), t(on ? 'guard.uacOn' : 'guard.uacOff'));
+    const r = await A.guardSwitch(on);
+    if ($('modal').open) $('modal').close();
+    toast(r && r.ok ? t(on ? 'guard.switchedOn' : 'guard.switchedOff') : t('guard.switchFailed'));
   }
   async function installGuard() {
     modal(t('guard.title'), t('guard.uac'));
@@ -1013,9 +1029,7 @@
       h('select', { onchange: (e) => save({ fix: { custom: { [cat]: e.target.value } } }) }, opts.map((o) => h('option', { value: o, selected: (fix.custom || {})[cat] === o, text: t('fixact.' + o) }))))) : [];
     const modeSeg = h('div', { class: 'seg' }, ['advanced', 'simple'].map((m) => h('button', { class: `seg-btn${mode === m ? ' is-active' : ''}`, type: 'button', text: t('mode.' + m), onclick: () => setUi({ mode: m }) })));
     const g = snap.guard || {};
-    const guardBtn = g.installed
-      ? btn(t('guard.uninstall'), async () => { const r = await A.guardUninstall(); toast(r && r.ok ? t('guard.removed') : t('guard.failed')); })
-      : btn(t('guard.install'), installGuard, 'fix');
+    const guardBtn = g.installed ? guardControls(g) : btn(t('guard.install'), installGuard, 'fix');
     fill(body,
       h('section', { class: 'set-group', id: 'setFix' }, h('h2', { text: t('set.fix') }),
         setRow(t('set.fixAuto'), autoSeg(fix, true), fix.auto ? t(`fix.level.${fix.level}Desc`) : t('set.fixAutoDesc')),

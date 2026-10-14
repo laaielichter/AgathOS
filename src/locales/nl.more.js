@@ -414,6 +414,17 @@
     "an.linkAgent.maybe": "Veel mensen laten een agent met opzet een andere om een tweede mening vragen.",
     "an.linkAgent.risk": "Een ingeplante instructie kan een vertrouwde agent gebruiken om bij een tweede agent met meer rechten te komen, zodat de schade lastiger te herleiden is.",
     "an.linkAgent.todo": "Wilde je dit, kies dan “Dit is OK”. Zo niet, stop de agent die hem startte en lees wat die moest doen.",
+
+    "guard.off": "Uitgezet",
+    "guard.offDesc": "Guard staat uit. De bestanden blijven staan, maar hij doet niets en blijft uit na een herstart. Firewallregels die hij maakte blijven bestaan.",
+    "guard.onOff": "Guard aan of uit",
+    "guard.uacOff": "Windows vraagt zo om admin-toestemming om Guard uit te zetten. Kies Ja.",
+    "guard.uacOn": "Windows vraagt zo om admin-toestemming om Guard aan te zetten. Kies Ja.",
+    "guard.switchedOn": "Guard staat aan.",
+    "guard.switchedOff": "Guard staat uit. Hij blijft uit tot je hem weer aanzet.",
+    "guard.switchFailed": "Schakelen is niet gelukt of geannuleerd. Er is niets veranderd.",
+    "guard.evOff": "AgathOS Guard is uitgezet",
+    "guard.evOn": "AgathOS Guard is aangezet",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.nl, d);

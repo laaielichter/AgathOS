@@ -413,6 +413,17 @@
     "an.linkAgent.maybe": "あえて 1 つのエージェントに別のエージェントへセカンドオピニオンを求めさせる人は多くいます。",
     "an.linkAgent.risk": "仕込まれた指示が信頼されたエージェントを足がかりに、より強い権限を持つ 2 つ目のエージェントに到達でき、被害の追跡が難しくなります。",
     "an.linkAgent.todo": "意図したものなら「問題なし」を選んでください。違うなら、起動した側のエージェントを止めて、何を指示されていたか読んでください。",
+
+    "guard.off": "オフにしました",
+    "guard.offDesc": "Guard はオフです。ファイルは残りますが、何もせず、再起動後もオフのままです。Guard が作ったファイアウォールの規則はそのまま残ります。",
+    "guard.onOff": "Guard のオン・オフ",
+    "guard.uacOff": "Guard をオフにするため、Windows が管理者の許可を求めます。「はい」を選んでください。",
+    "guard.uacOn": "Guard をオンにするため、Windows が管理者の許可を求めます。「はい」を選んでください。",
+    "guard.switchedOn": "Guard をオンにしました。",
+    "guard.switchedOff": "Guard をオフにしました。オンにするまでオフのままです。",
+    "guard.switchFailed": "切り替えに失敗したか取り消されました。何も変更していません。",
+    "guard.evOff": "AgathOS Guard をオフにしました",
+    "guard.evOn": "AgathOS Guard をオンにしました",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ja, d);

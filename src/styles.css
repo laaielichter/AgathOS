@@ -512,6 +512,8 @@ dialog.modal { position: fixed; }
 .guard-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; }
 .guard-pill.is-on { color: var(--calm); border-color: color-mix(in srgb, var(--calm) 55%, transparent); background: color-mix(in srgb, var(--calm) 10%, transparent); }
 .guard-pill.is-on::before { background: currentColor; box-shadow: 0 0 6px color-mix(in srgb, var(--calm) 60%, transparent); }
+/* Switched off on purpose: grey with an empty dot, not an amber warning. */
+.guard-pill.is-off { color: var(--dim); border-color: var(--line); }
 
 /* ---------- update window: a thin bar while it checks or downloads ---------- */
 .upd-wait { height: 3px; margin: -8px 0 20px; border-radius: 2px; background: var(--line); overflow: hidden; position: relative; }

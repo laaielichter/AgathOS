@@ -82,6 +82,8 @@ is never rewritten, and a cleaned file is never restored over newer work.
 
 **AgathOS Guard (optional).** A small helper with admin rights, installed with one UAC prompt. It turns on deep Windows logging (every new process with its full command line, DNS lookups per process; Sysmon if you have it), manages the firewall (block one agent, make an AI server local-only, AI lockdown), reports firewall rules added by other programs, and can freeze processes that run as admin. It runs as SYSTEM from an admin-only folder and only listens on `127.0.0.1` with a token. Removing it restores your previous Windows settings.
 
+**Guard on and off.** Once Guard is installed, a switch (in Settings and on the *Network* page) turns it off and on without removing it. Off means the helper stops and does not start again with Windows, until you switch it on; its files and the firewall rules it made stay as they are. Windows asks for permission each time you flip the switch, and the switch is not part of the local API, so no program or agent can use it. The *Guard* label at the top turns grey when it is switched off, and the log records both moves.
+
 **Live scanner switch.** One click in the title bar (or the tray menu) turns background
 watching on or off. It is on by default.
 

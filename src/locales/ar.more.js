@@ -413,6 +413,17 @@
     "an.linkAgent.maybe": "كثيرون يتركون وكيلًا يطلب رأيًا ثانيًا من وكيل آخر عن قصد.",
     "an.linkAgent.risk": "يمكن لتعليمة مزروعة أن تستخدم وكيلًا موثوقًا للوصول إلى وكيل ثانٍ بصلاحيات أكبر، فيصعب تتبّع الضرر.",
     "an.linkAgent.todo": "إذا كنت تريد هذا فاختر «هذا طبيعي». وإن لم تكن تريده، فأوقف الوكيل الذي شغّله واقرأ ما طُلب منه.",
+
+    "guard.off": "موقوف",
+    "guard.offDesc": "Guard موقوف. تبقى ملفاته، لكنه لا يفعل شيئًا ويظل موقوفًا بعد إعادة التشغيل. قواعد جدار الحماية التي أنشأها تبقى كما هي.",
+    "guard.onOff": "تشغيل Guard أو إيقافه",
+    "guard.uacOff": "سيطلب Windows إذن المسؤول لإيقاف Guard. اختر نعم.",
+    "guard.uacOn": "سيطلب Windows إذن المسؤول لتشغيل Guard. اختر نعم.",
+    "guard.switchedOn": "تم تشغيل Guard.",
+    "guard.switchedOff": "تم إيقاف Guard. يبقى موقوفًا إلى أن تشغّله.",
+    "guard.switchFailed": "لم ينجح التبديل أو أُلغي. لم يتغيّر شيء.",
+    "guard.evOff": "تم إيقاف AgathOS Guard",
+    "guard.evOn": "تم تشغيل AgathOS Guard",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ar, d);

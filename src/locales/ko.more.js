@@ -413,6 +413,17 @@
     "an.linkAgent.maybe": "일부러 한 에이전트가 다른 에이전트에게 두 번째 의견을 구하게 하는 사람이 많습니다.",
     "an.linkAgent.risk": "심어 둔 지시가 신뢰받는 에이전트를 이용해 더 큰 권한의 두 번째 에이전트에 닿을 수 있어, 피해를 추적하기가 더 어려워집니다.",
     "an.linkAgent.todo": "의도한 것이라면 \"정상입니다\"를 선택하세요. 아니라면 그것을 시작한 에이전트를 멈추고 무슨 작업을 맡았는지 읽어 보세요.",
+
+    "guard.off": "꺼짐",
+    "guard.offDesc": "Guard가 꺼져 있습니다. 파일은 남아 있지만 아무것도 하지 않으며 재시작 후에도 꺼진 채로 유지됩니다. Guard가 만든 방화벽 규칙은 그대로 남습니다.",
+    "guard.onOff": "Guard 켜기/끄기",
+    "guard.uacOff": "Guard를 끄려면 Windows가 관리자 권한을 요청합니다. 예를 선택하세요.",
+    "guard.uacOn": "Guard를 켜려면 Windows가 관리자 권한을 요청합니다. 예를 선택하세요.",
+    "guard.switchedOn": "Guard를 켰습니다.",
+    "guard.switchedOff": "Guard를 껐습니다. 다시 켤 때까지 꺼진 채로 있습니다.",
+    "guard.switchFailed": "전환에 실패했거나 취소되었습니다. 바뀐 것은 없습니다.",
+    "guard.evOff": "AgathOS Guard를 껐습니다",
+    "guard.evOn": "AgathOS Guard를 켰습니다",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);

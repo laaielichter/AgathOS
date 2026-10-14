@@ -195,8 +195,9 @@
       return res;
     },
     fixUndo: (rid) => { const r = snap.remedies.find((x) => x.rid === rid); if (r) { r.undone = Date.now(); r.canUndo = false; } emit(); return ok(); },
-    ui: () => ok(), uiState: () => Promise.resolve({ welcomed: !/welcome/.test(location.hash), mode: /simple/.test(location.hash) ? 'simple' : 'advanced', lang: (location.hash.match(/lang=(\w+)/) || [])[1] }), verifyLog: () => ok({ lines: 128 }), rollback: () => Promise.resolve(true), forget: () => Promise.resolve(true),
+    ui: () => ok(), uiState: () => Promise.resolve({ welcomed: !/welcome/.test(location.hash), mode: /simple/.test(location.hash) ? 'simple' : 'advanced', lang: (location.hash.match(/lang=(\w+)/) || [])[1], theme: (location.hash.match(/theme=(\w+)/) || [])[1] }), verifyLog: () => ok({ lines: 128 }), rollback: () => Promise.resolve(true), forget: () => Promise.resolve(true),
     judgeModels: () => Promise.resolve(['qwen2.5:7b', 'llama3.1:8b']), guardInstall: () => ok(), guardUninstall: () => ok(),
+    guardSwitch: (on) => { snap.guard.enabled = !!on; snap.guard.running = !!on; emit(); return ok(); },
     addFolder: () => ok(), removeFolder: () => ok(), reveal: () => ok(), onNavigate: () => {}, openMain: () => ok(), closeMini: () => ok(),
     checkText: (text) => {
       const tags = [...text].filter((c) => c.codePointAt(0) >= 0xe0000 && c.codePointAt(0) <= 0xe007f);
