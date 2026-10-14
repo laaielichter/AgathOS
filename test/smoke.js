@@ -117,7 +117,7 @@ async function until(fn, ms, every = 1500) {
     annotate(failed ? 'error' : 'notice', `Smoke test ${process.platform}`, lines.join('\n'));
     process.exit(failed ? 1 : 0);
   };
-  const stop = setTimeout(() => { say('FAIL the whole check took longer than 5 minutes'); failed++; finish(); }, 5 * 60 * 1000);
+  const stop = setTimeout(() => { say('FAIL the whole check took longer than 8 minutes'); failed++; finish(); }, 8 * 60 * 1000);
 
   try {
     const v = await app.evaluate(({ app: a }) => ({ electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node, platform: process.platform, arch: process.arch, version: a.getVersion(), packaged: a.isPackaged }));
@@ -372,6 +372,40 @@ async function until(fn, ms, every = 1500) {
       check(busy.bar && busy.buttons === 0, 'installing shows a moving bar and no buttons', busy);
       await app.evaluate(({ BrowserWindow }) => { for (const w of BrowserWindow.getAllWindows()) if (/#update/.test(w.webContents.getURL())) w.destroy(); });
     }
+
+    // How much the app uses when nothing happens. Information only: nothing here can fail the check.
+    // First with the window in view, then with the window hidden (the way it sits in the tray).
+    // Numbers are percent of one processor core, and megabytes of memory, per kind of process of the app.
+    const idleLoad = (secs) => app.evaluate(async ({ app: a }, seconds) => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const take = () => a.getAppMetrics().map((m) => ({ pid: m.pid, type: m.type, cpu: m.cpu && m.cpu.cumulativeCPUUsage, ws: m.memory && m.memory.workingSetSize }));
+      await wait(2500);
+      const t0 = Date.now();
+      const first = take();
+      await wait(seconds * 1000);
+      const last = take();
+      const spent = (Date.now() - t0) / 1000;
+      const by = {};
+      for (const m of last) {
+        const was = first.find((x) => x.pid === m.pid);
+        const k = by[m.type] || (by[m.type] = { n: 0, cpu: 0, mb: 0 });
+        k.n++;
+        k.cpu += was && Number.isFinite(m.cpu) && Number.isFinite(was.cpu) ? (m.cpu - was.cpu) / spent * 100 : 0;
+        k.mb += (m.ws || 0) / 1024;
+      }
+      const text = Object.entries(by).map(([t, k]) => `${t} ${k.cpu.toFixed(1)}% ${Math.round(k.mb)} MB${k.n > 1 ? ` (${k.n}x)` : ''}`).join(' | ');
+      const total = Object.values(by).reduce((s, k) => s + k.cpu, 0);
+      return { text, total: Math.round(total * 10) / 10, mb: Math.round(Object.values(by).reduce((s, k) => s + k.mb, 0)) };
+    }, secs);
+    try {
+      const shown = await idleLoad(25);
+      await app.evaluate(({ BrowserWindow }) => { for (const w of BrowserWindow.getAllWindows()) w.hide(); });
+      const hiddenLoad = await idleLoad(25);
+      await app.evaluate(({ BrowserWindow }) => { const w = BrowserWindow.getAllWindows()[0]; if (w) w.show(); });
+      say(`idle, window in view:  ${shown.total}% of one core, ${shown.mb} MB   (${shown.text})`);
+      say(`idle, window hidden:   ${hiddenLoad.total}% of one core, ${hiddenLoad.mb} MB   (${hiddenLoad.text})`);
+      annotate('notice', `Idle load ${process.platform} ${v.arch}`, `window in view: ${shown.total}% of one core, ${shown.mb} MB\n${shown.text}\n\nwindow hidden: ${hiddenLoad.total}% of one core, ${hiddenLoad.mb} MB\n${hiddenLoad.text}`);
+    } catch (e) { say(`(idle load could not be measured: ${e && e.message})`); }
 
     // A window that was closed comes back (tray "Open", Dock icon, second start).
     await page.evaluate(() => window.agathos.settings({ realtime: false }));

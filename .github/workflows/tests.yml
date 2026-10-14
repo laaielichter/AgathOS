@@ -26,3 +26,8 @@ jobs:
         with:
           node-version: 22
       - run: node test/run-tests.js
+      # How long the watchers take on this system. Information only: the numbers are written as an annotation.
+      - name: Speed of the watchers
+        if: runner.os != 'Linux'
+        continue-on-error: true
+        run: node test/bench-os.js
