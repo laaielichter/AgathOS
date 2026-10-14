@@ -279,14 +279,14 @@ module.exports = async function copyTests({ ok, tmp, eng }) {
     pw.first = true;
     const t0 = Date.now() - 100000;
     const P2 = (p, pp, n, c, e, dt) => ({ p, pp, n, c, e, t: t0 + dt });
-    const claude = (p, pp, dt) => P2(p, pp, 'claude', 'claude', '/usr/local/bin/claude', dt);
+    const claude = (p, pp, dt) => P2(p, pp, 'claude.exe', 'claude', '/usr/local/bin/claude', dt);   // process names end in .exe on Windows
     const sh = (p, pp, dt) => P2(p, pp, 'bash', 'bash', '/bin/bash', dt);
     const rows = [sh(50, 1, 0), claude(100, 50, 10), sh(101, 100, 20), claude(102, 101, 30)];
     pw.procs = new Map(rows.map((r) => [r.p, r]));
     for (const r of rows) pw.handleNew(r);
     ok(got.length === 0 && pw.roots.size === 2, T + 'programs that were already running when AgathOS started are not copies');
     pw.first = false;
-    const more = [sh(150, 1, 40), claude(200, 150, 50), claude(300, 101, 60), P2(400, 101, 'codex', 'codex', '/usr/local/bin/codex', 70)];
+    const more = [sh(150, 1, 40), claude(200, 150, 50), claude(300, 101, 60), P2(400, 101, 'codex.exe', 'codex', '/usr/local/bin/codex', 70)];
     for (const r of more) pw.procs.set(r.p, r);
     for (const r of more) pw.handleNew(r);
     ok(got.length === 1 && got[0].agentId === 'claude-code' && got[0].pid === 300 && got[0].parentPid === 100 && typeof got[0].agentName === 'string', T + 'a Claude Code that is started inside a Claude Code is a copy; a Claude Code started by a shell on its own is not');
