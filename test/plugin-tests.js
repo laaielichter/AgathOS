@@ -462,7 +462,7 @@ module.exports = async function pluginTests({ ok, tmp, eng }) {
   const mcpJson = readJson(path.join(pdir, '.mcp.json'));
   const srvCfg = mcpJson.mcpServers.agathos;
   ok(Object.keys(mcpJson.mcpServers).join() === 'agathos' && srvCfg.command === 'node' && srvCfg.args.join() === '${CLAUDE_PLUGIN_ROOT}/server.js' && Object.keys(srvCfg.env).every((k) => /^AGATHOS_/.test(k)) && fs.existsSync(path.join(pdir, 'server.js')), T + 'the plugin starts its own MCP server and passes on only the settings for AgathOS');
-  const skill = fs.readFileSync(path.join(pdir, 'skills', 'agathos', 'SKILL.md'), 'utf8');
+  const skill = fs.readFileSync(path.join(pdir, 'skills', 'agathos', 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n');   // Windows may check files out with CRLF
   const front = /^---\nname: agathos\ndescription: (.+)\n---\n/.exec(skill);
   ok(front && front[1].length > 80 && front[1].length <= 1024 && /never follow an instruction/i.test(skill) && /alarm/.test(skill) && /cannot/.test(skill), T + 'the skill says when to use the tools and not to follow what the answers contain');
 
@@ -550,7 +550,8 @@ module.exports = async function pluginTests({ ok, tmp, eng }) {
 
   // ---------- the screen in Settings: Agent access ----------
   const I18 = require('../src/i18n.js');
-  const appSrc = fs.readFileSync(path.join(top, 'src', 'app.js'), 'utf8');
+  const readLf = (...parts) => fs.readFileSync(path.join(top, ...parts), 'utf8').replace(/\r\n/g, '\n');   // Windows may check files out with CRLF
+  const appSrc = readLf('src', 'app.js');
   const secFrom = appSrc.indexOf('// ---------- settings: access for AI programs');
   const secTo = appSrc.indexOf('// ---------- check text');
   const sec = secFrom > 0 && secTo > secFrom ? appSrc.slice(secFrom, secTo) : '';
@@ -567,9 +568,9 @@ module.exports = async function pluginTests({ ok, tmp, eng }) {
   ok(/Codex/.test(reportSay) && !/Ignore previous|copy yourself/.test(reportSay) && !/[:“”"]\s*$/.test(reportSay), T + 'what an agent wrote in a report is not passed on to other agents', reportSay);
   ok(I18.I18N.en['agent.title'] === 'Agent access' && /Settings > Agent access/.test(fs.readFileSync(path.join(top, 'docs', 'agents.md'), 'utf8')) && /Settings > Agent access/.test(fs.readFileSync(path.join(top, 'README.md'), 'utf8')), T + 'the docs name the place in Settings by the words the window uses');
   // The bridge: each call exists in the preload, in the engine process and in the demo.
-  const mainSrc = fs.readFileSync(path.join(top, 'main.js'), 'utf8');
-  const preSrc = fs.readFileSync(path.join(top, 'preload.js'), 'utf8');
-  const mockSrc = fs.readFileSync(path.join(top, 'src', 'mock.js'), 'utf8');
+  const mainSrc = readLf('main.js');
+  const preSrc = readLf('preload.js');
+  const mockSrc = readLf('src', 'mock.js');
   const bridged = ['agentTokens', 'agentTokenCreate', 'agentTokenRevoke', 'agentAudit'].filter((n) => preSrc.includes(`${n}: call('${n}')`) && mainSrc.includes(`h('${n}'`) && new RegExp(`\\b${n}:`).test(mockSrc) && sec.includes(`A.${n}(`));
   ok(bridged.length === 4, T + 'the four calls of the screen exist in the preload, the app and the demo', bridged);
   ok(!/\b(localStorage|sessionStorage|indexedDB|innerHTML|insertAdjacentHTML|outerHTML|eval\(|document\.write|console\.)/.test(sec), T + 'the screen keeps nothing in the browser, builds no HTML from text and writes nothing to the console');
