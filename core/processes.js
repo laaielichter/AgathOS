@@ -189,4 +189,4 @@ class ProcessWatch {
   }
 }
 
-module.exports = { ProcessWatch, identify };
+module.exports = { ProcessWatch, identify, PS_LIST };
