@@ -31,6 +31,7 @@ const DEFAULT_SETTINGS = {
   api: true,                  // local API on 127.0.0.1 for hooks and future apps
   downloadGuard: true,        // check new files in Downloads right away
   updates: true,              // check GitHub Releases for a new version once a day
+  autoUpdate: true,           // Windows, installed app: install a new version by itself at a quiet moment
   // "Fix it": auto mode is off until you switch it on. level: gentle | firm | max | custom
   fix: { auto: false, level: 'firm', minSev: 'alarm', custom: { agent: 'block', port: 'localOnly', mcp: 'disable', hidden: 'clean', inject: 'off', model: 'quarantine', auto: 'off' } },
 };

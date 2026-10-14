@@ -963,7 +963,8 @@
           e.target.textContent = t('set.updatesNow');
           modal(t('set.updates'), !u || u.status === 'unreachable' ? t('upd.unreachable') : u.status === 'newer' ? t('upd.available', { v: u.version }) : t('upd.latest', { v: u.current }));
         }), snap.update && snap.update.status === 'newer' ? t('upd.available', { v: snap.update.version }) : null),
-        setRow(t('set.updatesAuto'), sw(s.updates !== false, () => save({ updates: s.updates === false })))),
+        setRow(t('set.updatesAuto'), sw(s.updates !== false, () => save({ updates: s.updates === false }))),
+        isMac() ? null : setRow(t('set.autoUpdate'), sw(s.autoUpdate !== false, () => save({ autoUpdate: s.autoUpdate === false })), t('set.autoUpdateDesc'))),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.app') }),
         setRow(startupLabel(), sw(s.startWithWindows, () => save({ startWithWindows: !s.startWithWindows }))),
         setRow(t('set.tray'), sw(s.closeToTray, () => save({ closeToTray: !s.closeToTray }))),

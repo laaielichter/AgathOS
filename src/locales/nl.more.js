@@ -288,6 +288,10 @@
     "an.backup.risk": "Agents die zonder enige beveiliging draaien, hebben al hele mappen en schijven gewist, en sommige wormen wissen de thuismap als ze niet kunnen inloggen. Zonder tweede kopie komen die gegevens niet terug.",
     "an.backup.todo": "Zet nu een back-up aan: Bestandsgeschiedenis of OneDrive-mapback-up op Windows, Time Machine of iCloud op een Mac. Zet code op GitHub of een andere Git-remote.",
     "an.backup.deep": "AgathOS controleert elke map die het bewaakt (behalve Downloads) op een teken van een kopie: de map staat in een OneDrive-, Dropbox-, Google Drive- of iCloud-map, of elk Git-project erin heeft een remote, of op een Mac heeft Time Machine een back-up gemaakt. Het kijkt niet in Bestandsgeschiedenis of andere back-upprogramma's en ziet geen externe schijven, dus het zegt alleen 'geen teken van een back-up'. Het leest geen bestandsinhoud en verandert niets.",
+    "upd.auto": "AgathOS werkt zichzelf bij naar {v}",
+    "upd.autoFailed": "De automatische update naar {v} is niet gelukt. Er is niets veranderd. Je kunt zelf bijwerken bij Instellingen.",
+    "set.autoUpdate": "Zelf bijwerken op een rustig moment",
+    "set.autoUpdateDesc": "Installeert een nieuwe versie als er geen agent draait, geen scan bezig is en het AgathOS-venster niet in gebruik is. Anders probeert het 20 minuten later opnieuw. De download wordt eerst gecontroleerd met de SHA-256-controlesom.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.nl, d);

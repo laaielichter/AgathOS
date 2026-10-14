@@ -256,8 +256,50 @@ async function checkUpdate(manual = false) {
     engine.event({ key: 'upd.event', sev: 'watch', watcher: 'gate', params: { v: updateInfo.version } });
   }
   buildTray();
+  if (!manual) scheduleAutoUpdate(0);
   return updateInfo;
 }
+
+// Updating by itself (Windows, installed app): only at a quiet moment, after a calm notice,
+// and only with a verified SHA-256 checksum. Not quiet? Look again 20 minutes later.
+let autoTimer = null;
+let autoFailed = null;       // version that failed once: not tried again until a newer one appears
+let autoNotified = null;     // version we already told the user about
+function scheduleAutoUpdate(ms) {
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => autoUpdateTick().catch(() => {}), ms);
+}
+async function autoUpdateTick() {
+  if (!engine || !store) return;
+  const decide = () => updater.autoDecision({
+    platform: process.platform, packaged: app.isPackaged, autoUpdate: store.settings.autoUpdate, info: updateInfo, failedVersion: autoFailed,
+    calm: updater.calmMoment({
+      runningAgents: engine.procs.runningAgents().length,
+      scanning: !!engine.scanning,
+      windowInUse: !!(win && !win.isDestroyed() && win.isVisible() && win.isFocused()),
+      paused: !!engine.pausedAll,
+    }),
+  });
+  let d = decide();
+  if (d === 'wait') { scheduleAutoUpdate(updater.RETRY_MS); return; }
+  if (d !== 'go') return;
+  const v = updateInfo.version;
+  if (autoNotified !== v) {
+    autoNotified = v;
+    engine.event({ key: 'upd.auto', sev: 'calm', watcher: 'gate', params: { v } });
+    if (Notification.isSupported()) new Notification({ title: tt('notif.title'), body: tt('upd.auto', { v }), icon: path.join(__dirname, 'src', 'icon.png'), silent: true }).show();
+  }
+  await new Promise((r) => setTimeout(r, 20000));      // a moment to read it, and to see that it is still quiet
+  d = decide();
+  if (d === 'wait') { scheduleAutoUpdate(updater.RETRY_MS); return; }
+  if (d !== 'go') return;
+  const r = await installUpdate();
+  if (!r || r.ok === false) {
+    autoFailed = v;
+    engine.event({ key: 'upd.autoFailed', sev: 'watch', watcher: 'gate', params: { v } });
+  }
+}
+
 async function installUpdate() {
   if (!updateInfo || updateInfo.status !== 'newer') return { ok: false };
   // Only the installed Windows app updates itself; otherwise open the download page.
@@ -300,6 +342,7 @@ function wireIpc() {
     engine.applySchedule();
     applyOsSettings();
     engine.changed(true);
+    if (patch && 'autoUpdate' in patch && updateInfo && updateInfo.status === 'newer') scheduleAutoUpdate(5000);
     return s;
   });
   h('ui', (patch) => {

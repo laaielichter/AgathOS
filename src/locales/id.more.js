@@ -287,6 +287,10 @@
     "an.backup.risk": "Agen yang berjalan tanpa pengaman sama sekali sudah menghapus seluruh folder dan disk, dan sebagian worm menghapus folder home saat tidak bisa masuk. Tanpa salinan kedua, data itu tidak bisa dikembalikan.",
     "an.backup.todo": "Aktifkan cadangan sekarang: File History atau pencadangan folder OneDrive di Windows, Time Machine atau iCloud di Mac. Untuk kode, dorong proyekmu ke GitHub atau remote Git lain.",
     "an.backup.deep": "AgathOS memeriksa setiap folder yang diawasi (kecuali Downloads) untuk mencari tanda salinan: folder berada di dalam folder OneDrive, Dropbox, Google Drive, atau iCloud, atau setiap proyek Git di dalamnya punya remote, atau di Mac Time Machine sudah membuat cadangan. AgathOS tidak melihat ke dalam File History atau program cadangan lain dan tidak bisa melihat disk eksternal, jadi hanya mengatakan 'tidak ada tanda cadangan'. Tidak membaca isi file dan tidak mengubah apa pun.",
+    "upd.auto": "AgathOS memperbarui dirinya ke {v}",
+    "upd.autoFailed": "Pembaruan otomatis ke {v} tidak berhasil. Tidak ada yang diubah. Kamu bisa memperbarui sendiri di Pengaturan.",
+    "set.autoUpdate": "Perbarui sendiri saat tenang",
+    "set.autoUpdateDesc": "Memasang versi baru saat tidak ada agen yang berjalan, tidak ada pemindaian yang sibuk, dan jendela AgathOS tidak sedang dipakai. Jika tidak, mencoba lagi 20 menit kemudian. Unduhan diperiksa dulu dengan checksum SHA-256-nya.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);

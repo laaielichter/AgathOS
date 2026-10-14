@@ -287,6 +287,10 @@
     "an.backup.risk": "안전장치를 모두 끈 채 실행된 에이전트가 폴더와 드라이브 전체를 지운 적이 있고, 로그인하지 못하면 홈 폴더를 지우는 웜도 있습니다. 두 번째 사본이 없으면 그 데이터는 되돌릴 수 없습니다.",
     "an.backup.todo": "지금 백업을 켜세요: Windows에서는 파일 히스토리나 OneDrive 폴더 백업, Mac에서는 Time Machine이나 iCloud. 코드는 GitHub 또는 다른 Git 원격 저장소에 올리세요.",
     "an.backup.deep": "AgathOS는 감시하는 각 폴더(다운로드 제외)에 사본의 흔적이 있는지 확인합니다: 폴더가 OneDrive, Dropbox, Google Drive, iCloud 폴더 안에 있거나, 안의 모든 Git 프로젝트에 원격 저장소가 있거나, Mac에서 Time Machine이 백업을 만들었는지. 파일 히스토리나 다른 백업 프로그램 안은 보지 않고 외장 디스크도 볼 수 없어서 '백업 흔적 없음'이라고만 말합니다. 파일 내용을 읽지 않고 아무것도 바꾸지 않습니다.",
+    "upd.auto": "AgathOS가 {v} 버전으로 스스로 업데이트하고 있습니다",
+    "upd.autoFailed": "{v} 자동 업데이트가 완료되지 않았습니다. 아무것도 바뀌지 않았습니다. 설정에서 직접 업데이트할 수 있습니다.",
+    "set.autoUpdate": "조용한 때 스스로 업데이트",
+    "set.autoUpdateDesc": "실행 중인 에이전트가 없고, 검사가 진행 중이지 않고, AgathOS 창을 쓰고 있지 않을 때 새 버전을 설치합니다. 그렇지 않으면 20분 뒤에 다시 시도합니다. 다운로드는 먼저 SHA-256 체크섬으로 확인합니다.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);

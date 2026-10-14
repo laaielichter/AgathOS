@@ -287,6 +287,10 @@
     "an.backup.risk": "Agentes executados sem nenhuma proteção já apagaram pastas e discos inteiros, e alguns worms apagam a pasta pessoal quando não conseguem fazer login. Sem uma segunda cópia, esses dados não voltam.",
     "an.backup.todo": "Ative um backup agora: Histórico de Arquivos ou backup de pastas do OneDrive no Windows, Time Machine ou iCloud no Mac. Para código, envie seus projetos para o GitHub ou outro remoto Git.",
     "an.backup.deep": "O AgathOS verifica cada pasta que vigia (exceto Downloads) em busca de um sinal de cópia: a pasta está dentro de uma pasta do OneDrive, Dropbox, Google Drive ou iCloud, ou todo projeto Git nela tem um remoto, ou no Mac o Time Machine fez um backup. Ele não olha dentro do Histórico de Arquivos nem de outros programas de backup e não vê discos externos, então só diz 'sem sinal de backup'. Não lê o conteúdo dos arquivos e não altera nada.",
+    "upd.auto": "O AgathOS está se atualizando para a versão {v}",
+    "upd.autoFailed": "A atualização automática para {v} não foi concluída. Nada foi alterado. Você pode atualizar manualmente em Configurações.",
+    "set.autoUpdate": "Atualizar sozinho em um momento tranquilo",
+    "set.autoUpdateDesc": "Instala uma nova versão quando nenhum agente está em execução, nenhuma verificação está em andamento e a janela do AgathOS não está em uso. Caso contrário, tenta de novo 20 minutos depois. O download é conferido antes com a soma de verificação SHA-256.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pt, d);

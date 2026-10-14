@@ -287,6 +287,10 @@
     "an.backup.risk": "Agentes que funcionan sin ninguna protección han borrado carpetas y discos enteros, y algunos gusanos borran la carpeta personal cuando no pueden iniciar sesión. Sin una segunda copia, esos datos no se pueden recuperar.",
     "an.backup.todo": "Activa una copia de seguridad ahora: Historial de archivos o copia de carpetas de OneDrive en Windows, Time Machine o iCloud en un Mac. Para el código, sube tus proyectos a GitHub u otro remoto de Git.",
     "an.backup.deep": "AgathOS comprueba cada carpeta que vigila (menos Descargas) en busca de una señal de copia: la carpeta está dentro de una carpeta de OneDrive, Dropbox, Google Drive o iCloud, o cada proyecto de Git que contiene tiene un remoto, o en un Mac Time Machine ha hecho una copia. No mira dentro del Historial de archivos ni de otros programas de copias y no ve discos externos, así que solo dice «sin señales de copia de seguridad». No lee el contenido de los archivos ni cambia nada.",
+    "upd.auto": "AgathOS se está actualizando a la versión {v}",
+    "upd.autoFailed": "La actualización automática a {v} no se completó. No se cambió nada. Puedes actualizar a mano en Ajustes.",
+    "set.autoUpdate": "Actualizarse solo en un momento tranquilo",
+    "set.autoUpdateDesc": "Instala una versión nueva cuando no hay ningún agente en marcha, no hay un análisis en curso y la ventana de AgathOS no se está usando. Si no, lo intenta de nuevo 20 minutos después. La descarga se comprueba antes con su suma de verificación SHA-256.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.es, d);

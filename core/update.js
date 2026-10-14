@@ -78,4 +78,24 @@ async function install(info) {
   return { ok: true };
 }
 
-module.exports = { check, install, cmp, REPO, CURRENT };
+// ---------- updating by itself ----------
+const RETRY_MS = 20 * 60 * 1000;   // not a quiet moment: look again 20 minutes later
+
+// A quiet moment: no agent running (a frozen agent would stay frozen if AgathOS restarts),
+// no scan busy, nothing paused, and the AgathOS window not in use.
+function calmMoment(s) {
+  return !s.runningAgents && !s.scanning && !s.windowInUse && !s.paused;
+}
+
+// What to do with a new version: 'skip' (not for this app, setting or version),
+// 'wait' (try again in RETRY_MS) or 'go' (tell the user quietly, then install).
+function autoDecision({ platform, packaged, autoUpdate, info, failedVersion, calm }) {
+  if (platform !== 'win32' || !packaged || autoUpdate === false) return 'skip';
+  if (!info || info.status !== 'newer' || info.version === failedVersion) return 'skip';
+  const asset = (info.assets || []).find((a) => /^AgathOS-Setup-.*\.exe$/i.test(a.name));
+  // Without a published SHA-256 checksum nothing runs by itself; the download page stays a manual step.
+  if (!asset || !/^sha256:[a-f0-9]{64}$/i.test(asset.digest || '')) return 'skip';
+  return calm ? 'go' : 'wait';
+}
+
+module.exports = { check, install, cmp, calmMoment, autoDecision, RETRY_MS, REPO, CURRENT };

@@ -287,6 +287,10 @@
     "an.backup.risk": "Des agents lancés sans aucune protection ont déjà effacé des dossiers et des disques entiers, et certains vers suppriment le dossier personnel quand ils ne peuvent pas se connecter. Sans seconde copie, ces données ne reviennent pas.",
     "an.backup.todo": "Active une sauvegarde maintenant : Historique des fichiers ou sauvegarde de dossiers OneDrive sous Windows, Time Machine ou iCloud sur Mac. Pour le code, envoie tes projets sur GitHub ou un autre dépôt Git distant.",
     "an.backup.deep": "AgathOS cherche pour chaque dossier surveillé (sauf Téléchargements) un signe de copie : le dossier se trouve dans un dossier OneDrive, Dropbox, Google Drive ou iCloud, ou chaque projet Git qu’il contient a un dépôt distant, ou sur Mac Time Machine a fait une sauvegarde. Il ne regarde pas dans l’Historique des fichiers ni dans d’autres programmes de sauvegarde et ne voit pas les disques externes, donc il dit seulement « aucun signe de sauvegarde ». Il ne lit aucun contenu de fichier et ne change rien.",
+    "upd.auto": "AgathOS se met à jour vers {v}",
+    "upd.autoFailed": "La mise à jour automatique vers {v} n’a pas abouti. Rien n’a été modifié. Tu peux mettre à jour à la main dans les réglages.",
+    "set.autoUpdate": "Se mettre à jour tout seul à un moment calme",
+    "set.autoUpdateDesc": "Installe une nouvelle version quand aucun agent ne tourne, qu’aucune analyse n’est en cours et que la fenêtre d’AgathOS n’est pas utilisée. Sinon, il réessaie 20 minutes plus tard. Le téléchargement est d’abord vérifié avec sa somme de contrôle SHA-256.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.fr, d);
