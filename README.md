@@ -214,6 +214,18 @@ copies the agent itself or a model somewhere else is asked about like other risk
 running agents cannot be approved and go away by themselves after a day. Everything is checked on
 the PC and nothing is sent anywhere. Switch it off in Settings.
 
+**For AI programs (plugin).** Any AI program can use AgathOS, not only watch from outside. A plugin for Claude
+Code (`/plugin marketplace add laaielichter/AgathOS`), an MCP server for every other program that speaks MCP (Codex,
+Gemini CLI, Cursor, VS Code, Claude Desktop and more), a command line and the local API let a program ask: *is this
+text safe to read?*, *is this file?*, *may I do this step?* and, with the app running, *what is wrong on this PC?*
+The program only reads and asks. It never decides: no key, not even the owner key, can pause, resume, approve, release or
+change anything, so what an AI program hears from AgathOS is advice that it can follow or ignore, and a program that
+ignores it cannot switch AgathOS off. Each program gets its own key from Settings > Agent access (shown once, kept as a
+hash, taken back in one click), every request is written to a log that cannot be changed unnoticed, and what comes back
+is marked as data: hidden characters are removed, text is cut short and the sentence that gave a finding away is never
+repeated. The plugin carries the scanners with it and works alone; it cannot start a program or write a file (a test
+checks it). See [docs/agents.md](docs/agents.md) and [plugins/agathos](plugins/agathos).
+
 **Calm notifications.** No notification circus: by default only danger pops up (attention goes to
 the log and the tray dot), what happens at the same time comes as one notification, the same
 finding is not repeated within 6 hours, at most 3 per hour, and nothing pops up while the
@@ -248,7 +260,7 @@ prediction. The simple view keeps four pages and plain words.
 **Welcome screen.** The first start asks for your language, the view, the live scanner,
 starting with Windows, deep protection (AgathOS Guard) and auto-fix.
 
-**Also:** a tamper-evident log (hash chain), notifications, tray icon, start with Windows, 20 languages (the top 10 world languages English, 中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский and Bahasa Indonesia, plus 日本語, 한국어, Deutsch, Nederlands, Italiano, Türkçe, Polski, Tiếng Việt, Українська and ไทย; Arabic right-to-left), dark and light mode (plus the extra Stealth look), and a local API on `127.0.0.1:47612` for hooks and future add-ons.
+**Also:** a tamper-evident log (hash chain), notifications, tray icon, start with Windows, 20 languages (the top 10 world languages English, 中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский and Bahasa Indonesia, plus 日本語, 한국어, Deutsch, Nederlands, Italiano, Türkçe, Polski, Tiếng Việt, Українська and ไทย; Arabic right-to-left), dark and light mode (plus the extra Stealth look), and a local API on `127.0.0.1:47612` for hooks, AI programs and add-ons.
 
 ## Install
 
@@ -336,6 +348,7 @@ may ask; a run of wrong keys is reported once, not at every try.
 - Message boards are found by what files and settings say and by the names programs look up (with Guard). An agent that builds an address while it runs, or hides it in encrypted data, does not show up in the list.
 - Model X-ray reads headers, templates and code, not weights: a model trained to misbehave looks like any other and can only be found by testing it. TensorFlow SavedModel folders and `.npz` files are not looked into, ONNX is read at its top level only, and GGUF files of an older or unknown version are recognised by format only.
 - Copy Guard recognises orders by their wording, in the 20 languages it knows. A text that is rewritten every time, or that spreads slowly, is not noticed as a spreading text, and an order in a wording it does not know is not noticed at all. Scripts in skills and plugins are code and are not read for orders. Models are looked for in cloud, web and public folders and (Windows) on external drives; iCloud Drive, network drives and other places that ask for permission first are not searched.
+- The plugin and the MCP server advise; they cannot force an AI program to listen. A program that does not ask, or that ignores a "deny", is only stopped by the permission rules of the program itself (for Claude Code the hook before a tool turns a "deny" into a refusal), or by AgathOS Guard on Windows. A hook that cannot reach AgathOS uses the checks of the plugin alone and, if those fail too, lets the step go on.
 - Smart TVs, ovens and other smart devices cannot run a watcher themselves. They come next, through the network (DNS sensor), Home Assistant and a phone app, using the local API.
 
 ## Translations

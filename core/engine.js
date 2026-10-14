@@ -20,7 +20,7 @@ const { ProcessWatch } = require('./processes');
 const { FileWatch } = require('./watchfs');
 const { Transcripts } = require('./transcripts');
 const { IntentEngine, thresholds } = require('./intent');
-const { classifyTool } = require('./classify');
+const { classifyTool, isShellTool } = require('./classify');
 const remedy = require('./remedy');
 const { DownloadGuard } = require('./dlguard');
 const { LanScanWatch } = require('./worm');
@@ -1059,14 +1059,17 @@ class Engine {
     this.changed(true);
   }
 
+  // May this step be done? allow, ask the person, or deny. A command that is dangerous in itself is refused; a tool that only has a name
+  // that sounds dangerous (send, post, delete) is asked about, since the name says little about what it does.
   checkToolCall({ agent, tool, input, cwd }) {
     const agentId = String(agent || 'unknown');
     const action = classifyTool(tool, input || {}, cwd);
     const v = this.intent.view(agentId);
     const exit = C.LABEL_OF.exit.has(action);
-    if (C.HARD_FLOOR[action]) return { decision: 'deny', action, reason: `AgathOS: ${action} is blocked by a safety rule` };
+    if (C.HARD_FLOOR[action] && isShellTool(tool)) return { decision: 'deny', action, reason: `AgathOS: ${action} is blocked by a safety rule` };
     if (exit && v.labels.untrusted && v.labels.private) return { decision: 'deny', action, reason: 'AgathOS: this would complete the lethal trifecta (untrusted input + private data + sending out)' };
     if (this.paused.has(agentId) || this.pausedAll) return { decision: 'deny', action, reason: 'AgathOS: agents are paused by the user' };
+    if (C.HARD_FLOOR[action]) return { decision: 'ask', action, reason: `AgathOS: risky step (${action}), the name of the tool sounds dangerous` };
     if (C.ACTIONS[action].sev >= 0.5 || v.state === 'alarm') return { decision: 'ask', action, reason: `AgathOS: risky step (${action}), score ${v.score}` };
     return { decision: 'allow', action };
   }

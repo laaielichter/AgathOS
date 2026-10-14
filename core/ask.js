@@ -54,7 +54,7 @@ const ADVICE = {
 const ACTION_WORDS = {
   READ_FILE: 'reads a file', WRITE_FILE: 'writes a file', TEST_RUN: 'runs a test', EXEC_SHELL: 'runs a command', ENUMERATE: 'lists many files or programs',
   READ_UNTRUSTED: 'reads something from outside', NET_FETCH: 'fetches something from the internet', INSTALL_PKG: 'installs a package', WRITE_OUTSIDE: 'writes outside the project',
-  READ_SENSITIVE: 'reads keys or private files', MCP_CONFIG_CHANGE: 'changes the settings of an MCP server', GIT_PUSH: 'pushes to a remote', NET_NEW: 'contacts a new address',
+  READ_SENSITIVE: 'reads keys or private files', MCP_CONFIG_CHANGE: 'changes the settings or instructions of an AI program', GIT_PUSH: 'pushes to a remote', NET_NEW: 'contacts a new address',
   EXFIL: 'sends data out', CREDENTIAL_ACCESS: 'reaches for passwords or tokens', EXEC_DOWNLOADED: 'runs code that was just downloaded', PERSISTENCE: 'makes something start by itself',
   DELETE_MANY: 'deletes many files', DISABLE_SECURITY: 'switches off a security tool', COPY_MODEL: 'copies a model', SELF_COPY: 'copies an AI agent',
 };
@@ -147,7 +147,8 @@ function checkFile(given) {
 }
 
 // May I do this? Without the state of a running AgathOS (which agents are paused, what an agent has already read) the answer follows the
-// kind of step alone: some steps are refused, some are asked about, the rest are fine.
+// kind of step alone: a command that is dangerous in itself is refused, steps that touch keys, settings or models are asked about, the
+// rest is fine. A tool that only has a name that sounds dangerous (send, post, delete) is asked about, never refused: the name says little.
 function checkAction({ tool, input, cwd } = {}) {
   const name = Z.text(tool, 100);
   let action;
@@ -155,7 +156,11 @@ function checkAction({ tool, input, cwd } = {}) {
     return { decision: 'ask', action: 'UNKNOWN', reason: 'AgathOS could not tell what this step does.' };
   }
   const what = ACTION_WORDS[action] || 'does something';
-  if (C.HARD_FLOOR[action]) return { decision: 'deny', action, reason: `AgathOS: this step ${what}, and a safety rule blocks it.` };
+  if (C.HARD_FLOOR[action]) {
+    return K.isShellTool(name)
+      ? { decision: 'deny', action, reason: `AgathOS: this step ${what}, and a safety rule blocks it.` }
+      : { decision: 'ask', action, reason: `AgathOS: this step ${what}, going by the name of the tool. Ask the person first.` };
+  }
   if (C.ACTIONS[action] && C.ACTIONS[action].sev >= 0.5) return { decision: 'ask', action, reason: `AgathOS: this step ${what}. Ask the person first.` };
   return { decision: 'allow', action };
 }
