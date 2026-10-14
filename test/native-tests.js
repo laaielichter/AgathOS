@@ -98,7 +98,8 @@ module.exports = async function nativeTests({ ok }) {
   ok(/^\$src = @'\r?\n/.test(W.LOAD) && /\r?\n'@\r?\n/.test(W.LOAD) && /Add-Type -TypeDefinition \$src/.test(W.LOAD) && /AGATHOS-NATIVE-OK/.test(W.LOAD), T + 'the PowerShell text puts the program in a here-string and adds it once');
   ok(new PowerShell().generation === 0, T + 'the PowerShell counts how often it was started, so the program is put in again after a restart');
   W.reset();
-  ok(W.status().on === false && (await W.processes()) === null && (await W.tcp()) === null, T + 'where there is no PowerShell (or it cannot be used) the direct ways give nothing, and the old ones are used');
+  if (process.platform !== 'win32') ok(W.status().on === false && (await W.processes()) === null && (await W.tcp()) === null, T + 'where there is no PowerShell the direct ways give nothing, and the old ones are used');
+  else ok(W.status().on === false && W.status().off === false, T + 'before the first question the direct way has not been tried yet');
 
   // ---------- netstat on the Mac ----------
   const modern = [
