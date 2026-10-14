@@ -21,7 +21,7 @@ const ALL_SITES = /^(<all_urls>|(\*|https?|\*):\/\/\*\/(\*)?)$/i;
 // Permissions that let an extension see more than the page it is on.
 const WIDE_PERMS = ['tabs', 'history', 'cookies', 'webRequest', 'webRequestBlocking', 'clipboardRead', 'debugger', 'nativeMessaging'];
 
-const stripBom = (s) => String(s || '').replace(/^﻿/, '');
+const stripBom = (s) => String(s || '').replace(/^\uFEFF/, '');
 function readJson(file) {
   const txt = U.readText(file, 1024 * 1024);
   if (txt == null) return null;

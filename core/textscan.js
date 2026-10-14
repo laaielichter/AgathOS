@@ -4,9 +4,9 @@
 const { INJECTION_PHRASES } = require('./catalog');
 
 // Zero-width and other invisible characters.
-const ZERO_WIDTH = /[​-‍⁠-⁤﻿᠎­]/g;
+const ZERO_WIDTH = /[\u200B-\u200D\u2060-\u2064\uFEFF\u180E\u00AD]/g;
 // Bidirectional overrides and isolates (can show text in a different order than it is read).
-const BIDI = /[‪-‮⁦-⁩]/g;
+const BIDI = /[\u202A-\u202E\u2066-\u2069]/g;
 // Unicode "Tags" block U+E0000–U+E007F: invisible copies of ASCII. Models read them, people do not.
 const TAGS = /[\u{E0000}-\u{E007F}]/gu;
 
@@ -27,7 +27,7 @@ function hiddenUnicode(text) {
     }
   }
   // Zero-width "binary" encodings: long runs of 200B/200C mean hidden data.
-  const zwRun = /[​‌‍]{8,}/.test(text);
+  const zwRun = /[\u200B\u200C\u200D]{8,}/.test(text);
   if (zwCount <= 0 && !bidi.length && !tags.length) return null;
   return { zeroWidth: Math.max(0, zwCount), bidi: bidi.length, tags: tags.length, decoded: decoded.trim().slice(0, 160), zwRun };
 }

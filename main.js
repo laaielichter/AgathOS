@@ -7,6 +7,7 @@ const path = require('path');
 const { Store } = require('./core/store');
 const { Engine } = require('./core/engine');
 const api = require('./core/api');
+const { AgentAccess } = require('./core/agentaccess');
 const guard = require('./core/guard');
 const judge = require('./core/judge');
 const updater = require('./core/update');
@@ -29,6 +30,7 @@ let engine = null;
 let store = null;
 let quitting = false;
 let apiServer = null;
+let agentAccess = null;
 let uiLang = 'en';
 let trayPaused = null;
 let trayLive = null;
@@ -246,6 +248,17 @@ function notify(e) {
   notifier.push(e);
 }
 
+// The keys of AI programs and the log of their requests (core/agentaccess.js). Made once; the window can make and take back keys
+// whether or not the local API is switched on.
+function access() {
+  if (!agentAccess) {
+    agentAccess = new AgentAccess(store.dir, { onEvent: (e) => { if (engine) engine.event(e); }, days: store.settings.logDays });
+    if (agentAccess.rotated) engine.event({ key: 'api.keyRotated', sev: 'watch', watcher: 'gate', params: {} });
+    if (!agentAccess.audit.ok) engine.event({ key: 'api.auditTampered', sev: 'alarm', watcher: 'gate', params: {} });
+  }
+  return agentAccess;
+}
+
 function applyOsSettings() {
   const s = store.settings;
   // Installed app: start AgathOS.exe itself. From source (npm start): electron.exe needs the app folder too.
@@ -257,7 +270,7 @@ function applyOsSettings() {
       if (engine.pausedAll) engine.resumeAll(); else engine.pauseAll('hotkey');
     });
   }
-  if (s.api && !apiServer) apiServer = api.start(engine, store.dir);
+  if (s.api && !apiServer) apiServer = api.start(engine, access());
   if (!s.api && apiServer) { apiServer.close(); apiServer = null; }
 }
 
@@ -496,6 +509,11 @@ function wireIpc() {
   });
   h('liveWatch', (on, since) => { setLiveWatching(on === true, Number(since) || 0); return true; });
   h('reveal', (p) => { if (typeof p === 'string' && path.isAbsolute(p)) shell.showItemInFolder(p); return true; });
+  // Keys of AI programs: made and taken back here, by a person; a key is shown once.
+  h('agentTokens', () => ({ keys: access().list(), max: 20, port: api.PORT, dir: store.dir, ownerFile: path.join(store.dir, 'api-token.txt') }));
+  h('agentTokenCreate', (name, scopes) => access().create(String(name || ''), Array.isArray(scopes) ? scopes.map(String) : undefined));
+  h('agentTokenRevoke', (id) => access().revoke(String(id)));
+  h('agentAudit', (n) => access().audit.tail(Number(n) || 40).map(({ ts, who, name, method, path: p, status, info, n: count }) => ({ ts, who, name, method, path: p, status, info, n: count })));
 }
 
 app.whenReady().then(async () => {
@@ -524,5 +542,5 @@ app.whenReady().then(async () => {
 });
 
 app.on('before-quit', () => { quitting = true; });
-app.on('will-quit', () => { globalShortcut.unregisterAll(); if (engine) engine.stop(); });
+app.on('will-quit', () => { globalShortcut.unregisterAll(); if (agentAccess) agentAccess.stop(); if (engine) engine.stop(); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin' && (quitting || !store || !store.settings.closeToTray)) app.quit(); });

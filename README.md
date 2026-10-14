@@ -281,16 +281,36 @@ After the first scan AgathOS keeps watching from the system tray.
 
 ## Local API
 
-Token: `%APPDATA%\AgathOS\data\api-token.txt`. Send it as `Authorization: Bearer <token>`.
-Browsers are refused.
+AgathOS answers on `127.0.0.1:47612`: this PC only. Web pages, and other names for this PC, are refused.
+Every request needs a key, sent as `Authorization: Bearer <key>`.
 
-| Method | Path | What |
-|---|---|---|
-| GET | `/v1/status` | Watchers, running agents, pause state |
-| GET | `/v1/agents` | Agent cards with scores and reasons |
-| GET | `/v1/events?since=<ms>` | Event log |
-| POST | `/v1/check` | `{agent, tool, input, cwd}` → `allow` / `ask` / `deny` before a tool call runs |
-| POST | `/v1/pause-all`, `/v1/resume-all` | The stop button |
+- **Owner key.** The file `api-token.txt` in the data folder (`%APPDATA%\AgathOS\data` on Windows,
+  `~/Library/Application Support/AgathOS/data` on a Mac). For your own tools. It can read, ask, report and press the stop
+  button. The file is readable by you only; a file that others could read is replaced by a new key.
+- **Keys for AI programs.** Make one for each program in Settings > Agent access. The key is shown once, kept only as a
+  hash, and taken back with one click. It can read, ask and report. Nothing else.
+
+**No key can resume agents, approve a finding, release a file or change a setting.** There is no route for it, and
+`POST /v1/resume-all` says so. That stays with you, in the window. An AI program may ask "may I?", never decide.
+
+| Method | Path | Needs | What |
+|---|---|---|---|
+| GET | `/v1/me` | read | Who the key is and what it may do |
+| GET | `/v1/status` | read | The six watchers, running agents, pause state |
+| GET | `/v1/agents` | read | Agents with state, score and reasons |
+| GET | `/v1/findings?limit=50` | read | Everything that is not calm, worst first |
+| GET | `/v1/events?since=<ms>&limit=100` | read | Recent events |
+| POST | `/v1/check` | ask | `{agent, tool, input, cwd}` → `allow` / `ask` / `deny` before a tool call runs |
+| POST | `/v1/check-text` | ask | `{text}` → is this text safe to read? |
+| POST | `/v1/check-file` | ask | `{path}` → is this file safe to read? |
+| POST | `/v1/report` | report | `{note}` → tells you about a worry: an event in the window |
+| POST | `/v1/pause-all` | owner key | The stop button |
+
+What an AI program gets back is **data, not instructions**. Answers (except `/v1/check`, which keeps its old shape) come in a
+wrapper `{untrusted: true, notice, data}`, hidden and control characters are removed, text is cut short, and the sentence
+that gave a finding away is never repeated: a finding is described in words of our own. Every request is written to a log
+that cannot be changed unnoticed (`api-audit.jsonl`, shown in Settings > Agent access). Keys are limited in how often they
+may ask; a run of wrong keys is reported once, not at every try.
 
 ## Windows and Mac
 

@@ -267,7 +267,7 @@
     addFolder: () => ok(), removeFolder: () => ok(), reveal: () => ok(), onNavigate: () => {}, openMain: () => ok(), closeMini: () => ok(),
     checkText: (text) => {
       const tags = [...text].filter((c) => c.codePointAt(0) >= 0xe0000 && c.codePointAt(0) <= 0xe007f);
-      const zw = (text.match(/[​-‍⁠]/g) || []).length;
+      const zw = (text.match(/[\u200B-\u200D\u2060]/g) || []).length;
       const decoded = tags.map((c) => String.fromCharCode(c.codePointAt(0) - 0xe0000)).join('');
       const reasons = [];
       if (tags.length) reasons.push(R('file.hiddenTags', { n: tags.length, text: decoded.slice(0, 160) }, 'alarm'));
@@ -276,7 +276,7 @@
       if (/ignore (all )?previous instructions/i.test(vis)) reasons.push(R('file.injectionPhrase', { text: (vis.match(/.{0,20}ignore (all )?previous instructions.{0,20}/i) || [''])[0] }, 'alarm'));
       const keys = vis.match(/sk-(ant-api\d{2}-|proj-)?[A-Za-z0-9_-]{20,}/g) || [];
       if (keys.length) reasons.push(R('file.secret', { n: keys.length, kinds: 'Anthropic' }, 'watch'));
-      const clean = [...text].filter((c) => !(c.codePointAt(0) >= 0xe0000 && c.codePointAt(0) <= 0xe007f) && !/[​-‍⁠]/.test(c)).join('');
+      const clean = [...text].filter((c) => !(c.codePointAt(0) >= 0xe0000 && c.codePointAt(0) <= 0xe007f) && !/[\u200B-\u200D\u2060]/.test(c)).join('');
       const sev = reasons.some((r) => r.sev === 'alarm') ? 'alarm' : reasons.length ? 'watch' : 'calm';
       return Promise.resolve({ sev, reasons, decoded, secrets: keys.map((k) => ({ kind: 'Anthropic', masked: k.slice(0, 6) + '…' + k.slice(-3) })), length: [...text].length, removed: [...text].length - [...clean].length, clean });
     },

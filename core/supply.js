@@ -32,7 +32,7 @@ const BODY_SEND = /webhook\.site|api\.github\.com\/(user\/repos|repos\/[^'"`]*\/
 const safeJson = (file, max = 256 * 1024) => {
   const txt = U.readText(file, max);
   if (txt == null) return null;
-  try { return JSON.parse(String(txt).replace(/^﻿/, '')); } catch (_) { return null; }
+  try { return JSON.parse(String(txt).replace(/^\uFEFF/, '')); } catch (_) { return null; }
 };
 
 // One install script (the command line), and the script file it starts, when it is a plain "node file.js".
