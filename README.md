@@ -191,15 +191,11 @@ the Start menu, and registers an uninstaller under Settings > Apps.
 **Just try it.** Double-click `start.bat` to run it from this folder.
 
 **Mac.** Download `AgathOS-<version>-arm64.dmg` (Apple chip, M1 and newer) or `-x64.dmg` (Intel),
-open it and drag AgathOS to Applications. The app is not notarized by Apple yet: the first time,
+open it and drag AgathOS to Applications (macOS 13 or newer). The app is not notarized by Apple yet: the first time,
 open it, then go to System Settings > Privacy & Security and click *Open Anyway*. macOS may ask
 whether AgathOS can read your Documents, Desktop and Downloads folders; that is where it looks for
 instruction files, MCP settings and keys. From source: `npm install` and `npm start`.
 Build the disk images yourself on a Mac with `npm run dist:mac`.
-
-> **Mac testers wanted.** The Mac version is built and its tests run automatically on macOS,
-> but nobody has clicked through it on a real Mac yet. If something does not work or looks
-> wrong, please open an issue with a screenshot and your macOS version.
 
 > **Mac testers wanted.** The Mac version is built and its tests run automatically on macOS,
 > but nobody has clicked through it on a real Mac yet. If something does not work or looks
