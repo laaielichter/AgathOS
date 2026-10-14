@@ -32,6 +32,13 @@
         running: [{ pid: 9120, parent: 'Code.exe', exe: 'C:\\Program Files\\nodejs\\node.exe', cmd: 'node C:\\Users\\you\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\bin\\codex.js', started: m(48), flags: [], signer: { valid: true, signer: 'OpenJS Foundation', status: 'Valid' }, children: 1 }],
         labels: {}, prediction: { action: 'TEST_RUN', p: 0.34 }, task: 'Fix the date bug in utils.ts', reasons: [],
         actions: [{ ts: m(2), action: 'TEST_RUN', source: 'process', detail: 'npm test' }, { ts: m(3), action: 'WRITE_FILE', source: 'transcript', detail: 'src/utils.ts' }], domains: ['api.openai.com'] },
+      { id: 'grok', name: 'Grok Build', kind: 'cli', version: '1.0.52', dirs: ['~\\.grok'], state: 'calm', score: 4, paused: false, learned: false,
+        running: [{ pid: 7712, parent: 'WindowsTerminal.exe', exe: 'C:\\Users\\you\\.grok\\bin\\grok.exe', cmd: 'grok', started: m(12), flags: [], signer: null, children: 2 }],
+        labels: {}, prediction: null, task: 'Add a dark mode switch to the settings page', reasons: [],
+        actions: [{ ts: m(1), action: 'READ_FILE', source: 'transcript', detail: 'src/settings.tsx' }, { ts: m(2), action: 'WRITE_FILE', source: 'transcript', detail: 'src/theme.ts' }], domains: ['api.x.ai'] },
+      { id: 'grok-bot', name: 'Grok Bot', kind: 'desktop', cloud: true, version: '0.70.2', dirs: ['~\\AppData\\Roaming\\Grok Bot'], state: 'calm', score: 0, paused: false, learned: false,
+        running: [{ pid: 5304, parent: 'explorer.exe', exe: 'C:\\Users\\you\\AppData\\Local\\Programs\\Grok Bot\\Grok Bot.exe', cmd: '"C:\\Users\\you\\AppData\\Local\\Programs\\Grok Bot\\Grok Bot.exe"', started: m(95), flags: [], signer: null, children: 0 }],
+        labels: {}, prediction: null, task: '', reasons: [], actions: [], domains: ['api2.cursor.sh'] },
       { id: 'ollama', name: 'Ollama', kind: 'server', version: '0.12.3', dirs: ['~\\.ollama'], state: 'calm', score: 0, paused: false, learned: false, running: [], labels: {}, prediction: null, task: '', reasons: [], actions: [], domains: [] },
       { id: 'cline', name: 'Cline', kind: 'extension', version: null, dirs: ['%APPDATA%\\Code\\User\\globalStorage\\saoudrizwan.claude-dev'], state: 'calm', score: 0, paused: false, learned: false, running: [], labels: {}, prediction: null, task: '', reasons: [], actions: [], domains: [] },
     ],
@@ -64,7 +71,7 @@
       { hash: 'e7', ts: m(30), key: 'scan.done', sev: 'calm', watcher: 'gate', params: { agents: 4, mcp: 4, issues: 7 } },
     ],
     settings: { level: 'balanced', realtime: true, pollSeconds: 5, fullScanHours: 6, roots: ['C:\\Users\\you\\Desktop', 'C:\\Users\\you\\Documents', 'C:\\Users\\you\\projects'], modelDirs: ['C:\\Users\\you\\.ollama\\models', 'C:\\Users\\you\\Downloads'], notify: 'notify', autoFreezeOnMassDelete: true, massDeleteThreshold: 40, portCheck: true, hotkey: true, judge: { enabled: false, model: 'qwen2.5:7b' }, learning: true, startWithWindows: true, closeToTray: true, logDays: 30, api: true, fix: { auto: false, level: 'firm', minSev: 'alarm', custom: { agent: 'block', port: 'localOnly', mcp: 'disable', hidden: 'clean', inject: 'off', model: 'quarantine', auto: 'off' } } },
-    chainOk: true, counts: { agents: 4, mcp: 4, files: 4, models: 3, issues: 7 }, learnedAgents: 2, apiPort: 47612,
+    chainOk: true, counts: { agents: 6, mcp: 4, files: 4, models: 3, issues: 7 }, learnedAgents: 2, apiPort: 47612,
   };
   // The same shape core/remedy.js builds from the findings above.
   const S = (id, cat, sev, name, where, reasons, action, preset, options, target) => ({ id, cat, sev, name, where, reasons, action, preset, options, target: target || {} });
@@ -88,10 +95,43 @@
   const emit = () => listeners.forEach((f) => f(JSON.parse(JSON.stringify(snap))));
   const ok = (r = {}) => Promise.resolve({ ok: true, ...r });
   setInterval(() => { snap.heartbeat = Date.now(); emit(); }, 5000);
+  // Live monitor demo: invented numbers, made once a second, only while the live panel asks for them.
+  const liveCb = [];
+  const L = { series: [], feed: [], seq: 0, timer: null, since: 0, next: 38 };
+  const rnd = (n) => Math.floor(Math.random() * n);
+  const pick = (a) => a[rnd(a.length)];
+  const burst = (p, max) => (Math.random() < p ? 1 + rnd(max) : 0);
+  const DEMO_ACTS = [
+    ['Claude Code', 'EXEC_SHELL', 'git status', 'calm'], ['Claude Code', 'READ_FILE', 'src\\utils.ts', 'calm'], ['Claude Code', 'TEST_RUN', 'npm test', 'calm'],
+    ['Codex CLI', 'WRITE_FILE', 'src\\date.ts', 'calm'], ['Claude Code', 'NET_FETCH', 'https://github.com/someone/repo', 'calm'], ['Claude Code', 'READ_SENSITIVE', 'C:\\Users\\you\\projects\\demo\\.env', 'watch'],
+  ];
+  function liveStep(ts) {
+    const row = { t: ts, spawns: burst(0.22, 4), actions: burst(0.3, 2), conns: burst(0.16, 3), files: burst(0.2, 14), alerts: 0, sev: 'calm' };
+    if (--L.next <= 0) { L.next = 30 + rnd(30); row.alerts = 1; row.sev = Math.random() < 0.3 ? 'alarm' : 'watch'; }
+    L.series.push(row);
+    if (L.series.length > 150) L.series.shift();
+    const add = (kind, key, params, sev) => L.feed.push({ id: ++L.seq, ts, kind, key, params, sev: sev || 'calm' });
+    if (row.actions) { const a = pick(DEMO_ACTS); add('act', 'live.act', { agent: a[0], action: a[1], detail: a[2] }, a[3]); }
+    if (row.conns && Math.random() < 0.7) add('net', Math.random() < 0.3 ? 'live.dns' : 'live.conn', { name: pick(['node.exe', 'git.exe', 'claude.exe']), host: pick(['api.anthropic.com', 'github.com', 'registry.npmjs.org', 'raw.githubusercontent.com']), port: 443 });
+    if (row.files > 8) add('file', 'live.files', { dir: '~\\projects\\demo', n: row.files });
+    if (row.alerts) add('event', row.sev === 'alarm' ? 'port.open' : 'flag.dangerous', row.sev === 'alarm' ? { product: 'Ollama', addr: '0.0.0.0', port: 11434 } : { agent: 'Claude Code', flag: '--dangerously-skip-permissions' }, row.sev);
+  }
+  for (let i = 150; i > 0; i--) liveStep(now - i * 1000);
+  const livePush = () => {
+    liveStep(Date.now());
+    const v = {
+      seq: L.seq, t: Date.now(), keep: 150, gauges: { procs: 312 + rnd(6), agents: 4, open: 34 + rnd(5) }, series: L.series.slice(), feed: L.feed.filter((e) => e.id > L.since).slice(-80),
+      guard: snap.guard, scanning: snap.scanning, pausedAll: snap.pausedAll, realtime: snap.settings.realtime !== false,
+    };
+    L.since = L.seq;
+    liveCb.forEach((f) => f(v));
+  };
   window.agathos = {
     version: 'demo', platform: /mac/.test(location.hash) ? 'darwin' : 'win32',
     snapshot: () => Promise.resolve(JSON.parse(JSON.stringify(snap))),
     onUpdate: (f) => listeners.push(f),
+    onLive: (f) => liveCb.push(f),
+    liveWatch: (on, since) => { clearInterval(L.timer); L.timer = null; if (on) { L.since = since || 0; livePush(); L.timer = setInterval(livePush, 1000); } return ok(); },
     scan: async () => {
       for (const w of ['gate', 'traps', 'keys', 'net', 'proc', 'files']) { snap.scanning = { watcher: w, done: 0, total: 6 }; emit(); await new Promise((r) => setTimeout(r, 650)); }
       snap.scanning = null; snap.lastScan = Date.now(); emit(); return true;

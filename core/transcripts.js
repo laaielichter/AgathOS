@@ -1,5 +1,5 @@
 'use strict';
-// AgathOS - reads agent transcripts on this PC (Claude Code, Codex CLI).
+// AgathOS - reads agent transcripts on this PC (Claude Code, Codex CLI, Grok Build).
 // They show what the user asked and which tools the agent used. That gives
 // the intent engine the "task" and lets the honesty check compare claims with facts.
 const fs = require('fs');
@@ -14,12 +14,23 @@ const FAIL_RE = /\b(\d+ (failed|failing|errors?)|FAILED|FAIL\b|Traceback|Asserti
 const PASS_RE = /\b(\d+ passed|all tests passed|OK \(\d+ tests?\)|Tests?:\s+\d+ passed|✓ \d+)/i;
 const TEST_RE = /\b(pytest|jest|vitest|mocha|go test|cargo test|dotnet test|npm (run )?test|pnpm (run )?test|yarn test|bun test|phpunit|rspec|unittest|ctest|gradle test|mvn test)\b/i;
 const TEST_FILE_RE = /([\\/](tests?|__tests__|spec)[\\/]|\.test\.|\.spec\.|_test\.|[\\/]test_[^\\/]+$|[\\/]conftest\.py$|jest\.config|vitest\.config|pytest\.ini|\.github[\\/]workflows)/i;
+const THOUGHT_RE = /\b(bypass (the )?(check|test|guard|monitor)|don'?t (tell|mention) (this )?(to )?the user|the user (won'?t|will not) notice|hide (this|it) from|pretend (that )?(it|the tests?) (works?|pass))/i;
 const BUGFIX_RE = /\b(fix|repair|bug|broken|crash|los .* op|repareer|herstel|werkt niet)\b/i;
 
 function textOf(content) {
   if (typeof content === 'string') return content;
+  if (content && typeof content === 'object' && !Array.isArray(content) && typeof content.text === 'string') return content.text;
   if (Array.isArray(content)) return content.map((c) => (typeof c === 'string' ? c : c.text || c.content || '')).filter((x) => typeof x === 'string').join('\n');
   return '';
+}
+
+// Grok Build tool names and kinds, in the words classifyTool knows.
+const GROK_TOOLS = { run_terminal_command: 'Bash', read_file: 'Read', write: 'Write', search_replace: 'Edit', grep: 'Grep', glob: 'Glob', list_dir: 'Glob', web_fetch: 'WebFetch', web_search: 'WebSearch' };
+const GROK_KINDS = { execute: 'Bash', read: 'Read', edit: 'Edit', write: 'Write', search: 'Grep', fetch: 'WebFetch' };
+
+// The folder of a Grok session is named after the project folder, URL-encoded.
+function grokCwd(file) {
+  try { return decodeURIComponent(path.basename(path.dirname(path.dirname(file)))); } catch (_) { return ''; }
 }
 
 class Transcripts {
@@ -34,13 +45,15 @@ class Transcripts {
     return [
       { agentId: 'claude-code', dir: path.join(U.HOME, '.claude', 'projects'), kind: 'claude' },
       { agentId: 'codex', dir: path.join(U.HOME, '.codex', 'sessions'), kind: 'codex' },
+      // Grok Build: sessions/<folder of the project, URL-encoded>/<session id>/updates.jsonl
+      { agentId: 'grok', dir: path.join(U.grokHome(), 'sessions'), kind: 'grok' },
     ].filter((r) => U.exists(r.dir));
   }
 
   poll() {
     const since = Date.now() - 3 * 3600 * 1000;
     for (const r of this.roots()) {
-      const files = U.walk(r.dir, { maxDepth: 5, maxFiles: 3000, skipDirs: new Set(), filter: (f, n) => /\.jsonl(\.zst)?$/i.test(n) });
+      const files = U.walk(r.dir, { maxDepth: 5, maxFiles: 3000, skipDirs: new Set(), filter: (f, n) => (r.kind === 'grok' ? n === 'updates.jsonl' : /\.jsonl(\.zst)?$/i.test(n)) });
       for (const f of files) {
         const st = U.statSafe(f);
         if (!st || st.mtimeMs < since) continue;
@@ -81,13 +94,14 @@ class Transcripts {
     if (!s) {
       s = { id: U.sha256(file).slice(0, 12), file, agentId: root.agentId, task: '', cwd: '', startedAt: st.birthtimeMs || st.mtimeMs,
         lastAt: 0, tools: [], claims: [], tests: [], edited: [], commands: [], pendingTests: new Map() };
+      if (root.kind === 'grok') s.cwd = grokCwd(file);
       this.sessions.set(file, s);
     }
     for (const line of text.split('\n')) {
       if (!line.trim()) continue;
       let j;
       try { j = JSON.parse(line); } catch (_) { continue; }
-      if (root.kind === 'claude') this.claudeLine(s, j); else this.codexLine(s, j);
+      if (root.kind === 'claude') this.claudeLine(s, j); else if (root.kind === 'grok') this.grokLine(s, j); else this.codexLine(s, j);
     }
   }
 
@@ -139,7 +153,7 @@ class Transcripts {
           if (CLAIM_RE.test(c.text)) s.claims.push({ ts, kind: 'tests', text: c.text.match(CLAIM_RE)[0] });
           if (NOT_TOUCHED_RE.test(c.text)) s.claims.push({ ts, kind: 'untouched', text: c.text.match(NOT_TOUCHED_RE)[0] });
         } else if (c.type === 'thinking' && c.thinking) {
-          const m = c.thinking.match(/\b(bypass (the )?(check|test|guard|monitor)|don'?t (tell|mention) (this )?(to )?the user|the user (won'?t|will not) notice|hide (this|it) from|pretend (that )?(it|the tests?) (works?|pass))/i);
+          const m = c.thinking.match(THOUGHT_RE);
           if (m) s.claims.push({ ts, kind: 'thought', text: m[0] });
         }
       }
@@ -179,6 +193,78 @@ class Transcripts {
       }
     }
     s.lastAt = Math.max(s.lastAt, ts);
+  }
+
+  // Grok Build writes every event of a session as one line of updates.jsonl:
+  //   { timestamp (seconds), method, params: { sessionId, update: { sessionUpdate, ... }, _meta: { eventId, agentTimestampMs } } }
+  // Texts come in pieces (chunks), so they are collected and judged when the next kind of event starts.
+  grokLine(s, j) {
+    const params = j.params || {};
+    const u = params.update || j.update;
+    const kind = u && u.sessionUpdate;
+    if (!kind) return;
+    const meta = params._meta || j._meta || {};
+    const secs = Number(j.timestamp);
+    const ts = Number(meta.agentTimestampMs) || (secs ? (secs < 1e11 ? secs * 1000 : secs) : Date.now());
+    const chunk = { user_message_chunk: 'user', agent_message_chunk: 'agent', agent_thought_chunk: 'thought' }[kind];
+    if (chunk) {
+      if (s.gbuf && s.gbuf.kind !== chunk) this.grokFlush(s);
+      if (!s.gbuf) s.gbuf = { kind: chunk, ts, text: '' };
+      if (s.gbuf.text.length < 20000) s.gbuf.text += textOf(u.content);
+      s.lastAt = Math.max(s.lastAt, ts);
+      return;
+    }
+    this.grokFlush(s);
+    if (kind === 'tool_call') {
+      const tm = (u._meta && u._meta['x.ai/tool']) || {};
+      const name = String(tm.name || u.title || '');
+      if (!name || /^skill:/i.test(name)) { s.lastAt = Math.max(s.lastAt, ts); return; }
+      const raw = u.rawInput && typeof u.rawInput === 'object' ? u.rawInput : {};
+      const input = { ...raw, file_path: raw.file_path || raw.target_file || raw.path || raw.target_directory || '' };
+      const tool = GROK_TOOLS[name] || GROK_KINDS[tm.kind] || name;
+      const action = classifyTool(tool, input, s.cwd);
+      const detail = input.command || input.file_path || input.url || input.query || input.pattern || name;
+      const id = u.toolCallId || meta.eventId;
+      if (tool === 'Bash') {
+        const cmd = String(input.command || '');
+        s.commands.push({ ts, cmd });
+        if (s.commands.length > 400) s.commands.shift();
+        if (TEST_RE.test(cmd) && id) { const t = { ts, cmd, failed: null, done: false }; s.tests.push(t); s.pendingTests.set(id, t); }
+      }
+      if ((tool === 'Write' || tool === 'Edit') && input.file_path) s.edited.push({ ts, file: String(input.file_path) });
+      this.push(s, ts, name, input, action, detail);
+    } else if (kind === 'tool_call_update') {
+      const pend = s.pendingTests.get(u.toolCallId || meta.eventId);
+      const st = String(u.status || '');
+      if (pend && /^(completed|failed|error|cancelled|canceled)$/i.test(st)) {
+        const o = u.rawOutput;
+        const out = typeof o === 'string' ? o : o && typeof o === 'object' ? String(o.output_for_prompt || o.stdout || o.output || o.stderr || '') : textOf(u.content);
+        const code = o && typeof o === 'object' ? Number(o.exit_code) : NaN;
+        pend.failed = st.toLowerCase() !== 'completed' || (Number.isFinite(code) && code !== 0) || (FAIL_RE.test(out) && !PASS_RE.test(out.slice(-400)));
+        pend.done = true;
+        s.pendingTests.delete(u.toolCallId || meta.eventId);
+      }
+      s.lastAt = Math.max(s.lastAt, ts);
+    } else {
+      s.lastAt = Math.max(s.lastAt, ts);
+    }
+  }
+
+  // The collected text of one kind of chunk is complete: what was asked, what the agent claims, what it thought.
+  grokFlush(s) {
+    const b = s.gbuf;
+    s.gbuf = null;
+    const t = b && b.text.trim();
+    if (!t) return;
+    if (b.kind === 'user') {
+      if (!t.startsWith('<')) { if (!s.task) s.task = t.slice(0, 300); else s.lastTask = t.slice(0, 300); }
+    } else if (b.kind === 'agent') {
+      if (CLAIM_RE.test(t)) s.claims.push({ ts: b.ts, kind: 'tests', text: t.match(CLAIM_RE)[0] });
+      if (NOT_TOUCHED_RE.test(t)) s.claims.push({ ts: b.ts, kind: 'untouched', text: t.match(NOT_TOUCHED_RE)[0] });
+    } else {
+      const m = t.match(THOUGHT_RE);
+      if (m) s.claims.push({ ts: b.ts, kind: 'thought', text: m[0] });
+    }
   }
 
   recent(ms = 3 * 3600 * 1000) {

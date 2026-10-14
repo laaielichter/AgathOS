@@ -11,7 +11,12 @@ const { scanText, findSecrets } = require('./textscan');
 function tomlVal(v) {
   try { return JSON.parse(v); } catch (_) {}
   if (/^'.*'$/.test(v)) return v.slice(1, -1);
-  if (/^\[.*\]$/.test(v)) { try { return JSON.parse(v.replace(/'/g, '"')); } catch (_) {} }
+  // TOML allows a comma after the last item of an array.
+  if (/^\[.*\]$/.test(v)) {
+    const flat = v.replace(/,\s*\]$/, ']');
+    try { return JSON.parse(flat); } catch (_) {}
+    try { return JSON.parse(flat.replace(/'/g, '"')); } catch (_) {}
+  }
   if (/^\{.*\}$/.test(v)) {
     const o = {};
     for (const m of v.slice(1, -1).matchAll(/("?)([\w.-]+)\1\s*=\s*("([^"]*)"|'([^']*)'|[^,]+)/g)) o[m[2]] = m[4] ?? m[5] ?? m[3].trim();
@@ -22,13 +27,29 @@ function tomlVal(v) {
   return v.replace(/^"|"$/g, '');
 }
 
+// Are all brackets of a TOML value closed? (An array or inline table can run over several lines.)
+function tomlClosed(s) {
+  let depth = 0;
+  let q = null;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) { if (ch === '\\' && q === '"') i++; else if (ch === q) q = null; continue; }
+    if (ch === '"' || ch === "'") q = ch;
+    else if (ch === '[' || ch === '{') depth++;
+    else if (ch === ']' || ch === '}') depth--;
+  }
+  return depth <= 0;
+}
+
 function parseTomlMcp(text) {
-  // Minimal TOML subset for [mcp_servers.<name>] tables (Codex CLI).
+  // Minimal TOML subset for [mcp_servers.<name>] tables (Codex CLI, Grok Build).
   const servers = {};
   let cur = null;
   let sub = null;
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.replace(/\s+#.*$/, '').trim();
+  const lines = text.split(/\r?\n/);
+  const clean = (raw) => raw.replace(/\s+#.*$/, '').trim();
+  for (let i = 0; i < lines.length; i++) {
+    const line = clean(lines[i]);
     if (!line) continue;
     const t = line.match(/^\[mcp_servers\.("?)([^\]"]+)\1(?:\.(env|headers))?\]$/);
     if (t) { cur = servers[t[2]] = servers[t[2]] || { env: {} }; sub = t[3] || null; continue; }
@@ -36,7 +57,9 @@ function parseTomlMcp(text) {
     if (!cur) continue;
     const kv = line.match(/^("?)([\w.-]+)\1\s*=\s*(.+)$/);
     if (!kv) continue;
-    const val = tomlVal(kv[3].trim());
+    let raw = kv[3].trim();
+    while (/^[[{]/.test(raw) && !tomlClosed(raw) && i + 1 < lines.length) raw += ' ' + clean(lines[++i]);
+    const val = tomlVal(raw);
     if (sub) { cur[sub] = cur[sub] || {}; cur[sub][kv[2]] = val; } else cur[kv[2]] = val;
   }
   return servers;
@@ -130,8 +153,10 @@ function analyseServer(name, def, app, file, store) {
 function scanMcp(store, extraConfigs = []) {
   const servers = [];
   const configs = [...C.MCP_CONFIGS.map((c) => ({ ...c, path: U.expand(c.path) })), ...extraConfigs];
+  const done = new Set();
   for (const c of configs) {
-    if (!U.exists(c.path)) continue;
+    if (!U.exists(c.path) || done.has(c.path.toLowerCase())) continue;
+    done.add(c.path.toLowerCase());
     let defs = {};
     if (c.format === 'toml') defs = parseTomlMcp(U.readText(c.path) || '');
     else defs = serversFromJson(U.readJsonLoose(c.path));
@@ -143,9 +168,18 @@ function scanMcp(store, extraConfigs = []) {
 }
 
 // ---------- Risky settings ----------
+const slash = (p) => String(p).replace(/\\/g, '/').toLowerCase();
+// Grok Build: ~/.grok/config.toml (or GROK_HOME) is the user file; a .grok/config.toml in a project may only add servers, plugins and [permission] rules.
+const isGrokUserConfig = (file) => slash(file) === slash(path.join(U.grokHome(), 'config.toml'));
+const isGrokHook = (file) => /[\\/]\.grok[\\/]hooks[\\/][^\\/]+\.json$/i.test(file);
+
 function scanConfigText(file, text, app) {
   const reasons = [];
-  for (const r of C.RISKY_CONFIG_KEYS) if (r.re.test(text)) reasons.push({ key: 'config.autoApprove', params: { key: r.key }, sev: 'alarm' });
+  const grokUser = isGrokUserConfig(file);
+  for (const r of C.RISKY_CONFIG_KEYS) {
+    if (r.userOnly && !grokUser) continue;
+    if (r.re.test(text)) reasons.push({ key: 'config.autoApprove', params: { key: r.key }, sev: 'alarm' });
+  }
   for (const v of C.BASE_URL_VARS) {
     const m = text.match(new RegExp(`${v}["']?\\s*[:=]\\s*["']?(https?://[^"'\\s,}]+)`, 'i'));
     if (m) {
@@ -154,7 +188,19 @@ function scanConfigText(file, text, app) {
       if (host && !C.OFFICIAL_HOSTS.test(host)) reasons.push({ key: 'config.baseUrl', params: { v, host }, sev: 'alarm' });
     }
   }
+  // Grok Build: a model with its own base_url sends the prompts (and that model's key) there.
+  if (grokUser) {
+    for (const m of text.matchAll(/^\s*base_url\s*=\s*["'](https?:\/\/[^"'\s]+)["']/gim)) {
+      let host = '';
+      try { host = new URL(m[1]).hostname; } catch (_) {}
+      if (host && !C.OFFICIAL_HOSTS.test(host)) reasons.push({ key: 'config.baseUrl', params: { v: 'base_url', host }, sev: 'alarm' });
+    }
+  }
   if (/[\\/]\.claude[\\/]settings(\.local)?\.json$/i.test(file) && !file.toLowerCase().startsWith(path.join(U.HOME, '.claude').toLowerCase()) && /"hooks"\s*:/.test(text)) {
+    reasons.push({ key: 'config.repoHooks', params: {}, sev: 'watch' });
+  }
+  // Grok Build hooks in a project run shell commands (after the person trusts the project folder).
+  if (isGrokHook(file) && !slash(file).startsWith(slash(path.join(U.grokHome(), 'hooks')) + '/') && /"type"\s*:\s*"command"/.test(text)) {
     reasons.push({ key: 'config.repoHooks', params: {}, sev: 'watch' });
   }
   return reasons.length ? { path: file, app, kind: 'config', state: reasons.some((r) => r.sev === 'alarm') ? 'alarm' : 'watch', reasons } : null;
@@ -188,8 +234,9 @@ function isInstructionFile(full, name) {
 // Project-level MCP files: .cursor/mcp.json, .vscode/mcp.json, .kiro/settings/mcp.json, .grok/settings.json, .gemini/settings.json …
 function isProjectMcp(f) {
   return /[\\/]\.(cursor|vscode|kiro[\\/]settings|roo|trae|windsurf|factory|kimi)[\\/]mcp\.json$/i.test(f) ||
-    /[\\/]\.grok[\\/]settings\.json$/i.test(f) || /[\\/](opencode|crush)\.json$/i.test(f);
+    /[\\/]\.grok[\\/](settings\.json|config\.toml)$/i.test(f) || /[\\/](opencode|crush)\.json$/i.test(f);
 }
+const projectMcpFormat = (f) => (/\.toml$/i.test(f) ? 'toml' : 'json');
 function projectName(f) {
   const parts = f.split(/[\\/]/);
   const i = parts.findIndex((p) => p.startsWith('.') && p.length > 1 && p !== '.mcp.json');
@@ -223,13 +270,16 @@ function scanFiles(roots, store) {
       filter: (full, name) => {
         const n = name.toLowerCase();
         return isInstructionFile(full, name) || /^\.env(\..+)?$/.test(n) || n === '.mcp.json' || isProjectMcp(full) ||
-          (/[\\/]\.(claude|vscode|cursor|gemini|codex)[\\/]/i.test(full) && /\.(json|toml)$/.test(n));
+          (/[\\/]\.(claude|vscode|cursor|gemini|codex|grok)[\\/]/i.test(full) && /\.(json|toml)$/.test(n));
       },
     });
     for (const f of found) {
       const n = path.basename(f).toLowerCase();
       if (/^\.env(\..+)?$/.test(n)) { if (!/\.example$|\.sample$|\.template$/.test(n)) check(f, 'env'); continue; }
-      if (n === '.mcp.json' || isProjectMcp(f)) { projectMcp.push({ app: `Project ${projectName(f)}`, path: f, format: 'json' }); continue; }
+      const isMcpFile = n === '.mcp.json' || isProjectMcp(f);
+      if (isMcpFile) projectMcp.push({ app: `Project ${projectName(f)}`, path: f, format: projectMcpFormat(f) });
+      // A project .grok/config.toml holds servers and also [permission] rules: it gets both checks.
+      if (isMcpFile && !/[\\/]\.grok[\\/]config\.toml$/i.test(f)) continue;
       if (/\.(json|toml)$/.test(n) && !isInstructionFile(f, path.basename(f))) {
         const r = scanConfigText(f, U.readText(f) || '', 'Project');
         if (r) configs.push({ id: U.sha256(f.toLowerCase()).slice(0, 16), ...r });
@@ -254,6 +304,7 @@ function scanGlobalConfigs() {
     ['%USERPROFILE%\\.codex\\config.toml', 'Codex CLI'], ['%APPDATA%\\Code\\User\\settings.json', 'VS Code'],
     ['%APPDATA%\\Cursor\\User\\settings.json', 'Cursor'], ['%USERPROFILE%\\.gemini\\settings.json', 'Gemini CLI'],
     ['%USERPROFILE%\\.qwen\\settings.json', 'Qwen Code'], ['%APPDATA%\\Windsurf\\User\\settings.json', 'Windsurf'],
+    ['%GROK_HOME%\\config.toml', 'Grok Build'],
   ];
   for (const [p, app] of list) {
     const f = U.expand(p);

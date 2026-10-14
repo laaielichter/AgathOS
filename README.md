@@ -34,12 +34,12 @@ words, predicts the next step from the actions it sees, and limits the damage.
 
 | Watcher | Looks for |
 |---|---|
-| Gatekeeper | MCP servers in every app's config: known-bad packages, unpinned versions, inline secrets, plain-http servers. Approve a server and AgathOS pins it; any later change (a "rug pull") is an alarm. Also "approve everything" settings (`chat.tools.autoApprove`, `bypassPermissions`, Codex `approval_policy = "never"`). |
+| Gatekeeper | MCP servers in every app's config: known-bad packages, unpinned versions, inline secrets, plain-http servers. Approve a server and AgathOS pins it; any later change (a "rug pull") is an alarm. Also "approve everything" settings (`chat.tools.autoApprove`, `bypassPermissions`, Codex `approval_policy = "never"`, Grok Build `permission_mode = "always-approve"` or a `[permission]` rule that allows every shell command). Grok Build's MCP servers (`~/.grok/config.toml`, project `.grok/config.toml`) are read too. |
 | File watcher | Mass deletion in your project folders (freezes the agents automatically, reversible). Model files: walks pickle opcodes itself and lists every import, inside PyTorch zips too; unreadable files count as suspicious. safetensors and GGUF are green. |
 | Network watcher | AI servers listening on the network instead of only on this PC. Outgoing connections and DNS lookups of agent child processes. **Worm watch:** any program that knocks on 20+ devices or 15+ ports of one device in your home network within a minute (cameras, TVs, routers), the first move of a self-spreading worm. Test it safely with `node test/lan-scan-sim.js`. |
 | Key watcher | API keys in `.env` files, configs and MCP definitions. `ANTHROPIC_BASE_URL` / `OPENAI_BASE_URL` pointing somewhere unexpected. |
 | Trap watcher | Invisible characters (zero-width, bidi overrides, Unicode Tags) in `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, skills and rules. Hidden Tag text is decoded and shown. Attack phrases ("ignore previous instructions", `curl … | bash`). |
-| Process watcher | Every running agent with an ID card: PID, who started it, signature, dangerous flags (`--dangerously-skip-permissions`, `--yolo`, `--trust-all-tools`), child processes, the task it was given, what it is doing now. Agents started by npm install scripts or temp folders are flagged. |
+| Process watcher | Every running agent with an ID card: PID, who started it, signature, dangerous flags (`--dangerously-skip-permissions`, `--yolo`, `--always-approve`, `--trust-all-tools`), child processes, the task it was given, what it is doing now. Agents started by npm install scripts or temp folders are flagged. |
 
 **The intent engine** gives each agent a risk score from six layers, each with a reason you can read:
 
@@ -47,7 +47,7 @@ words, predicts the next step from the actions it sees, and limits the damage.
 2. **The lethal trifecta** (Simon Willison): untrusted input + private data + a way out. Two of three is a warning, all three is an alarm.
 3. **Next-step prediction**: per-agent transition counts plus attack-chain templates. It warns when only the last step of a chain is missing, before it happens.
 4. **Your own baseline**: what is normal for this agent on this PC.
-5. **Honesty check**: the agent's transcript (Claude Code, Codex) compared with what Windows saw. "All tests pass" after a failing test run, editing test files during a bug fix, risky commands that never appear in the conversation.
+5. **Honesty check**: the agent's transcript (Claude Code, Codex, Grok Build) compared with what Windows saw. "All tests pass" after a failing test run, editing test files during a bug fix, risky commands that never appear in the conversation.
 6. **Optional local AI judge** through Ollama. It only sees a cleaned summary, answers in fixed JSON and can only *raise* a score.
 
 **Self-learning, safely.** It learns only from clean sessions or sessions you approved, never while a session read untrusted content, a little at a time, with versions you can roll back. Hard rules are never learned.
@@ -84,6 +84,23 @@ is never rewritten, and a cleaned file is never restored over newer work.
 
 **Live scanner switch.** One click in the title bar (or the tray menu) turns background
 watching on or off. It is on by default.
+
+**Live monitor.** The *Live* page (and a small panel on the overview) shows what happens right
+now, second by second: new programs, steps of agents, new connections, file changes and alerts,
+with a scrolling log in plain words. It lives in memory for about two and a half minutes and is
+never saved. Connections of programs that are not agents are only counted, never listed. With
+AgathOS Guard on, every new program and every new address lookup of an agent shows up at once;
+without it, programs and connections are checked every few seconds. The *Guard* label at the top
+turns green when Guard is installed and running.
+
+**Grok.** *Grok Build* (the `grok` command of xAI) is recognised on Windows and on a Mac, where the
+system shows the file behind the `grok` link instead of the name. AgathOS reads its settings and
+MCP servers (`config.toml`, also in a project's `.grok` folder), its hooks, its rules and skills,
+treats `--always-approve` (alias `--yolo`) as a dangerous flag, and reads its sessions
+(`~/.grok/sessions`, or `GROK_HOME`) for the task and the honesty check. *Grok Bot*, the desktop
+app of xAI, shows under *Active now* like the command line agents. It works mostly on its own
+cloud computer, so AgathOS only sees the app, its network traffic and the files it touches on
+this computer, and says so on its card.
 
 **Mini pop-up (Windows).** Click the AgathOS icon next to the clock and a small window opens
 right above it: the six watchers, the status, *Fix all*, *Scan now*, *Pause all agents*, the
@@ -223,6 +240,7 @@ Browsers are refused.
 - Agents inside VS Code extensions (Cline, Copilot) share the editor's process; their actions are seen through files and config, not per process.
 - Freezing a process can leave a file or git lock half-written. Resume or stop it afterwards.
 - Codex transcripts compressed with zstd need a runtime with zstd support.
+- Grok Bot is recognised by its program name (`Grok Bot.app` on a Mac, `Grok Bot.exe` on Windows); the Windows name could not be tested here. Reading Grok Build sessions follows the public description of `updates.jsonl`: if xAI changes that format, the task and the honesty check for Grok go quiet, nothing else is affected.
 - Smart TVs, ovens and other smart devices cannot run a watcher themselves. They come next, through the network (DNS sensor), Home Assistant and a phone app, using the local API.
 
 ## Translations

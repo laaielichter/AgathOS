@@ -4,7 +4,7 @@
   const A = window.agathos;
   const $ = (id) => document.getElementById(id);
   const WATCHERS = ['gate', 'files', 'net', 'keys', 'traps', 'proc'];
-  const VIEWS = ['overview', 'agents', 'mcp', 'files', 'models', 'network', 'check', 'log', 'settings'];
+  const VIEWS = ['overview', 'live', 'agents', 'mcp', 'files', 'models', 'network', 'check', 'log', 'settings'];
   const RANK = { calm: 0, watch: 1, alarm: 2 };
 
   let snap = null;
@@ -144,7 +144,11 @@
     pill.setAttribute('aria-checked', realtime ? 'true' : 'false');
     pill.title = realtime ? t('live.onHint') : t('live.offHint');
     $('liveText').textContent = `${t('live.scanner')} · ${realtime ? t('on') : t('off')}${snap && snap.demo ? ` · ${t('pill.demo')}` : ''}`;
-    $('guardPill').hidden = !(snap && snap.guard.running);
+    const gs = snap && snap.guard;
+    const gp = $('guardPill');
+    gp.hidden = !(gs && gs.installed);
+    gp.classList.toggle('is-on', !!(gs && gs.running));
+    gp.title = gs && gs.running ? t('guard.running') : t('guard.stopped');
     if (snap && snap.heartbeat && snap.heartbeat !== lastBeat) {
       lastBeat = snap.heartbeat;
       const d = $('liveDot');
@@ -726,6 +730,8 @@
         if (run0.flags && run0.flags.length) body.push(field(t('card.flags'), h('div', { class: 'flag', text: run0.flags.join(' ') })));
       }
       if (a.task) body.push(field(t('card.task'), h('div', { class: 'field-value', text: a.task })));
+      // Agents that do their work on a cloud computer: AgathOS can only see this PC's side of it.
+      if (a.cloud) body.push(h('div', { class: 'field-value', style: 'grid-column:1/-1;color:var(--dim)', text: t('card.cloudNote') }));
       body.push(adv(field(t('card.labels'), trifecta(a.labels))));
       if (a.prediction) body.push(adv(field(t('card.next'), h('div', { class: 'field-value', text: `${t('act.' + a.prediction.action)} · ${Math.round(a.prediction.p * 100)}%` }))));
       body.push(h('div', { style: 'grid-column:1/-1' }, field(t('card.why'), reasonList(a.reasons))));
@@ -1077,6 +1083,165 @@
     else if (first && snap && snap.lastScan && planOf().length) { fresh = true; render(); setTimeout(() => { fresh = false; }, 2600); }
   }
 
+  // ---------- live monitor: strip charts and a log, refreshed once a second ----------
+  // The charts count per second (new programs, agent steps, new connections, file changes, alerts).
+  // An alert draws a thin line through every chart, so you see what else happened at that moment.
+  const LIVE_KEEP = 150;           // seconds of history; the engine tells the real number
+  const live = {
+    series: [], feed: [], gauges: { procs: 0, agents: 0, open: 0 }, seq: 0, keep: LIVE_KEEP, guard: null, realtime: true,
+    on: false, frozen: false, kinds: new Set(['act', 'net', 'file', 'event']),
+  };
+  const LIVE_CH = [
+    { id: 'spawns', sub: (g) => t('live.sub.procs', { n: g.procs }) },
+    { id: 'actions', sub: (g) => t('live.sub.agents', { n: g.agents }) },
+    { id: 'conns', sub: (g) => t('live.sub.open', { n: g.open }) },
+    { id: 'files', sub: () => '' },
+    { id: 'alerts', sub: () => '' },
+  ];
+  const KIND_GROUP = { act: 'act', net: 'net', file: 'file', scan: 'event', event: 'event' };
+  const lastMinute = (series, ch) => series.slice(-60).reduce((a, r) => a + (r[ch] || 0), 0);
+  const hms = (ts) => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+  const svgKids = (tag, attrs, ...kids) => { const n = svg(tag, attrs); for (const k of kids.flat()) if (k) n.appendChild(k); return n; };
+
+  // One path with a bar per second. `only` picks the seconds whose worst alert has that level.
+  function barPath(series, ch, keep, H, only) {
+    const off = keep - series.length;
+    const max = Math.max(3, ...series.map((r) => r[ch] || 0));
+    let d = '';
+    series.forEach((r, i) => {
+      const v = r[ch] || 0;
+      if (!v || (only && r.sev !== only)) return;
+      const bh = ch === 'alerts' ? H : Math.max(3, Math.round((v / max) * H));
+      d += `M${off + i} ${H}V${H - bh}h0.8V${H}z`;
+    });
+    return d;
+  }
+  const markPath = (series, keep, H, sev) => series.map((r, i) => (r.sev === sev ? `M${keep - series.length + i + 0.4} 0V${H}` : '')).join('');
+
+  function monRow(ch, compact) {
+    const H = compact ? 14 : 36;
+    const keep = live.keep;
+    const s = live.series;
+    let grid = '';
+    for (let x = keep - 30; x > 0; x -= 30) grid += `M${x} 0V${H}`;
+    const chart = svgKids('svg', { class: 'mon-chart', viewBox: `0 0 ${keep} ${H}`, preserveAspectRatio: 'none', 'aria-hidden': 'true' },
+      svg('path', { class: 'mon-grid', d: grid }),
+      ch.id === 'alerts'
+        ? [svg('path', { class: 'bar watch', d: barPath(s, 'alerts', keep, H, 'watch') }), svg('path', { class: 'bar alarm', d: barPath(s, 'alerts', keep, H, 'alarm') })]
+        : [svg('path', { class: 'bar', d: barPath(s, ch.id, keep, H) }), svg('path', { class: 'mk watch', d: markPath(s, keep, H, 'watch') }), svg('path', { class: 'mk alarm', d: markPath(s, keep, H, 'alarm') })]);
+    const sub = compact ? '' : ch.sub(live.gauges);
+    return h('div', { class: `mon-row ch-${ch.id}` },
+      h('div', { class: 'mon-label' }, h('span', { class: 'mon-name', text: t('live.ch.' + ch.id) }), sub ? h('span', { class: 'mon-sub', text: sub }) : null),
+      h('span', { class: 'mon-read', text: String(lastMinute(s, ch.id)) }),
+      chart);
+  }
+  function monAxis() {
+    const m = Math.floor(live.keep / 60);
+    const sec = live.keep % 60;
+    return h('div', { class: 'mon-axis', 'aria-hidden': 'true' }, h('span'), h('span'),
+      h('div', null, h('span', { text: `−${m}:${pad(sec)}` }), h('span', { text: `−${Math.floor(live.keep / 2 / 60)}:${pad(Math.round(live.keep / 2) % 60)}` }), h('span', { text: t('live.now') })));
+  }
+
+  // One log line, split into who, what and the detail (a command, a file, an address).
+  function lineParts(e) {
+    const p = e.params || {};
+    if (e.kind === 'act') return { who: p.agent, what: t('act.' + p.action), detail: p.detail };
+    if (e.kind === 'net') return e.key === 'live.dns' ? { who: p.name, what: t('live.dnsNew'), detail: p.host } : { who: p.name, what: t('live.connTo'), detail: `${p.host}:${p.port}` };
+    if (e.kind === 'file') return { who: '', what: e.key === 'live.filesGone' ? t('live.filesGone', { n: p.n, del: p.del }) : t('live.files', { n: p.n }), detail: p.dir };
+    if (e.kind === 'scan') return { who: '', what: t('live.scanStart'), detail: '' };
+    return { who: '', what: tp(e.key, p), detail: '' };
+  }
+  function lineEl(e, fresh) {
+    const x = lineParts(e);
+    return h('li', { class: `ln ${e.sev} k-${e.kind}${fresh ? ' is-new' : ''}` },
+      h('time', { text: hms(e.ts) }),
+      h('span', { class: 'ln-tag', text: t('live.k.' + e.kind) }),
+      h('span', { class: 'ln-msg' }, x.who ? h('b', { text: x.who }) : null, h('span', { class: 'ln-what', text: x.what }), x.detail ? h('code', { text: x.detail }) : null));
+  }
+
+  function monitorInto(el, compact) {
+    if (!el._m) {
+      el._m = { sig: '', headSig: '', lastId: 0 };
+      el._m.head = h('div', { class: 'mon-head' });
+      el._m.charts = h('div', { class: 'mon-charts', role: 'img' });
+      el._m.list = h('ol', { class: 'mon-console', role: 'log', tabindex: '0' });
+      el._m.foot = h('div', { class: 'mon-foot' });
+      el.textContent = '';
+      el.appendChild(compact ? h('div', { class: 'mon-grid2' }, el._m.charts, el._m.list) : el._m.head);
+      if (!compact) el.append(h('div', { class: 'mon-stack' }, el._m.charts, el._m.list));
+      if (compact) el.appendChild(el._m.foot);
+    }
+    const m = el._m;
+    // Charts: cheap, every second.
+    m.charts.setAttribute('aria-label', t('live.chartAria'));
+    fill(m.charts, LIVE_CH.map((c) => monRow(c, compact)), monAxis());
+    // Head and foot only change when the settings, the language or the Guard state change.
+    const g = live.guard || {};
+    const headSig = [lang, live.frozen, [...live.kinds].join(), g.running, g.installed, live.realtime, compact].join('|');
+    if (headSig !== m.headSig) {
+      m.headSig = headSig;
+      if (compact) {
+        fill(m.foot, h('button', { class: 'btn-ghost small', type: 'button', text: t('live.open'), onclick: () => show('live') }));
+      } else {
+        const hint = !isMac() && !g.installed ? ` ${t('live.src.hint')}` : '';
+        const src = !live.realtime ? t('live.src.off') : g.running ? t('live.src.guard') : t('live.src.basic') + hint;
+        const chips = ['act', 'net', 'file', 'event'].map((k) => h('button', {
+          class: `mon-chip${live.kinds.has(k) ? ' is-on' : ''}`, type: 'button', 'aria-pressed': live.kinds.has(k) ? 'true' : 'false', text: t('live.k.' + k),
+          onclick: () => { if (live.kinds.has(k)) live.kinds.delete(k); else live.kinds.add(k); m.sig = ''; renderMonitors(); },
+        }));
+        fill(m.head,
+          h('p', { class: `mon-src${g.running ? ' deep' : ''}`, text: src }),
+          h('div', { class: 'mon-tools' }, h('div', { class: 'mon-chips', role: 'group' }, chips),
+            h('button', { class: `btn-ghost small mon-freeze${live.frozen ? ' is-on' : ''}`, type: 'button', 'aria-pressed': live.frozen ? 'true' : 'false', text: live.frozen ? t('live.unfreeze') : t('live.freeze'),
+              onclick: () => { live.frozen = !live.frozen; m.sig = ''; m.headSig = ''; if (!live.frozen && A.liveWatch) A.liveWatch(true, live.seq); renderMonitors(); } })),
+          h('p', { class: 'mon-note', text: t('live.perMin') }));
+      }
+    }
+    // The log: only when there is something new (or the filter / language changed).
+    const rows = live.feed.filter((e) => live.kinds.has(KIND_GROUP[e.kind] || 'event')).slice(compact ? -9 : -150);
+    const sig = `${lang}|${[...live.kinds].join()}|${compact}|${rows.length ? rows[rows.length - 1].id : 0}|${rows.length}`;
+    if (sig !== m.sig) {
+      m.sig = sig;
+      const l = m.list;
+      const stick = l.scrollHeight - l.scrollTop - l.clientHeight < 28;
+      const first = m.lastId === 0;
+      fill(l, rows.length ? rows.map((e) => lineEl(e, !first && e.id > m.lastId)) : h('li', { class: 'ln empty', text: t('live.empty') }));
+      if (rows.length) m.lastId = rows[rows.length - 1].id;
+      if (stick || first) l.scrollTop = l.scrollHeight;
+    }
+  }
+
+  function renderMonitors() {
+    if (view === 'overview' && mode === 'advanced') {
+      $('monitorMini').hidden = false;
+      $('monitorMiniTitle').textContent = t('live.mon.title');
+      monitorInto($('monitorMiniBody'), true);
+    } else if (view === 'live') monitorInto($('monitorFull'), false);
+  }
+
+  function onLive(v) {
+    if (!v || typeof v !== 'object' || live.frozen) return;
+    if (Array.isArray(v.series)) live.series = v.series.slice(-LIVE_KEEP * 2);
+    if (v.keep > 0) live.keep = Math.min(v.keep, 600);
+    if (v.gauges && typeof v.gauges === 'object') live.gauges = { procs: +v.gauges.procs || 0, agents: +v.gauges.agents || 0, open: +v.gauges.open || 0 };
+    live.guard = v.guard || null;
+    live.realtime = v.realtime !== false;
+    if (v.seq < live.seq) live.feed = [];                       // the engine started again
+    for (const e of Array.isArray(v.feed) ? v.feed : []) if (e && e.id > live.seq) live.feed.push(e);
+    if (live.feed.length > 240) live.feed.splice(0, live.feed.length - 240);
+    live.seq = Math.max(live.seq, +v.seq || 0);
+    renderMonitors();
+  }
+
+  // The engine only pushes (and only looks more often) while a live panel is on screen.
+  function syncLive() {
+    const want = !!A.liveWatch && mode === 'advanced' && (view === 'overview' || view === 'live') && document.visibilityState === 'visible';
+    if (want === live.on) return;
+    live.on = want;
+    A.liveWatch(want, live.seq);
+  }
+  document.addEventListener('visibilitychange', syncLive);
+
   // ---------- main render ----------
   function render() {
     renderChrome();
@@ -1084,6 +1249,8 @@
     renderStatus();
     if (view === 'overview') { renderFix(); renderLive(); renderWatchers(); renderEvents(); }
     else if (snap && snap.events) snap.events.forEach((e) => seenEvents.add(e.hash));
+    renderMonitors();
+    syncLive();
     if (view === 'agents') renderAgents();
     if (view === 'mcp') renderMcp();
     if (view === 'files') renderFiles();
@@ -1106,6 +1273,7 @@
     mode = (ui.mode || local.mode) === 'simple' ? 'simple' : 'advanced';
     welcomed = !!(ui.welcomed || local.welcomed);
     if (!ui.lang && A.ui) A.ui({ lang, theme });
+    if (A.onLive) A.onLive(onLive);          // before the first render, which may already ask for live data
     render();
     A.onUpdate((s) => {
       // A scan that ends with things to fix makes the fix panel pulse once.
