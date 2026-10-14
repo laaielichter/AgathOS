@@ -13,7 +13,19 @@ process.env.LOCALAPPDATA = path.join(tmp, 'AppData', 'Local');
 
 let pass = 0;
 let fail = 0;
-const ok = (cond, name) => { if (cond) { pass++; console.log('PASS', name); } else { fail++; console.log('FAIL', name); } };
+const failed = [];
+// A crash in the tests (not a failed check) is written the same way.
+const crashed = (e) => {
+  console.error(e);
+  if (process.env.GITHUB_ACTIONS) {
+    const esc = String((e && e.stack) || e).slice(0, 6000).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+    console.log(`::error title=Test run crashed ${process.platform}::${esc}`);
+  }
+  process.exit(1);
+};
+process.on('uncaughtException', crashed);
+process.on('unhandledRejection', crashed);
+const ok = (cond, name) => { if (cond) { pass++; console.log('PASS', name); } else { fail++; failed.push(String(name)); console.log('FAIL', name); } };
 
 const T = require('../core/textscan');
 const K = require('../core/classify');
@@ -1635,6 +1647,11 @@ const themeTests = () => {
   themeTests();
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
+  // In GitHub Actions the names of the failed tests are also written as an annotation, which can be read without the full log.
+  if (fail && process.env.GITHUB_ACTIONS) {
+    const esc = failed.join('\n').slice(0, 6000).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+    console.log(`::error title=Failed tests ${process.platform}::${esc}`);
+  }
   fs.rmSync(tmp, { recursive: true, force: true });
   process.exit(fail ? 1 : 0);
 })();
