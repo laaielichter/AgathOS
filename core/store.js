@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS = {
   hotkey: true,               // Ctrl+Alt+Shift+P pauses all agents
   judge: { enabled: false, model: 'qwen2.5:7b' },
   learning: true,
-  startWithWindows: false,
+  startWithWindows: true,     // start quietly in the tray (--hidden) when you sign in
   closeToTray: true,
   logDays: 30,
   api: true,                  // local API on 127.0.0.1 for hooks and future apps
