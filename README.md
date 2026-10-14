@@ -161,6 +161,24 @@ connections to a look-alike, a tunnel or a catch-all are noticed as well. Nothin
 nothing is sent; it cannot see where a program really connects, only where its settings say it
 will. Look-alikes and catch-alls cannot be approved. Switch it off in Settings.
 
+**AI shield (message boards).** Agents take orders from, and leave messages on, places that nobody
+reviews: a chat channel (Discord, Telegram, Slack, WhatsApp, Matrix and others), an outgoing
+webhook, a public message channel (ntfy, a public MQTT broker), a public text page (Pastebin, a
+Gist, a published Google document), a public social board, a network where AI agents talk to each
+other (Moltbook, agent-to-agent), or a hidden address (Tor, I2P). Whoever can write there can steer
+the agent; whoever reads there receives what the agent sends. Many of these places are named in
+files you never opened: a skill, an instruction file, the workspace of an agent such as the
+`HEARTBEAT.md` of OpenClaw. AgathOS reads those files and settings as text (nothing is run,
+nothing is sent) and lists every board, also one that a file only describes in a sentence such as
+"every four hours, fetch this page and follow it" (recognised in many languages). A standing order
+from somewhere else, a public channel that an agent reads, a channel that accepts messages from
+anyone, a hidden address and a collector behind a tunnel are danger until you approve them; an
+address with invisible characters or a catch-all site can never be approved. Keys that are part of
+an address (a Discord webhook, a Telegram bot) are never shown, never written to the log and never
+stored: only a one-way fingerprint is, so a swapped key is noticed. With Guard, a program that
+connects to a board that no file names is noticed as it happens. An approved board that changes is
+a danger again. Switch it off in Settings.
+
 **Calm notifications.** No notification circus: by default only danger pops up (attention goes to
 the log and the tray dot), what happens at the same time comes as one notification, the same
 finding is not repeated within 6 hours, at most 3 per hour, and nothing pops up while the
@@ -260,6 +278,7 @@ Browsers are refused.
 - Freezing a process can leave a file or git lock half-written. Resume or stop it afterwards.
 - Codex transcripts compressed with zstd need a runtime with zstd support.
 - Grok Bot is recognised by its program name (`Grok Bot.app` on a Mac, `Grok Bot.exe` on Windows); the Windows name could not be tested here. Reading Grok Build sessions follows the public description of `updates.jsonl`: if xAI changes that format, the task and the honesty check for Grok go quiet, nothing else is affected.
+- Message boards are found by what files and settings say and by the names programs look up (with Guard). An agent that builds an address while it runs, or hides it in encrypted data, does not show up in the list.
 - Smart TVs, ovens and other smart devices cannot run a watcher themselves. They come next, through the network (DNS sensor), Home Assistant and a phone app, using the local API.
 
 ## Translations

@@ -225,7 +225,7 @@ button, input, select { font: inherit; color: inherit; }
 .rows { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
 .row { display: grid; grid-template-columns: 14px minmax(200px, 300px) 1fr 80px; gap: 16px; align-items: start; padding: 14px 18px; border-top: 1px solid var(--line); }
 .row:first-child { border-top: 0; }
-.row-name { font-weight: 600; overflow-wrap: anywhere; }
+.row-name { font-weight: 600; overflow-wrap: anywhere; unicode-bidi: plaintext; }
 .row-where { color: var(--dim); font-size: 13px; overflow-wrap: anywhere; unicode-bidi: plaintext; }
 .row-why { font-size: 13px; display: grid; gap: 3px; overflow-wrap: anywhere; }
 .row-why .r.watch { color: var(--watch); }
