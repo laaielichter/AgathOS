@@ -83,8 +83,11 @@ class DownloadGuard {
     if (this.seen.get(file) === sig) return;
     this.seen.set(file, sig);
     if (this.seen.size > 2000) this.seen.clear();
-    const res = inspect(file);
-    if (res) this.onFinding(res);
+    // This runs from a timer: a file that cannot be read, or a handler that fails, must not stop the others.
+    try {
+      const res = inspect(file);
+      if (res) this.onFinding(res);
+    } catch (_) { /* nothing to report for this file */ }
   }
 }
 

@@ -78,7 +78,7 @@ class Engine {
       threshold: store.settings.massDeleteThreshold,
       onConfigChange: (f) => this.configChanged(f),
       onInstructionChange: (f) => this.instructionChanged(f),
-      onMassDelete: (d) => this.massDelete(d),
+      onMassDelete: (d) => this.massDelete(d).catch(() => {}),
       onActivity: (dir, deleted) => this.tel.file(U.shortPath(dir), deleted),
     });
   }
@@ -90,7 +90,8 @@ class Engine {
     U.ps.start();
     this.event({ key: 'app.started', sev: 'calm', watcher: 'proc', params: {} }, true);
     if (!this.store.chainOk) this.event({ key: 'log.tampered', sev: 'alarm', watcher: 'files', params: {} });
-    await this.fullScan('start');
+    // Whatever goes wrong in the first scan, the watchers must still start.
+    try { await this.fullScan('start'); } catch (_) { this.scanning = null; }
     this.applySchedule();
   }
 
@@ -122,7 +123,13 @@ class Engine {
     const s = this.store.settings;
     this.files.threshold = s.massDeleteThreshold;
     if (s.realtime) {
-      const every = (ms, fn) => { const t = setInterval(() => fn().catch(() => {}), ms); this.timers.push(t); fn().catch(() => {}); };
+      // A job never runs twice at the same time: when one round is slow (a busy PC, a hung helper),
+      // the next tick is skipped instead of piling up behind it or handling the same events twice.
+      const every = (ms, fn) => {
+        const run = U.exclusive(fn);
+        this.timers.push(setInterval(run, ms));
+        run();
+      };
       every(Math.max(2, s.pollSeconds) * 1000, () => this.pollProcesses());
       every(15000, () => this.pollNetwork());
       // While the live view is open the network is checked more often, so new connections show up quickly.
@@ -170,23 +177,28 @@ class Engine {
       ['files', async () => { this.inventory.models = models.scanModelDirs(this.store.settings.modelDirs); }],
     ];
     this.scanning = { reason, watcher: steps[0][0], done: 0, total: steps.length };
-    this.tel.note('scan', 'live.scanStart', { reason });
-    this.changed(true);
-    for (const [w, fn] of steps) {
-      this.scanning.watcher = w;
+    try {
+      this.tel.note('scan', 'live.scanStart', { reason });
       this.changed(true);
-      const t0 = Date.now();
-      try { await fn(); } catch (_) {}
-      // Each phase stays visible for at least a moment so the ring can show it.
-      const wait = 450 - (Date.now() - t0);
-      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-      this.scanning.done++;
+      for (const [w, fn] of steps) {
+        this.scanning.watcher = w;
+        this.changed(true);
+        const t0 = Date.now();
+        try { await fn(); } catch (_) {}
+        // Each phase stays visible for at least a moment so the ring can show it.
+        const wait = 450 - (Date.now() - t0);
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+        this.scanning.done++;
+      }
+      this.diffInventory(reason);
+      this.lastScan = Date.now();
+      this.store.state.lastScan = this.lastScan;
+      this.store.saveState();
+    } catch (_) {
+      // A mistake in one step must not end the scanning for good: "scanning" is cleared below in every case.
+    } finally {
+      this.scanning = null;
     }
-    this.diffInventory(reason);
-    this.lastScan = Date.now();
-    this.store.state.lastScan = this.lastScan;
-    this.store.saveState();
-    this.scanning = null;
     if (this.store.settings.realtime) this.files.start(this.configPaths(), this.store.settings.roots);
     this.event({ key: 'scan.done', sev: 'calm', watcher: 'gate', params: this.counts() }, true);
     this.changed(true);
@@ -472,7 +484,7 @@ class Engine {
     if (!sum) return;
     judge.ask({ model: j.model, ...sum }).then((r) => {
       if (r && r.risk > v.score) { this.intent.setJudge(agentId, r.risk, r.reason); this.changed(); }
-    });
+    }).catch(() => {});
   }
 
   // ---------- stop button ----------
@@ -670,7 +682,7 @@ class Engine {
   loadSignature(exe) {
     if (!exe || this.signatures.has(exe)) return;
     this.signatures.set(exe, null);
-    inv.signature(exe).then((s) => { this.signatures.set(exe, s); this.changed(); });
+    inv.signature(exe).then((s) => { this.signatures.set(exe, s); this.changed(); }).catch(() => {});
   }
 
   // Live numbers and log lines for the dashboard. `since` is the last log line the window has seen.

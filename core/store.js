@@ -37,6 +37,18 @@ const DEFAULT_SETTINGS = {
   fix: { auto: false, level: 'firm', minSev: 'alarm', custom: { agent: 'block', port: 'localOnly', mcp: 'disable', hidden: 'clean', inject: 'off', model: 'quarantine', auto: 'off' } },
 };
 
+// A settings file that was edited by hand, or half written, must not break the timers
+// (an interval of 600 hours or more overflows and then fires every millisecond).
+const LIMITS = { pollSeconds: [2, 60], fullScanHours: [1, 168], massDeleteThreshold: [1, 1000], logDays: [1, 365] };
+function sanitize(s) {
+  for (const [k, [lo, hi]] of Object.entries(LIMITS)) {
+    const n = Number(s[k]);
+    s[k] = Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : DEFAULT_SETTINGS[k];
+  }
+  for (const k of ['roots', 'modelDirs']) s[k] = Array.isArray(s[k]) ? s[k].filter((x) => typeof x === 'string' && x) : [];
+  return s;
+}
+
 class Store {
   constructor(dir) {
     this.dir = dir;
@@ -55,8 +67,8 @@ class Store {
     try { s = JSON.parse(fs.readFileSync(this.stateFile, 'utf8')); } catch (_) {}
     const old = s.settings || {};
     const oldFix = old.fix || {};
-    s.settings = { ...DEFAULT_SETTINGS, ...old, judge: { ...DEFAULT_SETTINGS.judge, ...(old.judge || {}) },
-      fix: { ...DEFAULT_SETTINGS.fix, ...oldFix, custom: { ...DEFAULT_SETTINGS.fix.custom, ...(oldFix.custom || {}) } } };
+    s.settings = sanitize({ ...DEFAULT_SETTINGS, ...old, judge: { ...DEFAULT_SETTINGS.judge, ...(old.judge || {}) },
+      fix: { ...DEFAULT_SETTINGS.fix, ...oldFix, custom: { ...DEFAULT_SETTINGS.fix.custom, ...(oldFix.custom || {}) } } });
     s.remedies = s.remedies || [];     // what "Fix it" changed, with what is needed to undo it
     s.approvals = s.approvals || {};   // id -> { hash, at }   (MCP servers, agents, skills, autostarts)
     s.ignored = s.ignored || {};       // finding id -> at
@@ -86,6 +98,7 @@ class Store {
       else if (k === 'fix') s.fix = { ...s.fix, ...v, custom: { ...s.fix.custom, ...((v && v.custom) || {}) } };
       else s[k] = v;
     }
+    sanitize(s);
     this.saveState();
     return s;
   }

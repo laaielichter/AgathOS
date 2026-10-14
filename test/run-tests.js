@@ -554,6 +554,230 @@ const supplyTests = async () => {
   ok(gs && gs.edited.some((e) => /login\.test\.js$/.test(e.file)), 'grok: edited files are remembered for the honesty check');
 }
 
+// ---------- robustness: broken connections, odd files, errors nobody caught ----------
+const robustTests = async () => {
+  const https = require('https');
+  const http = require('http');
+  const cp = require('child_process');
+  const crypto = require('crypto');
+  const { EventEmitter } = require('events');
+  const { Readable } = require('stream');
+  const U = require('../core/util');
+  const up = require('../core/update');
+  const settle = (p, ms = 2000) => Promise.race([p, new Promise((r) => setTimeout(() => r('HUNG'), ms))]);
+  const flush = () => new Promise((r) => setImmediate(r));
+
+  // --- updates: a pretend GitHub whose connection can break half way ---
+  const realGet = https.get;
+  const realSpawn = cp.spawn;
+  const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+  const pretend = (routes) => {
+    https.get = (url, _opts, cb) => {
+      const req = new EventEmitter();
+      req.destroy = () => {};
+      const r = routes(String(url));
+      setImmediate(() => {
+        if (!r) { req.emit('error', new Error('offline')); return; }
+        const res = new Readable({ read() {} });
+        res.statusCode = r.status || 200;
+        res.headers = r.headers || {};
+        res.complete = !r.broken;
+        cb(res);
+        if (r.body != null) res.push(Buffer.from(r.body));
+        if (r.broken) setImmediate(() => res.destroy()); else res.push(null);
+      });
+      return req;
+    };
+  };
+  const bytes = 'pretend-installer-bytes';
+  const digest = crypto.createHash('sha256').update(bytes).digest('hex');
+  const asset = 'https://github.com/x/y/releases/download/v9.9.9/AgathOS-Setup-9.9.9.exe';
+  const release = (tag) => JSON.stringify({ tag_name: tag, html_url: 'https://github.com/x/y/releases/tag/v9.9.9', assets: [{ name: 'AgathOS-Setup-9.9.9.exe', browser_download_url: asset, size: bytes.length, digest: 'sha256:' + digest }] });
+  const api = (body, extra = {}) => (url) => (/\/releases\/latest$/.test(url) ? { body, ...extra } : null);
+  try {
+    pretend(api(release('v9.9.9')));
+    const good = await settle(up.check());
+    ok(good.status === 'newer' && good.version === '9.9.9' && good.assets[0].digest === 'sha256:' + digest, 'update: a normal answer from GitHub is a new version with its checksum');
+    pretend(api(release('v9.9.9/../../evil')));
+    ok((await settle(up.check())).status === 'unreachable', 'update: a release tag that is not a plain version number is refused (it becomes part of a file name)');
+    pretend(api('{"tag_name":"v9', { broken: true }));
+    const cut = await settle(up.check());
+    ok(cut !== 'HUNG' && cut.status === 'unreachable', 'update: a connection that breaks half way ends the check instead of waiting for ever');
+    pretend(() => null);
+    ok((await settle(up.check())).status === 'unreachable', 'update: no connection at all is "unreachable"');
+
+    // The installer download (Windows only; the system is pretended here).
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    const info = { status: 'newer', version: '9.9.9', assets: [{ name: 'AgathOS-Setup-9.9.9.exe', url: asset, digest: 'sha256:' + digest }] };
+    const exe = path.join(os.tmpdir(), 'AgathOS-Setup-9.9.9.exe');
+    let spawned = [];
+    const fakeChild = (event) => {
+      const c = new EventEmitter();
+      c.unref = () => { c.unrefed = true; };
+      setImmediate(() => c.emit(event, new Error('blocked')));
+      return c;
+    };
+    pretend((u) => (u === asset ? { body: bytes.slice(0, 8), broken: true } : null));
+    cp.spawn = (...a) => { spawned.push(a); return fakeChild('spawn'); };
+    const cutDl = await settle(up.install(info), 4000);
+    ok(cutDl !== 'HUNG' && cutDl.ok === false && cutDl.reason === 'checksum' && spawned.length === 0 && !fs.existsSync(exe), 'update: a download that breaks half way is thrown away and nothing is started');
+    pretend((u) => (u === asset ? { body: 'something else' } : null));
+    const wrong = await settle(up.install(info), 4000);
+    ok(wrong.ok === false && wrong.reason === 'checksum' && spawned.length === 0 && !fs.existsSync(exe), 'update: a file with the wrong checksum is thrown away and nothing is started');
+    pretend((u) => (u === asset ? { body: bytes } : null));
+    cp.spawn = (...a) => { spawned.push(a); return fakeChild('error'); };
+    const blocked = await settle(up.install(info), 4000);
+    ok(blocked.ok === false && blocked.reason === 'start' && !fs.existsSync(exe), 'update: an installer that cannot start is reported, so AgathOS does not close for nothing');
+    spawned = [];
+    let child = null;
+    cp.spawn = (...a) => { spawned.push(a); child = fakeChild('spawn'); return child; };
+    const started = await settle(up.install(info), 4000);
+    ok(started.ok === true && spawned.length === 1 && spawned[0][1].join(' ') === '/S --force-run' && child.unrefed === true, 'update: a good download is started silently and AgathOS lets go of it');
+    try { fs.unlinkSync(exe); } catch (_) {}
+  } finally {
+    https.get = realGet;
+    cp.spawn = realSpawn;
+    Object.defineProperty(process, 'platform', realPlatform);
+  }
+
+  // --- the local AI judge and its connection ---
+  {
+    const judge = require('../core/judge');
+    const realRequest = http.request;
+    const realHttpGet = http.get;
+    const broken = (cb) => {
+      const res = new Readable({ read() {} });
+      res.complete = false;
+      cb(res);
+      res.push(Buffer.from('{"resp'));
+      setImmediate(() => res.destroy());
+    };
+    http.request = (_o, cb) => { const r = new EventEmitter(); r.destroy = () => {}; r.end = () => setImmediate(() => broken(cb)); return r; };
+    http.get = (_o, cb) => { const r = new EventEmitter(); r.destroy = () => {}; setImmediate(() => broken(cb)); return r; };
+    try {
+      const j = await settle(judge.ask({ model: 'm', task: 't', actions: ['a'], labels: [] }));
+      ok(j === null, 'judge: a connection that breaks half way gives no opinion instead of waiting for ever');
+      const m = await settle(judge.models());
+      ok(Array.isArray(m) && m.length === 0, 'judge: the model list of a broken connection is empty instead of waiting for ever');
+    } finally { http.request = realRequest; http.get = realHttpGet; }
+  }
+
+  // --- local API: the token check must never throw ---
+  {
+    const A = require('../core/api');
+    const tok = 'a1b2c3'.repeat(8);
+    ok(A.authOk('Bearer ' + tok, tok) && A.authOk(tok, tok), 'api: the right token is accepted');
+    ok(!A.authOk('Bearer ' + tok.slice(1), tok) && !A.authOk('', tok) && !A.authOk(undefined, tok) && !A.authOk('Bearer ' + tok, ''), 'api: a wrong, empty or missing token is refused');
+    let threw = false;
+    let res = null;
+    try { res = A.authOk('é'.repeat(48), tok); } catch (_) { threw = true; }
+    ok(!threw && res === false, 'api: a header with as many letters as the token, but more bytes, is refused and does not crash the app');
+  }
+
+  // --- browser extensions with odd manifests ---
+  {
+    const X = require('../core/extensions');
+    let threw = null;
+    let out = [];
+    try {
+      out = [
+        { name: 'AI Odd', permissions: 'tabs', host_permissions: { a: 1 }, content_scripts: [null, 5, { matches: 'https://*/*' }, { matches: ['<all_urls>'] }] },
+        { name: ['AI'], description: 7, default_locale: 5, permissions: [1, null, 'tabs'] },
+        { name: 'Claude helper', optional_permissions: { x: 1 }, optional_host_permissions: 'x', content_scripts: 'x' },
+        { name: 'AI ' + 'x'.repeat(300) },
+      ].map((m) => X.analyse(m, path.join(tmp, 'nowhere')));
+    } catch (e) { threw = e; }
+    ok(!threw && out.every(Boolean), 'extensions: a manifest whose fields have the wrong type does not break the scan' + (threw ? ' (' + threw.message + ')' : ''));
+    ok(out[0] && out[0].allSites === true && out[0].state === 'watch', 'extensions: valid parts of an odd manifest are still used');
+    ok(out[3] && out[3].name.length <= 80, 'extensions: a very long name is cut');
+    const base = path.join(tmp, 'extx', 'a', 'b');
+    fs.mkdirSync(base, { recursive: true });
+    fs.mkdirSync(path.join(tmp, 'extx', 'a', 'evil'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, 'extx', 'a', 'evil', 'messages.json'), JSON.stringify({ n: { message: 'AI Traversal' } }));
+    const trav = X.analyse({ name: '__MSG_n__', description: 'AI helper', default_locale: '../../evil' }, base);
+    ok(trav && trav.name !== 'AI Traversal', 'extensions: the language of a manifest is a folder name and never a path');
+  }
+
+  // --- settings that were edited by hand ---
+  {
+    const d = path.join(tmp, 'store-odd');
+    fs.mkdirSync(d, { recursive: true });
+    fs.writeFileSync(path.join(d, 'state.json'), JSON.stringify({ settings: { fullScanHours: 100000, pollSeconds: 'soon', roots: null, modelDirs: ['ok', 5, ''], logDays: -5, massDeleteThreshold: 0 } }));
+    const s = new Store(d).settings;
+    ok(s.fullScanHours === 168 && s.pollSeconds === 5 && s.logDays === 1 && s.massDeleteThreshold === 1, 'settings: numbers from a damaged file are brought back into range (no timer that fires every millisecond)');
+    ok(Array.isArray(s.roots) && s.roots.length === 0 && s.modelDirs.length === 1 && s.modelDirs[0] === 'ok', 'settings: folder lists from a damaged file are lists of text again');
+    const st = new Store(d);
+    st.updateSettings({ fullScanHours: 1e9, roots: 'x', pollSeconds: 1 });
+    ok(st.settings.fullScanHours === 168 && Array.isArray(st.settings.roots) && st.settings.pollSeconds === 2, 'settings: a change with odd values is brought into range too');
+  }
+
+  // --- errors nobody caught ---
+  {
+    const E = require('../core/errlog');
+    const d = path.join(tmp, 'errlog');
+    const file = path.join(d, 'errors.log');
+    ok(E.record(d, 'error', new Error('boom'), 1000) === true && /boom/.test(fs.readFileSync(file, 'utf8')), 'errlog: an error is written to the log file');
+    ok(E.record(d, 'error', new Error('boom'), 2000) === false, 'errlog: the same error is written once a minute at most');
+    ok(E.record(d, 'error', new Error('boom'), 1000 + 61000) === true, 'errlog: and again after that minute');
+    for (let i = 0; i < 200; i++) E.record(d, 'error', new Error('big ' + i + ' ' + 'x'.repeat(1500)), 1e7 + i * 1000);
+    ok(fs.statSync(file).size <= E.MAX_BYTES + 4000, 'errlog: the file stays small');
+    const fake = new EventEmitter();
+    const off = E.install(path.join(tmp, 'errlog2'), fake);
+    fake.emit('uncaughtException', new Error('late'));
+    fake.emit('unhandledRejection', 'nope');
+    const txt = fs.readFileSync(path.join(tmp, 'errlog2', 'errors.log'), 'utf8');
+    ok(/error Error: late/.test(txt) && /rejection nope/.test(txt), 'errlog: errors and broken promises are both written');
+    off();
+    ok(fake.listenerCount('uncaughtException') === 0 && fake.listenerCount('unhandledRejection') === 0, 'errlog: the hooks can be removed again');
+    fs.writeFileSync(path.join(tmp, 'file-not-dir'), 'x');
+    ok(E.record(path.join(tmp, 'file-not-dir', 'sub'), 'error', 'x', 9e9) === false, 'errlog: a log that cannot be written never throws');
+  }
+
+  // --- timers: one round at a time ---
+  {
+    let t = 0;
+    const gates = [];
+    const run = U.exclusive(() => new Promise((r) => gates.push(r)), { hungMs: 1000, now: () => t });
+    ok(run() === true, 'timers: the first round starts');
+    await flush();
+    ok(run() === false && gates.length === 1, 'timers: a new round does not start while the previous one is running');
+    gates[0]();
+    await flush();
+    const again = run();
+    await flush();
+    ok(again === true && gates.length === 2, 'timers: when the round is over the next one starts');
+    t = 500;
+    ok(run() === false, 'timers: still running after half a second');
+    t = 1500;
+    ok(run() === true, 'timers: a round that is running for too long counts as hung and is not waited for');
+    await flush();
+    gates[1]();
+    await flush();
+    ok(run() === false && gates.length === 3, 'timers: the end of the hung round does not free the new one');
+    const bad = U.exclusive(() => { throw new Error('x'); });
+    ok(bad() === true, 'timers: a round that fails does not throw');
+    await flush();
+    ok(bad() === true, 'timers: and the next round still starts');
+  }
+
+  // --- watchers: a failing handler must not take the program down ---
+  {
+    const dl = require('../core/dlguard');
+    const evil = path.join(tmp, 'Downloads', 'evil.pkl');
+    let called = 0;
+    const g = new dl.DownloadGuard({ onFinding: () => { called++; throw new Error('handler broke'); } });
+    let threw = false;
+    try { g.check(evil, fs.statSync(evil).size); g.check(path.join(tmp, 'Downloads', 'gone.pkl'), 0); } catch (_) { threw = true; }
+    ok(!threw && called === 1, 'download guard: a failing handler does not break the timer');
+    const { FileWatch } = require('../core/watchfs');
+    const fw = new FileWatch({});
+    let ran = false;
+    fw.debounced('k', () => { ran = true; throw new Error('handler broke'); });
+    await new Promise((r) => setTimeout(r, 900));
+    ok(ran, 'file watch: a failing handler does not end the program');
+  }
+};
+
 // ---------- engine smoke test ----------
 (async () => {
   const { Engine } = require('../core/engine');
@@ -647,8 +871,18 @@ const supplyTests = async () => {
     ok(eng.liveWatching === true, 'engine: the window can ask for more frequent network checks');
     eng.setLiveWatching(false);
   }
+  // a mistake after the steps must not leave the scanner stuck in "scanning"
+  {
+    const realDiff = eng.diffInventory;
+    eng.diffInventory = () => { throw new Error('broken on purpose'); };
+    const stuck = await eng.fullScan('user');
+    eng.diffInventory = realDiff;
+    ok(stuck === true && eng.scanning === null, 'engine: a failing step does not leave the scan stuck');
+    ok((await eng.fullScan('user')) === true && eng.scanning === null, 'engine: the next scan can start');
+  }
   await supplyTests();
   await backupTests();
+  await robustTests();
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
   fs.rmSync(tmp, { recursive: true, force: true });
