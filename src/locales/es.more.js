@@ -272,6 +272,21 @@
     "an.ext.risk": "En 2026, dos extensiones que se hacían pasar por ayudantes de IA, con unos 900.000 usuarios, copiaban conversaciones de ChatGPT y DeepSeek y todas las pestañas abiertas a un servidor. Una extensión que puede leer cada página también puede leer tus chats, tu correo y tus páginas del banco.",
     "an.ext.todo": "¿No conoces esta extensión o ya no la usas? Quítala en tu navegador. Si la conservas, comprueba quién la hizo y mira las valoraciones.",
     "an.ext.deep": "AgathOS lee el manifest.json de cada extensión de Chrome, Edge y Brave (todos los perfiles) y nada más. Muestra las extensiones relacionadas con la IA o que pueden llegar a sitios de chat de IA. Cuenta como aviso cuando la extensión puede leer todos los sitios web (<all_urls> o un patrón como https://*/*). También muestra permisos más amplios como tabs, history, cookies, webRequest y clipboardRead. No ve lo que la extensión hace de verdad, solo lo que se le permite hacer. Un cambio de permisos tras una actualización se avisa de nuevo.",
+    "tab.backup": "Copia de seguridad",
+    "backup.empty": "No hay carpetas de trabajo que comprobar.",
+    "backup.none": "Sin señales de copia de seguridad para {n} carpeta(s) de trabajo: {folders}",
+    "backup.cloud": "{folder} está en una carpeta en la nube ({service})",
+    "backup.git": "{folder}: los {repos} proyecto(s) de Git tienen una copia en un servidor",
+    "backup.timeMachine": "Time Machine ha hecho una copia de seguridad",
+    "backup.flagged": "Sin señales de copia de seguridad para tus carpetas de trabajo ({folders}). Si un agente borra archivos allí, pueden perderse para siempre.",
+    "fix.backup": "Activa una copia de seguridad: Historial de archivos o copia de carpetas de OneDrive en Windows, Time Machine o iCloud en un Mac. Para el código, sube tus proyectos a un remoto de Git como GitHub. ¿Ya tienes una copia que AgathOS no puede ver (otro programa o un disco externo)? Entonces pulsa Descartar.",
+    "set.backupCheck": "Comprobación de copias: avisar cuando las carpetas de trabajo no tienen copia",
+    "set.backupCheckDesc": "Busca una señal de copia de tus carpetas de trabajo: una carpeta en la nube (OneDrive, Dropbox, Google Drive, iCloud), proyectos de Git con remoto o Time Machine. Nunca lee tus archivos.",
+    "an.backup.simple": "AgathOS no encontró señales de que tus carpetas de trabajo tengan una segunda copia. Si un agente o un gusano las borra, pueden perderse para siempre.",
+    "an.backup.maybe": "Puede que tengas una copia que AgathOS no puede ver, como el Historial de archivos, un disco externo u otro programa de copias. Entonces es una falsa alarma y puedes descartarla.",
+    "an.backup.risk": "Agentes que funcionan sin ninguna protección han borrado carpetas y discos enteros, y algunos gusanos borran la carpeta personal cuando no pueden iniciar sesión. Sin una segunda copia, esos datos no se pueden recuperar.",
+    "an.backup.todo": "Activa una copia de seguridad ahora: Historial de archivos o copia de carpetas de OneDrive en Windows, Time Machine o iCloud en un Mac. Para el código, sube tus proyectos a GitHub u otro remoto de Git.",
+    "an.backup.deep": "AgathOS comprueba cada carpeta que vigila (menos Descargas) en busca de una señal de copia: la carpeta está dentro de una carpeta de OneDrive, Dropbox, Google Drive o iCloud, o cada proyecto de Git que contiene tiene un remoto, o en un Mac Time Machine ha hecho una copia. No mira dentro del Historial de archivos ni de otros programas de copias y no ve discos externos, así que solo dice «sin señales de copia de seguridad». No lee el contenido de los archivos ni cambia nada.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.es, d);

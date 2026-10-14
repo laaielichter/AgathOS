@@ -272,6 +272,21 @@
     "an.ext.risk": "Em 2026, duas extensões que se passavam por assistentes de IA, com cerca de 900.000 usuários, copiavam conversas do ChatGPT e do DeepSeek e todas as abas abertas para um servidor. Uma extensão que lê todas as páginas também pode ler suas conversas, seus e-mails e as páginas do seu banco.",
     "an.ext.todo": "Você não conhece esta extensão ou não a usa mais? Remova-a no navegador. Se for mantê-la, veja quem a criou e confira as avaliações.",
     "an.ext.deep": "O AgathOS lê o manifest.json de cada extensão do Chrome, Edge e Brave (todos os perfis) e nada mais. Ele lista extensões ligadas à IA ou que podem alcançar sites de chat de IA. Conta como atenção quando a extensão pode ler todos os sites (<all_urls> ou um padrão como https://*/*). Também mostra permissões mais amplas como tabs, history, cookies, webRequest e clipboardRead. Ele não vê o que a extensão realmente faz, só o que ela pode fazer. Uma mudança de permissões após uma atualização é avisada de novo.",
+    "tab.backup": "Backup",
+    "backup.empty": "Nenhuma pasta de trabalho para verificar.",
+    "backup.none": "Sem sinal de backup para {n} pasta(s) de trabalho: {folders}",
+    "backup.cloud": "{folder} está em uma pasta na nuvem ({service})",
+    "backup.git": "{folder}: todos os {repos} projeto(s) Git têm uma cópia em um servidor",
+    "backup.timeMachine": "O Time Machine fez um backup",
+    "backup.flagged": "Sem sinal de backup para suas pastas de trabalho ({folders}). Se um agente apagar arquivos ali, eles podem ser perdidos para sempre.",
+    "fix.backup": "Ative um backup: Histórico de Arquivos ou backup de pastas do OneDrive no Windows, Time Machine ou iCloud no Mac. Para código, envie seus projetos para um remoto Git como o GitHub. Você já tem um backup que o AgathOS não consegue ver (outro programa ou disco externo)? Então toque em Descartar.",
+    "set.backupCheck": "Verificação de backup: avisar quando pastas de trabalho não têm cópia",
+    "set.backupCheckDesc": "Procura um sinal de cópia das suas pastas de trabalho: uma pasta na nuvem (OneDrive, Dropbox, Google Drive, iCloud), projetos Git com remoto ou Time Machine. Nunca lê seus arquivos.",
+    "an.backup.simple": "O AgathOS não encontrou sinal de que suas pastas de trabalho tenham uma segunda cópia. Se um agente ou um worm as apagar, elas podem ser perdidas para sempre.",
+    "an.backup.maybe": "Você pode ter um backup que o AgathOS não consegue ver, como o Histórico de Arquivos, um disco externo ou outro programa de backup. Nesse caso é um falso alarme e você pode dispensá-lo.",
+    "an.backup.risk": "Agentes executados sem nenhuma proteção já apagaram pastas e discos inteiros, e alguns worms apagam a pasta pessoal quando não conseguem fazer login. Sem uma segunda cópia, esses dados não voltam.",
+    "an.backup.todo": "Ative um backup agora: Histórico de Arquivos ou backup de pastas do OneDrive no Windows, Time Machine ou iCloud no Mac. Para código, envie seus projetos para o GitHub ou outro remoto Git.",
+    "an.backup.deep": "O AgathOS verifica cada pasta que vigia (exceto Downloads) em busca de um sinal de cópia: a pasta está dentro de uma pasta do OneDrive, Dropbox, Google Drive ou iCloud, ou todo projeto Git nela tem um remoto, ou no Mac o Time Machine fez um backup. Ele não olha dentro do Histórico de Arquivos nem de outros programas de backup e não vê discos externos, então só diz 'sem sinal de backup'. Não lê o conteúdo dos arquivos e não altera nada.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pt, d);

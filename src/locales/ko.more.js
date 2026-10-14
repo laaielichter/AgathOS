@@ -272,6 +272,21 @@
     "an.ext.risk": "2026년에 AI 도우미인 척한 확장 프로그램 두 개(사용자 약 90만 명)가 ChatGPT와 DeepSeek 대화와 열려 있는 모든 탭을 서버로 복사했습니다. 모든 페이지를 읽을 수 있는 확장 프로그램은 내 채팅, 메일, 은행 페이지도 읽을 수 있습니다.",
     "an.ext.todo": "이 확장 프로그램을 모르거나 더 이상 쓰지 않나요? 브라우저에서 삭제하세요. 계속 쓸 거라면 만든 사람을 확인하고 후기를 보세요.",
     "an.ext.deep": "AgathOS는 Chrome, Edge, Brave(모든 프로필)의 각 확장 프로그램의 manifest.json만 읽고 그 밖에는 아무것도 읽지 않습니다. AI와 관련되었거나 AI 채팅 사이트에 접근할 수 있는 확장 프로그램을 나열합니다. 확장 프로그램이 모든 웹사이트를 읽을 수 있으면(<all_urls> 또는 https://*/* 같은 패턴) 주의로 셉니다. tabs, history, cookies, webRequest, clipboardRead 같은 더 넓은 권한도 보여 줍니다. 확장 프로그램이 실제로 무엇을 하는지는 볼 수 없고, 허용된 것만 볼 수 있습니다. 업데이트 후 권한이 바뀌면 다시 알려 줍니다.",
+    "tab.backup": "백업",
+    "backup.empty": "확인할 작업 폴더가 없습니다.",
+    "backup.none": "작업 폴더 {n}개에 백업 흔적이 없습니다: {folders}",
+    "backup.cloud": "{folder}은(는) 클라우드 폴더({service}) 안에 있습니다",
+    "backup.git": "{folder}: Git 프로젝트 {repos}개 모두 서버에 사본이 있습니다",
+    "backup.timeMachine": "Time Machine이 백업을 만들었습니다",
+    "backup.flagged": "작업 폴더({folders})에 백업 흔적이 없습니다. 에이전트가 그곳의 파일을 지우면 영영 사라질 수 있습니다.",
+    "fix.backup": "백업을 켜세요: Windows에서는 파일 히스토리나 OneDrive 폴더 백업, Mac에서는 Time Machine이나 iCloud. 코드는 GitHub 같은 Git 원격 저장소에 올리세요. AgathOS가 볼 수 없는 백업(다른 프로그램이나 외장 디스크)이 이미 있다면 '숨기기'를 누르세요.",
+    "set.backupCheck": "백업 확인: 작업 폴더에 사본이 없으면 경고",
+    "set.backupCheckDesc": "작업 폴더의 사본 흔적을 찾습니다: 클라우드 폴더(OneDrive, Dropbox, Google Drive, iCloud), 원격 저장소가 있는 Git 프로젝트, 또는 Time Machine. 파일 내용은 읽지 않습니다.",
+    "an.backup.simple": "AgathOS는 작업 폴더에 두 번째 사본이 있다는 흔적을 찾지 못했습니다. 에이전트나 웜이 지우면 영영 사라질 수 있습니다.",
+    "an.backup.maybe": "파일 히스토리, 외장 디스크, 다른 백업 프로그램처럼 AgathOS가 볼 수 없는 백업이 있을 수 있습니다. 그렇다면 오경보이니 무시해도 됩니다.",
+    "an.backup.risk": "안전장치를 모두 끈 채 실행된 에이전트가 폴더와 드라이브 전체를 지운 적이 있고, 로그인하지 못하면 홈 폴더를 지우는 웜도 있습니다. 두 번째 사본이 없으면 그 데이터는 되돌릴 수 없습니다.",
+    "an.backup.todo": "지금 백업을 켜세요: Windows에서는 파일 히스토리나 OneDrive 폴더 백업, Mac에서는 Time Machine이나 iCloud. 코드는 GitHub 또는 다른 Git 원격 저장소에 올리세요.",
+    "an.backup.deep": "AgathOS는 감시하는 각 폴더(다운로드 제외)에 사본의 흔적이 있는지 확인합니다: 폴더가 OneDrive, Dropbox, Google Drive, iCloud 폴더 안에 있거나, 안의 모든 Git 프로젝트에 원격 저장소가 있거나, Mac에서 Time Machine이 백업을 만들었는지. 파일 히스토리나 다른 백업 프로그램 안은 보지 않고 외장 디스크도 볼 수 없어서 '백업 흔적 없음'이라고만 말합니다. 파일 내용을 읽지 않고 아무것도 바꾸지 않습니다.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);

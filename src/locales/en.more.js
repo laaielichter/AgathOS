@@ -273,6 +273,21 @@
     "an.ext.risk": "In 2026 two extensions that posed as AI helpers, with about 900,000 users, copied ChatGPT and DeepSeek chats and all open tabs to a server. An extension that can read every page can also read your chats, your mail and your bank pages.",
     "an.ext.todo": "Do you not know this extension, or do you no longer use it? Remove it in your browser. If you keep it, check who made it and look at the reviews.",
     "an.ext.deep": "AgathOS reads the manifest.json of every extension in Chrome, Edge and Brave (all profiles) and nothing else. It lists extensions that are about AI or may reach AI chat sites. It counts as attention when the extension may read all websites (<all_urls> or a pattern such as https://*/*). It also shows wider permissions such as tabs, history, cookies, webRequest and clipboardRead. It cannot see what the extension really does, only what it is allowed to do. A change in permissions after an update is reported again.",
+    "tab.backup": "Backup",
+    "backup.empty": "No work folders to check.",
+    "backup.none": "No sign of a backup for {n} work folder(s): {folders}",
+    "backup.cloud": "{folder} is in a cloud folder ({service})",
+    "backup.git": "{folder}: all {repos} Git project(s) have a copy on a server",
+    "backup.timeMachine": "Time Machine has made a backup",
+    "backup.flagged": "No sign of a backup for your work folders ({folders}). If an agent deletes files there, they may be gone for good.",
+    "fix.backup": "Turn on a backup: File History or OneDrive folder backup on Windows, Time Machine or iCloud on a Mac. For code, push your projects to a Git remote such as GitHub. Do you already have a backup that AgathOS cannot see (another program or an external disk)? Then press Dismiss.",
+    "set.backupCheck": "Backup check: warn when work folders have no copy",
+    "set.backupCheckDesc": "Looks for a sign of a copy of your work folders: a cloud folder (OneDrive, Dropbox, Google Drive, iCloud), Git projects with a remote, or Time Machine. It never reads your files.",
+    "an.backup.simple": "AgathOS found no sign that your work folders have a second copy. If an agent or a worm deletes them, they may be gone for good.",
+    "an.backup.maybe": "You may have a backup that AgathOS cannot see, such as File History, an external disk or another backup program. Then this is a false alarm and you can dismiss it.",
+    "an.backup.risk": "Agents that run with all safety switched off have wiped whole folders and drives, and some worms delete the home folder when they cannot log in. Without a second copy that data cannot be brought back.",
+    "an.backup.todo": "Turn on a backup now: File History or OneDrive folder backup on Windows, Time Machine or iCloud on a Mac. For code, push your projects to GitHub or another Git remote.",
+    "an.backup.deep": "AgathOS checks each folder it watches (except Downloads) for a sign of a copy: the folder lies inside a OneDrive, Dropbox, Google Drive or iCloud folder, or every Git project in it has a remote, or on a Mac Time Machine has made a backup. It does not look inside File History or other backup programs and cannot see external disks, so it only says 'no sign of a backup'. It reads no file contents and changes nothing.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);

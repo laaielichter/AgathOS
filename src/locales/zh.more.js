@@ -272,6 +272,21 @@
     "an.ext.risk": "2026 年，有两个自称 AI 助手的扩展（共约 90 万用户）把 ChatGPT 和 DeepSeek 的对话以及所有打开的标签页复制到了服务器。能读取每个页面的扩展，也能读取你的聊天、邮件和银行页面。",
     "an.ext.todo": "不认识这个扩展，或者不再使用它？请在浏览器中删除它。如果要保留，请查清是谁做的，并看一下评价。",
     "an.ext.deep": "AgathOS 只读取 Chrome、Edge 和 Brave（所有用户配置）中每个扩展的 manifest.json，其他什么都不读。它列出与 AI 有关或可以访问 AI 聊天网站的扩展。当扩展可以读取所有网站（<all_urls> 或类似 https://*/* 的模式）时，会作为注意事项。它还会显示更广的权限，如 tabs、history、cookies、webRequest 和 clipboardRead。它看不到扩展实际做了什么，只能看到它被允许做什么。更新后权限发生变化会再次提醒。",
+    "tab.backup": "备份",
+    "backup.empty": "没有需要检查的工作文件夹。",
+    "backup.none": "{n} 个工作文件夹没有备份的迹象：{folders}",
+    "backup.cloud": "{folder} 位于云文件夹中（{service}）",
+    "backup.git": "{folder}：全部 {repos} 个 Git 项目在服务器上都有副本",
+    "backup.timeMachine": "Time Machine 已经做了备份",
+    "backup.flagged": "你的工作文件夹（{folders}）没有备份的迹象。如果代理在那里删除文件，它们可能永远消失。",
+    "fix.backup": "开启备份：Windows 上用“文件历史记录”或 OneDrive 文件夹备份，Mac 上用 Time Machine 或 iCloud。代码请推送到 GitHub 之类的 Git 远程仓库。如果你已经有 AgathOS 看不到的备份（其他程序或外置硬盘），请点“不再提醒”。",
+    "set.backupCheck": "备份检查：工作文件夹没有副本时发出警告",
+    "set.backupCheckDesc": "查找你的工作文件夹有副本的迹象：云文件夹（OneDrive、Dropbox、Google Drive、iCloud）、带远程仓库的 Git 项目，或 Time Machine。它从不读取你的文件。",
+    "an.backup.simple": "AgathOS 没有发现你的工作文件夹有第二份副本的迹象。如果代理或蠕虫把它们删除，它们可能永远消失。",
+    "an.backup.maybe": "你可能有 AgathOS 看不到的备份，比如文件历史记录、外置硬盘或其他备份程序。那么这是误报，可以忽略。",
+    "an.backup.risk": "在没有任何保护的情况下运行的代理，已经清空过整个文件夹和硬盘，有些蠕虫在无法登录时会删除主目录。没有第二份副本，这些数据就无法找回。",
+    "an.backup.todo": "现在就开启备份：Windows 上用“文件历史记录”或 OneDrive 文件夹备份，Mac 上用 Time Machine 或 iCloud。代码请推送到 GitHub 或其他 Git 远程仓库。",
+    "an.backup.deep": "AgathOS 会检查它监视的每个文件夹（下载文件夹除外）是否有副本的迹象：文件夹位于 OneDrive、Dropbox、Google Drive 或 iCloud 文件夹内，或其中每个 Git 项目都有远程仓库，或在 Mac 上 Time Machine 已做了备份。它不会查看文件历史记录或其他备份程序，也看不到外置硬盘，所以只会说“没有备份的迹象”。它不读取文件内容，也不改动任何东西。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);
