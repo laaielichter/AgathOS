@@ -106,7 +106,7 @@
     const s = snap;
     const cnt = (list) => (list || []).filter((x) => x.state !== 'calm');
     const b = {
-      agents: cnt(s && s.agents), mcp: cnt(s && s.mcp), files: cnt(s && [...s.files, ...s.autostarts, ...(s.extensions || []), ...(s.backups || [])]), models: cnt(s && s.models), network: cnt(s && s.ports),
+      agents: cnt(s && s.agents), mcp: cnt(s && s.mcp), files: cnt(s && [...s.files, ...s.autostarts, ...(s.extensions || []), ...(s.backups || []), ...(s.packages || [])]), models: cnt(s && s.models), network: cnt(s && s.ports),
     };
     const shown = mode === 'simple' ? SIMPLE_VIEWS : VIEWS;
     fill($('nav'), shown.map((v) => {
@@ -378,6 +378,7 @@
     port: ['port.open'],
     worm: ['worm.lanSweep', 'worm.portScan'],
     ext: ['ext.aiTheme', 'ext.aiChats', 'ext.allSites', 'ext.reads', 'ext.flagged'],
+    pkg: ['pkg.ioc', 'pkg.fetchRun', 'pkg.stealer', 'pkg.selfSpread', 'pkg.obfuscated', 'pkg.wfDump', 'pkg.wfSend', 'pkg.flagged'],
     backup: ['backup.none', 'backup.flagged', 'backup.cloud', 'backup.git', 'backup.timeMachine'],
     destroy: ['proc.destructive', 'mass.delete'],
     persist: ['proc.persistence', 'auto.hiddenScript', 'auto.tempPath', 'auto.scriptRuntime', 'auto.added'],
@@ -401,10 +402,10 @@
   // How sure AgathOS is per kind of finding, and the matching public technique IDs
   // (MITRE ATT&CK for classic attacks, MITRE ATLAS for attacks on AI systems).
   const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', tamper: 'high',
-    inject: 'medium', worm: 'medium', ext: 'medium', backup: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
+    inject: 'medium', worm: 'medium', ext: 'medium', pkg: 'medium', backup: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
     chain: 'low', odd: 'low', generic: 'low' };
   const MITRE = { hidden: 'AML.T0051.001 · T1027', inject: 'AML.T0051.001', secret: 'T1552.001', mcpBad: 'T1195.002 · AML.T0053', supply: 'T1195.002 · T1195.001',
-    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', model: 'AML.T0010.003 · T1204.002', port: 'T1133', worm: 'T1046 · T1210 · T1570', ext: 'T1176', backup: 'T1485 · M1053',
+    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', model: 'AML.T0010.003 · T1204.002', port: 'T1133', worm: 'T1046 · T1210 · T1570', ext: 'T1176', pkg: 'T1195.002 · T1059 · T1552.001', backup: 'T1485 · M1053',
     destroy: 'T1485', persist: 'T1053.005 · T1543.001 · T1547.001', cred: 'T1555 · T1552', secOff: 'T1562.001 · T1562.004', exfil: 'AML.T0057 · T1567 · T1041',
     chain: 'AML.T0051 · T1059', tamper: 'T1070' };
   let anLevel = null;     // 'simple' | 'deep'; follows the view until you pick a tab
@@ -428,6 +429,9 @@
     } else if (kind === 'port') {
       const p = snap.ports.find((x) => String(x.port) === id);
       if (p) { add(t('ev.address'), `${p.addr}:${p.port}`); add(t('ev.process'), `${p.process || '?'} · PID ${p.pid}`); }
+    } else if (kind === 'pkg') {
+      const p = (snap.packages || []).find((e) => e.id === id);
+      if (p) { add(t('ev.file'), p.path); }
     } else if (kind === 'backup') {
       const b = (snap.backups || []).find((e) => e.id === id);
       if (b) add(t('ev.file'), b.names);
@@ -782,7 +786,7 @@
     const all = snap ? snap.files : [];
     const groups = {
       instruction: all.filter((f) => f.kind === 'instruction'), skill: all.filter((f) => f.kind === 'skill'),
-      config: all.filter((f) => f.kind === 'config'), env: all.filter((f) => f.kind === 'env'), auto: snap ? snap.autostarts : [], ext: snap ? (snap.extensions || []) : [], backup: snap ? (snap.backups || []) : [],
+      config: all.filter((f) => f.kind === 'config'), env: all.filter((f) => f.kind === 'env'), auto: snap ? snap.autostarts : [], ext: snap ? (snap.extensions || []) : [], pkg: snap ? (snap.packages || []) : [], backup: snap ? (snap.backups || []) : [],
     };
     fill($('fileTabs'), Object.entries(groups).map(([k, list]) => {
       const bad = list.filter((x) => x.state !== 'calm');
@@ -793,6 +797,14 @@
       rowList($('fileRows'), groups.auto, {
         name: (a) => a.name, where: (a) => a.command.slice(0, 200), step: (a) => stepBy([`auto:${a.id}`, `manual:${a.id}`]), key: (a) => `auto:${a.id}`,
         actions: (a) => (a.state !== 'calm' ? [btn(t('btn.ignore'), () => run(A.trust({ type: 'auto', id: a.id })))] : []),
+      });
+      return;
+    }
+    if (fileTab === 'pkg') {
+      rowList($('fileRows'), groups.pkg, {
+        empty: t('pkg.empty'),
+        name: (p) => p.name, where: (p) => p.short || p.path, step: (p) => stepBy([`manual:pkg:${p.id}`]), key: (p) => `pkg:${p.id}`,
+        actions: (p) => [btn(t('btn.open'), () => A.reveal(p.path)), p.state !== 'calm' ? btn(t('btn.how'), () => modal(t('btn.how'), t('fix.pkg'))) : null],
       });
       return;
     }
@@ -941,6 +953,7 @@
         setRow(t('set.autoFreeze'), sw(s.autoFreezeOnMassDelete, () => save({ autoFreezeOnMassDelete: !s.autoFreezeOnMassDelete }))),
         setRow(t('set.threshold'), num(s.massDeleteThreshold, 10, 1000, 'massDeleteThreshold', t('set.files10s')), null, 'adv'),
         setRow(t('set.portCheck'), sw(s.portCheck, () => save({ portCheck: !s.portCheck })), null, 'adv'),
+        setRow(t('set.pkgCheck'), sw(s.pkgCheck !== false, () => save({ pkgCheck: s.pkgCheck === false })), t('set.pkgCheckDesc')),
         setRow(t('set.backupCheck'), sw(s.backupCheck !== false, () => save({ backupCheck: s.backupCheck === false })), t('set.backupCheckDesc')),
         setRow(t('set.wormWatch'), sw(s.wormWatch !== false, () => save({ wormWatch: s.wormWatch === false })), t('set.wormWatchDesc')),
         setRow(t('set.dlGuard'), sw(s.downloadGuard !== false, () => save({ downloadGuard: s.downloadGuard === false })), t('set.dlGuardDesc')),
