@@ -123,6 +123,46 @@ async function until(fn, ms, every = 1500) {
     await page.evaluate(() => window.agathos.liveWatch(false, 0));
     check(live >= 2, 'the live view sends updates', live);
 
+    // The tray line "Check for updates" sends the window a message. The window asks GitHub and shows the answer.
+    // GitHub may be out of reach here, or answer "newest version": either way a window with an answer must come up.
+    await app.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].webContents.send('agathos:navigate', 'updatecheck'); });
+    const answer = await until(() => page.evaluate(() => {
+      const d = document.getElementById('updDlg');
+      return d.open && document.getElementById('updWait').hidden && document.querySelectorAll('#updActions button').length > 0 ? document.getElementById('updBody').textContent : null;
+    }), 45000, 1000);
+    check(!!answer, 'the tray line "Check for updates" opens a window with an answer', answer);
+    await page.evaluate(() => document.getElementById('updDlg').close());
+
+    // The update window with a new version. A second window without the program behind it shows the demo data of the page
+    // (a new version is on offer there): Settings > Check now has to show the version with the button to install it.
+    await app.evaluate(({ BrowserWindow, app: a }) => {
+      const w = new BrowserWindow({ show: false, width: 1100, height: 760, webPreferences: { sandbox: true, contextIsolation: true } });
+      w.loadFile(`${a.getAppPath()}/src/index.html`, { hash: 'update' });
+    });
+    const demo = await until(() => app.windows().find((p) => /#update/.test(p.url())), 20000, 500);
+    if (!demo) check(false, 'the demo window of the page opened');
+    else {
+      watch(demo);
+      await demo.waitForLoadState('load');
+      await sleep(1500);
+      const banner = await demo.evaluate(() => { const b = document.getElementById('updBanner'); return !b.hidden && b.querySelectorAll('button').length === 2; });
+      check(banner, 'a new version shows the banner with its two buttons');
+      await demo.evaluate(() => { [...document.querySelectorAll('.nav-item')].pop().click(); });
+      await sleep(600);
+      await demo.evaluate(() => { const rows = [...document.querySelectorAll('.set')]; const r = rows.find((x) => x.querySelector('button') && /Check now/.test(x.textContent)); r.querySelector('button').click(); });
+      const offer = await until(() => demo.evaluate(() => {
+        const d = document.getElementById('updDlg');
+        const b = document.querySelectorAll('#updActions button');
+        return d.open && b.length === 2 && document.querySelector('#updActions .btn-primary') && /0\.5\.1/.test(document.getElementById('updTitle').textContent) ? b.length : null;
+      }), 10000, 500);
+      check(!!offer, 'Settings > Check now shows the new version with the button to install it');
+      await demo.evaluate(() => document.querySelector('#updActions .btn-primary').click());
+      await sleep(500);
+      const busy = await demo.evaluate(() => ({ bar: !document.getElementById('updWait').hidden, buttons: document.querySelectorAll('#updActions button').length }));
+      check(busy.bar && busy.buttons === 0, 'installing shows a moving bar and no buttons', busy);
+      await app.evaluate(({ BrowserWindow }) => { for (const w of BrowserWindow.getAllWindows()) if (/#update/.test(w.webContents.getURL())) w.destroy(); });
+    }
+
     // A window that was closed comes back (tray "Open", Dock icon, second start).
     await page.evaluate(() => window.agathos.settings({ realtime: false }));
     await app.evaluate(({ BrowserWindow }) => { for (const w of BrowserWindow.getAllWindows()) w.close(); });

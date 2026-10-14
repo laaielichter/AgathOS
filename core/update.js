@@ -107,15 +107,28 @@ function calmMoment(s) {
   return !s.runningAgents && !s.scanning && !s.windowInUse && !s.paused;
 }
 
+// Can this app put the new version on by itself? Only the installed Windows app can, and only when
+// GitHub publishes a SHA-256 checksum for the installer. Anything else opens the download page.
+function canSelfInstall(info, platform = process.platform, packaged = false) {
+  if (platform !== 'win32' || !packaged || !info || info.status !== 'newer') return false;
+  const asset = (info.assets || []).find((a) => /^AgathOS-Setup-.*\.exe$/i.test(a.name));
+  return !!asset && /^sha256:[a-f0-9]{64}$/i.test(asset.digest || '');
+}
+
+// A look that failed (offline, GitHub busy) must not wipe out an update that was found before.
+function keepKnown(prev, fresh) {
+  if (fresh && fresh.status === 'unreachable' && prev && prev.status === 'newer' && prev.current === fresh.current) return prev;
+  return fresh;
+}
+
 // What to do with a new version: 'skip' (not for this app, setting or version),
 // 'wait' (try again in RETRY_MS) or 'go' (tell the user quietly, then install).
 function autoDecision({ platform, packaged, autoUpdate, info, failedVersion, calm }) {
   if (platform !== 'win32' || !packaged || autoUpdate === false) return 'skip';
   if (!info || info.status !== 'newer' || info.version === failedVersion) return 'skip';
-  const asset = (info.assets || []).find((a) => /^AgathOS-Setup-.*\.exe$/i.test(a.name));
   // Without a published SHA-256 checksum nothing runs by itself; the download page stays a manual step.
-  if (!asset || !/^sha256:[a-f0-9]{64}$/i.test(asset.digest || '')) return 'skip';
+  if (!canSelfInstall(info, platform, packaged)) return 'skip';
   return calm ? 'go' : 'wait';
 }
 
-module.exports = { check, install, cmp, calmMoment, autoDecision, RETRY_MS, REPO, CURRENT };
+module.exports = { check, install, cmp, calmMoment, autoDecision, canSelfInstall, keepKnown, RETRY_MS, REPO, CURRENT };

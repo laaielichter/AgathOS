@@ -401,6 +401,12 @@
     "live.chartAria": "Hoạt động mỗi giây trong vài phút qua",
     "live.perMin": "Các con số cho thấy phút vừa qua.",
     "card.cloudNote": "Chủ yếu chạy trên máy tính đám mây của riêng nó. AgathOS chỉ thấy những gì xảy ra trên máy này: ứng dụng, lưu lượng mạng của nó và các tệp nó chạm vào ở đây.",
+
+    "tray.update": "Kiểm tra bản cập nhật…",
+    "upd.popupSelf": "AgathOS tải bản mới, kiểm tra tệp rồi tự khởi động lại. Cài đặt và nhật ký của bạn được giữ nguyên.",
+    "upd.popupPage": "Trang tải xuống sẽ mở trong trình duyệt. Hãy tải bản mới ở đó và cài đè lên bản hiện tại.",
+    "set.updatesAutoDesc": "Mỗi ngày lúc 23:00 theo giờ Hà Lan. Nếu lúc đó máy tắt, sẽ kiểm tra ngay khi máy bật lại.",
+    "upd.notice": "AgathOS {v} đã sẵn sàng. Nhấp để cập nhật.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.vi, d);

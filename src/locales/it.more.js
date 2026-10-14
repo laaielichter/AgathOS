@@ -401,6 +401,12 @@
     "live.chartAria": "Attività al secondo negli ultimi minuti",
     "live.perMin": "I numeri mostrano l’ultimo minuto.",
     "card.cloudNote": "Funziona soprattutto sul proprio computer nel cloud. AgathOS vede solo ciò che succede su questo computer: l’app, il suo traffico di rete e i file che tocca qui.",
+
+    "tray.update": "Cerca aggiornamenti…",
+    "upd.popupSelf": "AgathOS scarica la nuova versione, controlla il file e si riavvia da solo. Impostazioni e registro restano come sono.",
+    "upd.popupPage": "La pagina di download si apre nel browser. Scarica lì la nuova versione e installala sopra questa.",
+    "set.updatesAutoDesc": "Ogni giorno alle 23:00, ora dei Paesi Bassi. Se il computer era spento, appena viene riacceso.",
+    "upd.notice": "AgathOS {v} è disponibile. Clicca per aggiornare.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.it, d);

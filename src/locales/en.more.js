@@ -343,6 +343,12 @@
     "live.chartAria": "Activity per second over the last few minutes",
     "live.perMin": "The numbers show the last minute.",
     "card.cloudNote": "Works mostly on its own cloud computer. AgathOS only sees what happens on this computer: the app, its network traffic and the files it touches here.",
+
+    "tray.update": "Check for updates…",
+    "upd.popupSelf": "AgathOS downloads the new version, checks the file and restarts by itself. Your settings and log stay as they are.",
+    "upd.popupPage": "The download page opens in your browser. Download the new version there and install it over this one.",
+    "set.updatesAutoDesc": "Every day at 23:00 Dutch time. If the computer was off then, right after it is on again.",
+    "upd.notice": "AgathOS {v} is available. Click to update.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);
