@@ -1,7 +1,7 @@
 'use strict';
 // AgathOS - macOS. The same watchers as on Windows, built on the tools every Mac has:
 //   ps         process list with parent, start time, path and command line
-//   lsof       open TCP ports and connections per process
+//   netstat    open TCP ports and connections per process (lsof is the way back when netstat does not say which process)
 //   SIGSTOP    freeze (SIGCONT resumes); SIGTERM/SIGKILL to stop
 //   launchd    LaunchAgents and LaunchDaemons (autostart), launchctl to turn them off
 //   codesign   who signed a program
@@ -72,14 +72,55 @@ function splitAddr(s) {
   if (!m) return { a: '', p: 0 };
   return { a: m[1] === '*' ? '0.0.0.0' : m[1], p: m[2] === '*' ? 0 : +m[2] };
 }
+
+// netstat writes an address as host.port ("192.168.1.5.443", "::1.631", "*.22") and "*.*" for nothing.
+function splitNetstatAddr(s) {
+  const t = String(s);
+  const i = t.lastIndexOf('.');
+  if (i < 0) return { a: '', p: 0 };
+  const host = t.slice(0, i).replace(/%.*$/, '');
+  const port = t.slice(i + 1);
+  return { a: host === '*' || host === '' ? '0.0.0.0' : host, p: port === '*' ? 0 : +port || 0 };
+}
+const NS_STATE = { LISTEN: 'Listen', ESTABLISHED: 'Established', SYN_SENT: 'SynSent' };
+// "netstat -anv -p tcp" names the process of every socket: as "name:pid" in one column (newer macOS), or as "pid epid" in two (older).
+const NS_NEW = /^(tcp\S*)\s+\d+\s+\d+\s+(\S+)\s+(\S+)\s+([A-Z][A-Z_0-9]*)\s+\d+\s+\d+\s+\d+\s+\d+\s+(.*?):(\d+)\s+[0-9a-f]{5}\s+[0-9a-f]{8}\b/i;
+const NS_OLD = /^(tcp\S*)\s+\d+\s+\d+\s+(\S+)\s+(\S+)\s+([A-Z][A-Z_0-9]*)\s+\d+\s+\d+\s+(\d+)\s+(\d+)\s+[0-9a-f]{5}\s+[0-9a-f]{8}\b/i;
+// Gives the rows { la, lp, ra, rp, state, pid, n } for listeners, open connections and attempts. Other states are left out.
+function parseNetstat(text) {
+  const rows = [];
+  let mode = null;
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (/^Proto\b/.test(line)) { mode = /process:pid/.test(line) ? 'new' : /\bpid\b/.test(line) ? 'old' : null; continue; }
+    if (!mode || !/^tcp/.test(line)) continue;
+    const m = (mode === 'new' ? NS_NEW : NS_OLD).exec(line);
+    if (!m) continue;
+    const state = NS_STATE[m[4].toUpperCase()];
+    if (!state) continue;
+    const l = splitNetstatAddr(m[2]);
+    const r = splitNetstatAddr(m[3]);
+    const pid = mode === 'new' ? +m[6] : +m[5];
+    rows.push({ la: l.a, lp: l.p, ra: r.a, rp: r.p, state, pid, n: mode === 'new' ? m[5] : '' });
+  }
+  return rows;
+}
+async function netstatRows() {
+  const r = await run('/usr/sbin/netstat', ['-anv', '-p', 'tcp'], 8000);
+  return r.ok ? parseNetstat(r.out) : [];
+}
 async function connections() {
   if (!IS_MAC) return [];
+  const rows = await netstatRows();
+  if (rows.length) return rows.filter((x) => x.state === 'Listen' || x.state === 'Established');
   const r = await run('/usr/sbin/lsof', ['-nP', '-iTCP', '-sTCP:LISTEN,ESTABLISHED', '-F', 'pcnT'], 12000);
   return parseLsof(r.out);
 }
 // Outgoing connections and attempts (SYN_SENT) for the worm watch.
 async function attempts() {
   if (!IS_MAC) return [];
+  const rows = await netstatRows();
+  if (rows.length) return rows.filter((x) => x.state === 'SynSent' || x.state === 'Established');
   const r = await run('/usr/sbin/lsof', ['-nP', '-iTCP', '-sTCP:SYN_SENT,ESTABLISHED', '-F', 'pcnT'], 6000);
   return parseLsof(r.out, true).filter((x) => x.state !== 'Listen');
 }
@@ -217,4 +258,4 @@ function shellExports(names) {
   return vals;
 }
 
-module.exports = { IS_MAC, fixPath, listProcesses, parsePs, parseLsof, connections, attempts, suspend, resume, kill, autostarts, launchAgentEnabled, signature, shellExports, SHELL_RC, splitAddr };
+module.exports = { IS_MAC, fixPath, listProcesses, parsePs, parseLsof, parseNetstat, splitNetstatAddr, connections, attempts, suspend, resume, kill, autostarts, launchAgentEnabled, signature, shellExports, SHELL_RC, splitAddr };

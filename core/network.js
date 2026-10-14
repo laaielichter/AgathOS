@@ -3,6 +3,7 @@
 const U = require('./util');
 const C = require('./catalog');
 const mac = require('./mac');
+const native = require('./winnative');
 
 const PS_CONN = `Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Listen' -or $_.State -eq 'Established' } |
   ForEach-Object { [pscustomobject]@{ la=$_.LocalAddress; lp=$_.LocalPort; ra=$_.RemoteAddress; rp=$_.RemotePort; s="$($_.State)"; p=$_.OwningProcess } } | ConvertTo-Json -Compress`;
@@ -10,6 +11,9 @@ const PS_CONN = `Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Obje
 async function connections() {
   if (U.IS_MAC) return mac.connections();
   if (!U.IS_WIN) return [];
+  // Windows is asked directly (a few milliseconds); the PowerShell commands below are the way back when that is not possible.
+  const direct = await native.tcp();
+  if (direct) return listenAndEstablished(direct);
   let rows = await U.ps.json(PS_CONN, 15000);
   if (rows.length) return rows.map((r) => ({ la: r.la, lp: r.lp, ra: r.ra, rp: r.rp, state: r.s, pid: r.p }));
   // Fallback: netstat works everywhere.
@@ -32,9 +36,17 @@ const PS_ATTEMPTS = `Get-NetTCPConnection -State SynSent,Established -ErrorActio
   Where-Object { $_.RemoteAddress -match '^(10\\.|192\\.168\\.|172\\.(1[6-9]|2\\d|3[01])\\.|169\\.254\\.)' } |
   ForEach-Object { [pscustomobject]@{ ra=$_.RemoteAddress; rp=$_.RemotePort; s="$($_.State)"; p=$_.OwningProcess } } | ConvertTo-Json -Compress`;
 
+const HOME_NET = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/;
+// The rows of the TCP table that the program uses: listeners and open connections.
+const listenAndEstablished = (rows) => rows.filter((r) => r.state === 'Listen' || r.state === 'Established').map((r) => ({ la: r.la, lp: r.lp, ra: r.ra, rp: r.rp, state: r.state, pid: r.pid }));
+// The same table for the worm watch: attempts and open connections to the home network only.
+const toHomeNetwork = (rows) => rows.filter((r) => (r.state === 'SynSent' || r.state === 'Established') && HOME_NET.test(r.ra)).map((r) => ({ ra: r.ra, rp: r.rp, state: r.state, pid: r.pid }));
+
 async function attempts() {
   if (U.IS_MAC) return mac.attempts();
   if (!U.IS_WIN) return [];
+  const direct = await native.tcp();
+  if (direct) return toHomeNetwork(direct);
   const rows = await U.ps.json(PS_ATTEMPTS, 8000);
   return rows.map((r) => ({ ra: r.ra, rp: r.rp, state: r.s, pid: r.p }));
 }
@@ -73,4 +85,4 @@ function aiListeners(conns, procName) {
   return [...byPort.values()];
 }
 
-module.exports = { connections, attempts, aiListeners, isLoopback, isAny, isPrivate };
+module.exports = { connections, attempts, aiListeners, isLoopback, isAny, isPrivate, listenAndEstablished, toHomeNetwork };
