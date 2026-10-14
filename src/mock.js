@@ -59,9 +59,35 @@
       { path: 'C:\\Users\\you\\.ollama\\models\\blobs\\sha256-6a0746a1ec1a', short: '~\\.ollama\\models\\blobs\\sha256-6a0746a1ec1a', format: 'GGUF', size: 4920000000, state: 'calm', reasons: [R('model.safe', { format: 'GGUF' }, 'calm')] },
       { path: 'C:\\Users\\you\\models\\sdxl.safetensors', short: '~\\models\\sdxl.safetensors', format: 'safetensors', size: 6940000000, state: 'calm', reasons: [R('model.safe', { format: 'safetensors' }, 'calm')] },
     ],
+    links: [
+      { id: 'l1', kind: 'endpoint', app: 'Project repo-from-internet', label: 'api.openai.com.evil.example/v1', key: 'env.OPENAI_BASE_URL', url: 'https://api.openai.com.evil.example/v1', host: 'api.openai.com.evil.example', via: 'config',
+        file: 'C:\\Users\\you\\Downloads\\repo-from-internet\\.claude\\settings.json', short: '~\\Downloads\\repo-from-internet\\.claude\\settings.json', scope: 'agentdir', cls: 'lookalike', provider: '', state: 'alarm',
+        reasons: [R('link.look.embed', { host: 'api.openai.com.evil.example', brand: 'OpenAI' }, 'alarm')], hash: 'h1', approved: false, approvable: false, dupOf: null, watcher: 'keys' },
+      { id: 'l2', kind: 'endpoint', app: 'Project game', label: 'a1b2c3.ngrok-free.app/v1', key: 'ANTHROPIC_BASE_URL', url: 'https://a1b2c3.ngrok-free.app/v1', host: 'a1b2c3.ngrok-free.app', via: 'config',
+        file: 'C:\\Users\\you\\projects\\game\\.env', short: '~\\projects\\game\\.env', scope: 'project', cls: 'tunnel', provider: '', state: 'alarm',
+        reasons: [R('link.tunnel', { host: 'a1b2c3.ngrok-free.app' }, 'alarm')], hash: 'h2', approved: false, approvable: true, dupOf: null, watcher: 'keys' },
+      { id: 'l3', kind: 'endpoint', app: 'Codex CLI', label: 'llm.company.example/v1', key: 'model_providers.work.base_url', url: 'https://llm.company.example/v1', host: 'llm.company.example', via: 'config',
+        file: 'C:\\Users\\you\\.codex\\config.toml', short: '~\\.codex\\config.toml', scope: 'global', cls: 'unknown', provider: '', state: 'watch',
+        reasons: [R('link.unknown', { host: 'llm.company.example' }, 'watch')], hash: 'h3', approved: false, approvable: true, dupOf: null, watcher: 'keys' },
+      { id: 'l4', kind: 'agent', app: 'Claude Code', label: 'Codex CLI', key: 'claude-code>codex', url: '', host: '', via: 'process', file: '', short: '', scope: 'global', cls: 'agent', provider: '', state: 'watch',
+        reasons: [R('link.agentChain', { from: 'Claude Code', to: 'Codex CLI' }, 'watch')], hash: 'claude-code>codex', approved: false, approvable: true, dupOf: null, watcher: 'gate' },
+      { id: 'l5', kind: 'endpoint', app: 'Claude Code', label: 'api.anthropic.com', key: 'env.ANTHROPIC_BASE_URL', url: 'https://api.anthropic.com', host: 'api.anthropic.com', via: 'config',
+        file: 'C:\\Users\\you\\.claude\\settings.json', short: '~\\.claude\\settings.json', scope: 'global', cls: 'official', provider: 'Anthropic', state: 'calm',
+        reasons: [R('link.official', { provider: 'Anthropic' }, 'calm')], hash: 'h5', approved: false, approvable: true, dupOf: null, watcher: 'keys' },
+      { id: 'l6', kind: 'endpoint', app: 'Cline', label: 'localhost:11434/v1', key: 'cline.ollamaBaseUrl', url: 'http://localhost:11434/v1', host: 'localhost', via: 'config',
+        file: 'C:\\Users\\you\\AppData\\Roaming\\Code\\User\\settings.json', short: '~\\AppData\\Roaming\\Code\\User\\settings.json', scope: 'global', cls: 'local', provider: '', state: 'calm',
+        reasons: [R('link.local', {}, 'calm')], hash: 'h6', approved: false, approvable: true, dupOf: null, watcher: 'keys' },
+      { id: 'l7', kind: 'default', app: 'Grok Build', label: 'xAI', key: 'grok', url: '', host: '', via: 'builtin', file: '', short: '', scope: 'global', cls: 'official', provider: 'xAI', state: 'calm',
+        reasons: [R('link.default', { provider: 'xAI' }, 'calm')], hash: 'xAI', approved: false, approvable: false, dupOf: 'default' },
+      { id: 'l8', kind: 'mcp', app: 'Claude Code', label: 'github', key: 'github', url: '', host: '', via: 'mcp', file: '', short: '', scope: 'global', cls: 'stdio', provider: '', state: 'calm',
+        reasons: [R('mcp.ok', {}, 'calm')], hash: 'm3', approved: true, approvable: false, dupOf: 'mcp', mcpId: 'm3' },
+      { id: 'l9', kind: 'server', app: 'Ollama', label: '0.0.0.0:11434', key: '11434', url: '', host: '0.0.0.0', via: 'port', file: '', short: '', scope: 'global', cls: 'exposed', provider: '', state: 'alarm',
+        reasons: [R('port.open', { product: 'Ollama', addr: '0.0.0.0', port: 11434 }, 'alarm')], hash: 'p1', approved: false, approvable: false, dupOf: 'port' },
+    ],
     ports: [{ id: 'p1', port: 11434, addr: '0.0.0.0', pid: 5512, process: 'ollama.exe', product: 'Ollama', exposed: true, state: 'alarm', reasons: [R('port.open', { product: 'Ollama', addr: '0.0.0.0', port: 11434 }, 'alarm')] }],
     autostarts: [{ id: 'a1', kind: 'task', name: 'NodeUpdater', command: 'node C:\\Users\\you\\AppData\\Local\\Temp\\upd.js', where: '\\', state: 'watch', reasons: [R('auto.tempPath', {}, 'watch'), R('auto.scriptRuntime', {}, 'watch')] }],
     events: [
+      { hash: 'e0', ts: m(1), key: 'link.added', sev: 'alarm', watcher: 'keys', params: { app: 'Project repo-from-internet', label: 'api.openai.com.evil.example/v1', host: 'api.openai.com.evil.example' }, target: { type: 'link', id: 'l1' } },
       { hash: 'e1', ts: m(1), key: 'intent.chain', sev: 'watch', watcher: 'proc', agentId: 'claude-code', params: { chain: 'exfil', next: 'EXFIL' } },
       { hash: 'e2', ts: m(3), key: 'port.open', sev: 'alarm', watcher: 'net', params: { product: 'Ollama', addr: '0.0.0.0', port: 11434 }, target: { type: 'port', port: 11434 } },
       { hash: 'e3', ts: m(9), key: 'mcp.defChanged', sev: 'alarm', watcher: 'gate', params: { name: 'filesystem', app: 'Claude Desktop' }, target: { type: 'mcp', id: 'm2' } },
@@ -86,12 +112,15 @@
     S('manual:f3', 'manual', 'watch', '.env', snap.files[2].short, snap.files[2].reasons, 'guide', 'guide', ['guide']),
     S('manual:flag:claude-code', 'manual', 'watch', 'Claude Code', '--dangerously-skip-permissions', [R('flag.dangerous', { flag: '--dangerously-skip-permissions' }, 'watch')], 'guide', 'guide', ['guide']),
   ];
+  const LS = (l) => S(`manual:link:${l.id}`, 'manual', l.state, `${l.app} → ${l.label}`, l.short || '', l.reasons, 'guide', 'guide', ['guide'], { type: 'link', id: l.id });
+  snap.fixPlan.push(...snap.links.filter((l) => !l.dupOf && l.state !== 'calm').map(LS));
   snap.remedies = [];
   snap.dismissed = [];
   // #update shows a new version (the Mac demo opens the download page instead of installing); #updatefail also makes the installing fail.
   const demoNewer = { status: 'newer', current: '0.5.0', version: '0.5.1', self: snap.platform !== 'darwin' };
   snap.update = /update/.test(location.hash) ? demoNewer : null;
   for (const st of snap.fixPlan) st.tkey = st.id.replace(/^(hidden|inject|manual):(flag:)?/, (m0, kind, flag) => (flag ? 'agent:' : kind === 'manual' || kind === 'hidden' || kind === 'inject' ? 'file:' : ''));
+  for (const st of snap.fixPlan) if (/^manual:link:/.test(st.id)) st.tkey = st.id.replace('manual:', '');
   let fixSnap = { ...snap.settings.fix };
   const fixBefore = () => fixSnap;
   const emit = () => listeners.forEach((f) => f(JSON.parse(JSON.stringify(snap))));
@@ -144,7 +173,12 @@
     resume: (id) => { const a = snap.agents.find((x) => x.id === id); if (a) a.paused = false; emit(); return ok(); },
     kill: () => ok(), block: () => ok(), lockdown: (on) => { snap.lockdown = on; emit(); return ok(); },
     localOnly: () => { snap.ports[0].exposed = false; snap.ports[0].state = 'calm'; snap.ports[0].reasons = [R('port.local', { product: 'Ollama', port: 11434 }, 'calm')]; snap.watchers[2].state = 'calm'; snap.watchers[2].issues = 0; emit(); return ok(); },
-    trust: (tg) => { if (tg && tg.type === 'mcp') { const x = snap.mcp.find((y) => y.id === tg.id); if (x) { x.approved = true; x.state = 'calm'; x.reasons = [R('mcp.ok', {}, 'calm')]; } } emit(); return ok(); },
+    trust: (tg) => {
+      if (tg && tg.type === 'link') {
+        const l = snap.links.find((y) => y.id === tg.id);
+        if (l && l.approvable) { l.approved = true; l.state = 'calm'; l.reasons = [R('link.trusted', {}, 'calm')]; snap.fixPlan = snap.fixPlan.filter((x) => x.tkey !== `link:${l.id}`); }
+      }
+      if (tg && tg.type === 'mcp') { const x = snap.mcp.find((y) => y.id === tg.id); if (x) { x.approved = true; x.state = 'calm'; x.reasons = [R('mcp.ok', {}, 'calm')]; } } emit(); return ok(); },
     settings: (p) => { const f = p.fix; Object.assign(snap.settings, p); if (f) snap.settings.fix = { ...fixBefore(), ...f }; fixSnap = { ...snap.settings.fix }; emit(); return ok(); },
     fixPlan: () => Promise.resolve(snap.fixPlan),
     fixApply: async (picks) => {

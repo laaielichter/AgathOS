@@ -224,7 +224,7 @@ button, input, select { font: inherit; color: inherit; }
 .row { display: grid; grid-template-columns: 14px minmax(200px, 300px) 1fr 80px; gap: 16px; align-items: start; padding: 14px 18px; border-top: 1px solid var(--line); }
 .row:first-child { border-top: 0; }
 .row-name { font-weight: 600; overflow-wrap: anywhere; }
-.row-where { color: var(--dim); font-size: 13px; overflow-wrap: anywhere; }
+.row-where { color: var(--dim); font-size: 13px; overflow-wrap: anywhere; unicode-bidi: plaintext; }
 .row-why { font-size: 13px; display: grid; gap: 3px; overflow-wrap: anywhere; }
 .row-why .r.watch { color: var(--watch); }
 .row-why .r.alarm { color: var(--alarm); }
@@ -262,6 +262,8 @@ button, input, select { font: inherit; color: inherit; }
 .actions-list .d { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .domains { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; color: var(--dim); }
+.chip.bad { color: var(--alarm); border-color: color-mix(in srgb, var(--alarm) 50%, transparent); }
+.link-sum { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
 
 /* trifecta: three lights joined by a line that turns red when all three are on */
 .trifecta { display: flex; align-items: center; flex-wrap: wrap; row-gap: 6px; }

@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
   wormWatch: true,            // warn when a program sweeps the home network (worm behaviour)
   backupCheck: true,          // warn when work folders show no sign of a second copy
   pkgCheck: true,             // look for package and workflow worms (install scripts, GitHub workflows) in your projects
+  linkCheck: true,            // AI links: check where every program sends its prompts (addresses, tunnels, look-alike names, agents that start agents)
   hotkey: true,               // Ctrl+Alt+Shift+P pauses all agents
   judge: { enabled: false, model: 'qwen2.5:7b' },
   learning: true,
@@ -76,6 +77,7 @@ class Store {
     s.baselines = s.baselines || {};   // agentKind -> baseline object
     s.baselineVersions = s.baselineVersions || [];
     s.seen = s.seen || {};             // inventory fingerprints from the last scan
+    s.chains = s.chains || {};         // 'from>to' -> { from, to, first, last, n }: an agent that started another agent
     s.firstRun = s.firstRun !== false;
     s.updateSlot = Number.isFinite(s.updateSlot) ? s.updateSlot : 0;                      // the last 23:00 (Dutch time) that got its update check
     s.updateAnnounced = typeof s.updateAnnounced === 'string' ? s.updateAnnounced.slice(0, 40) : '';   // the version we showed a pop-up for

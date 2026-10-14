@@ -23,6 +23,7 @@ const { classifyTool } = require('./classify');
 const remedy = require('./remedy');
 const { DownloadGuard } = require('./dlguard');
 const { LanScanWatch } = require('./worm');
+const links = require('./links');
 
 const WATCHERS = ['gate', 'files', 'net', 'keys', 'traps', 'proc'];
 const RANK = { calm: 0, watch: 1, alarm: 2 };
@@ -40,7 +41,7 @@ class Engine {
     this.appDir = appDir;
     this.onUpdate = onUpdate || (() => {});
     this.notify = notify || (() => {});
-    this.inventory = { agents: [], mcp: [], files: [], configs: [], models: [], ports: [], autostarts: [], extensions: [], backups: [], packages: [] };
+    this.inventory = { agents: [], mcp: [], files: [], configs: [], models: [], ports: [], autostarts: [], extensions: [], backups: [], packages: [], links: [] };
     this.scanning = null;
     this.lastScan = store.state.lastScan || 0;
     this.paused = new Map();        // agentId -> { pids, at }
@@ -78,6 +79,7 @@ class Engine {
       threshold: store.settings.massDeleteThreshold,
       onConfigChange: (f) => this.configChanged(f),
       onInstructionChange: (f) => this.instructionChanged(f),
+      onLinkFile: (f) => this.linkFileChanged(f),
       onMassDelete: (d) => this.massDelete(d).catch(() => {}),
       onActivity: (dir, deleted) => this.tel.file(U.shortPath(dir), deleted),
     });
@@ -149,7 +151,8 @@ class Engine {
   }
 
   configPaths() {
-    return [...C.MCP_CONFIGS.map((c) => U.expand(c.path)), ...this.inventory.configs.map((c) => c.path).filter((p) => !p.startsWith('Environment'))];
+    const linkFiles = this.store.settings.linkCheck !== false ? links.globalFiles().map((f) => f.path) : [];
+    return [...new Set([...C.MCP_CONFIGS.map((c) => U.expand(c.path)), ...this.inventory.configs.map((c) => c.path).filter((p) => !p.startsWith('Environment')), ...linkFiles])];
   }
 
   // ---------- full scan ----------
@@ -162,6 +165,7 @@ class Engine {
         this._files = files;
         this.inventory.mcp = inv.scanMcp(this.store, files.projectMcp);
         this.inventory.configs = [...inv.scanGlobalConfigs(), ...files.configs, ...(await inv.envBaseUrls())];
+        try { this._env = this.store.settings.linkCheck !== false ? await inv.envEndpoints() : []; } catch (_) { this._env = []; }
         try { this.inventory.extensions = extensions.scan(); } catch (_) { this.inventory.extensions = []; }
         try { this.inventory.packages = this.store.settings.pkgCheck !== false ? await supply.scan(this.store.settings.roots) : []; } catch (_) { this.inventory.packages = []; }
         try { this.inventory.backups = this.store.settings.backupCheck !== false ? await backup.check(this.store.settings) : []; } catch (_) { this.inventory.backups = []; }
@@ -190,6 +194,7 @@ class Engine {
         if (wait > 0) await new Promise((r) => setTimeout(r, wait));
         this.scanning.done++;
       }
+      this.refreshLinks();
       this.diffInventory(reason);
       this.lastScan = Date.now();
       this.store.state.lastScan = this.lastScan;
@@ -208,8 +213,85 @@ class Engine {
 
   counts() {
     const i = this.inventory;
-    const issues = [...i.mcp, ...i.files, ...i.configs, ...i.models, ...i.ports, ...i.autostarts, ...(i.extensions || []), ...(i.backups || []), ...(i.packages || [])].filter((x) => x.state !== 'calm').length;
-    return { agents: i.agents.length, mcp: i.mcp.length, files: i.files.length, models: i.models.length, issues };
+    const own = (i.links || []).filter((l) => !l.dupOf);
+    const issues = [...i.mcp, ...i.files, ...i.configs, ...i.models, ...i.ports, ...i.autostarts, ...(i.extensions || []), ...(i.backups || []), ...(i.packages || []), ...own].filter((x) => x.state !== 'calm').length;
+    return { agents: i.agents.length, mcp: i.mcp.length, files: i.files.length, models: i.models.length, links: (i.links || []).length, issues };
+  }
+
+  // ---------- AI links ----------
+  // Where does each program send its prompts? Built from the settings files, the variables, the MCP list, the open ports and the programs that started programs.
+  refreshLinks() {
+    if (this.store.settings.linkCheck === false) { this.inventory.links = []; return; }
+    try {
+      this.inventory.links = links.scan({ store: this.store, mcp: this.inventory.mcp, ports: this.inventory.ports, installed: this.inventory.agents,
+        files: this._files ? this._files.linkFiles || [] : [], env: this._env || [], chains: this.chainList() });
+    } catch (_) { this.inventory.links = []; }
+    this.absorbBaseUrl();
+  }
+
+  // The older "settings send traffic to ..." finding is now part of AI links, where you can also approve an address.
+  // It is dropped when the link list shows the same address, so nothing is counted twice.
+  absorbBaseUrl() {
+    const eps = this.inventory.links.filter((l) => l.kind === 'endpoint');
+    if (!eps.length) return;
+    const covered = (c, r) => {
+      const host = String(r.params && r.params.host || '').toLowerCase();
+      if (String(c.path).startsWith('Environment')) return eps.some((l) => l.via === 'env' && l.key === (r.params && r.params.v));
+      return eps.some((l) => l.host === host && String(l.file).toLowerCase() === String(c.path).toLowerCase());
+    };
+    this.inventory.configs = this.inventory.configs.map((c) => {
+      if (!c.reasons.some((r) => r.key === 'config.baseUrl' && covered(c, r))) return c;
+      const reasons = c.reasons.filter((r) => !(r.key === 'config.baseUrl' && covered(c, r)));
+      return reasons.length ? { ...c, reasons, state: reasons.some((r) => r.sev === 'alarm') ? 'alarm' : 'watch' } : null;
+    }).filter(Boolean);
+  }
+
+  chainList() {
+    const cut = Date.now() - 30 * 86400000;
+    return Object.values(this.store.state.chains || {}).filter((c) => c && c.last >= cut).sort((a, b) => b.last - a.last).slice(0, 50);
+  }
+
+  // A program that talks to an AI started another one (Claude Code starting Codex, say): written down, and shown until you say it is fine.
+  noteChain(from, to, initial) {
+    if (this.store.settings.linkCheck === false || from === to) return;
+    const chains = this.store.state.chains;
+    const k = `${from}>${to}`;
+    const now = Date.now();
+    if (chains[k]) { chains[k].last = now; chains[k].n++; return; }
+    chains[k] = { from, to, first: now, last: now, n: 1 };
+    const keys = Object.keys(chains);
+    if (keys.length > 60) delete chains[keys.sort((a, b) => chains[a].last - chains[b].last)[0]];
+    this.store.saveState();
+    this.refreshLinks();
+    const l = this.inventory.links.find((x) => x.id === links.idOf('agent', from, to));
+    if (initial || !l || l.state === 'calm') { this.changed(); return; }
+    const params = { from: this.agentName(from), to: this.agentName(to) };
+    this.event({ key: 'link.agentChain', sev: 'watch', watcher: 'gate', params, agentId: from, target: { type: 'link', id: l.id } });
+    this.intent.addSignal(from, { key: 'link.agentChain', params, sev: 'watch', points: 15 });
+    this.store.state.seen[`link:${l.id}`] = l.hash;
+  }
+
+  // The settings of a program or a project changed: look at the addresses again and report what is new or moved.
+  refreshLinksWithEvents() {
+    if (this.store.settings.linkCheck === false) return;
+    const before = new Map(this.inventory.links.map((l) => [l.id, l.hash]));
+    this.refreshLinks();
+    for (const l of this.inventory.links) {
+      if (l.dupOf || before.get(l.id) === l.hash) continue;
+      this.store.state.seen[`link:${l.id}`] = l.hash;
+      if (l.state === 'calm') continue;
+      this.event({ key: before.has(l.id) ? 'link.moved' : 'link.added', sev: l.state, watcher: l.watcher || 'keys', params: { app: l.app, label: l.label, host: l.host }, target: { type: 'link', id: l.id } });
+    }
+    this.changed();
+  }
+
+  // A file in a project folder that can hold an address was created or changed (a repository was cloned, a settings file was edited).
+  linkFileChanged(file) {
+    if (this.store.settings.linkCheck === false || !links.PROJECT_FILE.test(file) || !U.exists(file)) return;
+    if (!this._files) this._files = { files: [], configs: [], projectMcp: [], linkFiles: [] };
+    const list = this._files.linkFiles || (this._files.linkFiles = []);
+    if (!list.some((x) => x.path.toLowerCase() === file.toLowerCase())) list.push({ path: file, app: `Project ${inv.projectName(file)}` });
+    this.refreshLinksWithEvents();
   }
 
   // New things since the previous scan become events (new agent, new MCP server, new autostart, changed files).
@@ -232,6 +314,10 @@ class Engine {
     for (const p of this.inventory.packages || []) note('pkg', p.id, p.hash, () => p.state !== 'calm' && this.event({ key: 'pkg.flagged', sev: p.state, watcher: 'gate', params: { name: p.name }, target: { type: 'pkg', id: p.id, path: p.path } }));
     for (const b of this.inventory.backups || []) note('backup', b.id, b.hash, () => b.state !== 'calm' && this.event({ key: 'backup.flagged', sev: 'watch', watcher: 'files', params: { folders: b.names }, target: { type: 'backup', id: b.id, path: b.path } }));
     for (const m of this.inventory.models) note('model', U.sha256(m.path).slice(0, 16), String(m.size), (how) => m.state === 'alarm' && this.event({ key: 'model.flagged', sev: 'alarm', watcher: 'files', params: { file: U.shortPath(m.path) } }));
+    for (const l of this.inventory.links || []) {
+      if (l.dupOf) continue;
+      note('link', l.id, l.hash, (how) => l.state !== 'calm' && this.event({ key: how === 'new' ? 'link.added' : 'link.moved', sev: l.state, watcher: l.watcher || 'keys', params: { app: l.app, label: l.label, host: l.host }, target: { type: 'link', id: l.id } }));
+    }
     for (const p of this.inventory.ports) note('port', p.id, p.exposed ? 'open' : 'local', (how) => p.exposed && this.event({ key: 'port.open', sev: 'alarm', watcher: 'net', params: { product: p.product, addr: p.addr, port: p.port }, target: { type: 'port', port: p.port } }));
     if (first) {
       const c = this.counts();
@@ -373,6 +459,13 @@ class Engine {
       this.domains.set(info.agent.id, dm);
       const isNew = !dm.has(e.name);
       if (isNew) this.tel.note('net', 'live.dns', { name: path.basename(String(e.image || '')) || String(e.pid), host: String(e.name).toLowerCase() });
+      // A name that pretends to be an AI provider, a tunnel or a collecting site: the agent is talking to the wrong party.
+      const bad = isNew && this.store.settings.linkCheck !== false ? links.liveHost(String(e.name).toLowerCase()) : null;
+      if (bad) {
+        const params = { agent: info.agent.name, ...bad.params };
+        this.event({ key: bad.key, sev: bad.sev, watcher: 'net', params, agentId: info.agent.id, pid: e.pid });
+        this.intent.addSignal(info.agent.id, { key: bad.key, params, sev: bad.sev, points: bad.sev === 'alarm' ? 45 : 25 });
+      }
       dm.set(String(e.name).toLowerCase(), e.ts || Date.now());
       if (isNew && root !== e.pid && !AI_API.test(e.name)) {
         this.intent.addAction({ agentId: info.agent.id, action: 'NET_NEW', source: 'dns', detail: `${path.basename(String(e.image || '')) || e.pid} → ${e.name}`, pid: e.pid });
@@ -406,6 +499,7 @@ class Engine {
       if (!initial) this.event({ key: 'flag.dangerous', sev: 'watch', watcher: 'proc', params: { agent: a.name, flag: info.flags.join(' ') }, agentId: a.id, pid: info.proc.p });
     }
     if (!initial && a.root) this.event({ key: 'agent.started', sev: 'calm', watcher: 'proc', params: { name: a.name, pid: info.proc.p }, agentId: a.id });
+    if (a.root && info.spawnedBy) this.noteChain(info.spawnedBy.agentId, a.id, initial);
     if (this.pausedAll && a.root && !initial) this.freezeAgent(a.id, 'auto');
     this.loadSignature(info.proc.e);
     this.changed();
@@ -427,7 +521,10 @@ class Engine {
     }
     const t = U.readText(file) || '';
     const r = inv.scanConfigText(file, t, path.basename(file));
-    if (r) this.event({ key: r.reasons[0].key, sev: r.state, watcher: 'gate', params: { ...r.reasons[0].params, file: U.shortPath(file) } });
+    // Addresses are reported by AI links (a bit further down), with a proper judgement; here only the other risky settings.
+    const rs = r ? (this.store.settings.linkCheck !== false ? r.reasons.filter((x) => x.key !== 'config.baseUrl') : r.reasons) : [];
+    if (rs.length) this.event({ key: rs[0].key, sev: rs.some((x) => x.sev === 'alarm') ? 'alarm' : 'watch', watcher: 'gate', params: { ...rs[0].params, file: U.shortPath(file) } });
+    this.refreshLinksWithEvents();
     // An agent changing agent settings is a classic hijack step.
     for (const ra of this.procs.runningAgents()) this.intent.addAction({ agentId: ra.agent.id, action: 'MCP_CONFIG_CHANGE', source: 'files', detail: U.shortPath(file), historic: running.length === 0 });
     this.changed();
@@ -609,6 +706,13 @@ class Engine {
     } else if (target.type === 'agent') {
       this.intent.approve(target.id);
       this.event({ key: 'agent.approved', sev: 'calm', watcher: 'proc', params: { name: this.agentName(target.id) }, agentId: target.id });
+    } else if (target.type === 'link') {
+      const l = this.inventory.links.find((x) => x.id === target.id);
+      if (l && l.approvable) {
+        this.store.state.approvals[l.id] = { hash: l.hash, at: Date.now() };
+        this.refreshLinks();
+        this.event({ key: 'link.trusted', sev: 'calm', watcher: l.watcher || 'keys', params: { app: l.app, label: l.label }, target: { type: 'link', id: l.id } });
+      }
     } else if (target.type === 'file' || target.type === 'auto') {
       this.store.state.ignored[target.id] = Date.now();
       for (const list of [this.inventory.files, this.inventory.autostarts]) {
@@ -738,10 +842,10 @@ class Engine {
     const recent = (w, ms = 3600000) => this.store.events.filter((e) => e.watcher === w && e.sev !== 'calm' && Date.now() - e.ts < ms);
     const issues = (list) => list.filter((x) => x.state !== 'calm');
     const st = {
-      gate: { list: [...i.mcp, ...(i.extensions || []), ...(i.packages || []), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.autoApprove'))] },
+      gate: { list: [...i.mcp, ...(i.extensions || []), ...(i.packages || []), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.autoApprove')), ...(i.links || []).filter((l) => l.watcher === 'gate')] },
       files: { list: [...i.models, ...(i.backups || [])], ev: recent('files') },
       net: { list: [...i.ports], ev: recent('net') },
-      keys: { list: [...i.files.filter((f) => f.kind === 'env'), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.baseUrl'))] },
+      keys: { list: [...i.files.filter((f) => f.kind === 'env'), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.baseUrl')), ...(i.links || []).filter((l) => l.watcher === 'keys')] },
       traps: { list: [...i.files.filter((f) => f.kind !== 'env')] },
       proc: { list: [...agents.map((a) => ({ state: a.state })), ...i.autostarts], ev: recent('proc', 1800000) },
     };
@@ -770,6 +874,7 @@ class Engine {
       extensions: (i.extensions || []).map((x) => mark(`ext:${x.id}`, x)),
       backups: (i.backups || []).map((b) => mark(`backup:${b.id}`, b)),
       packages: (i.packages || []).map((p) => mark(`pkg:${p.id}`, p)),
+      links: (i.links || []).map((l) => (l.dupOf ? l : mark(`link:${l.id}`, l))),
     };
     return { agents, view };
   }
@@ -796,6 +901,7 @@ class Engine {
       extensions: i.extensions.map((x) => ({ ...x, short: U.shortPath(x.path) })),
       backups: i.backups.map((b) => ({ ...b, short: U.shortPath(b.path) })),
       packages: (i.packages || []).map((p) => ({ ...p, short: U.shortPath(p.path) })),
+      links: (i.links || []).map((l) => ({ ...l, short: l.file && l.file !== 'Environment' ? U.shortPath(l.file) : '' })),
       events: this.store.events.slice(-250).reverse(),
       settings: this.store.settings,
       chainOk: this.store.chainOk,

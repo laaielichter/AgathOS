@@ -143,6 +143,20 @@ or similar named after a tool that is not installed with a file (Claude Code, Op
 Codex CLI) is an alarm, a zip of it is a warning. Fake download pages for these tools spread
 password stealers this way. It only warns; it never opens or runs the file.
 
+**AI shield (AI links).** Attacks on AI often start at the place where a program sends its prompts
+and its key. AgathOS reads the settings files and variables that hold such addresses (the global
+files of Claude Code, Codex, Gemini, Cursor, VS Code and others, `.env` files, and the agent
+folders and settings in the projects it watches) and judges every address by its name alone:
+the official address of a known provider is calm; this PC or a server on your own network is calm
+once you approve it; a hosting platform or an unknown server needs attention until you approve it;
+a look-alike of a provider (`api.openai.com.evil.example`, a Cyrillic letter in the name, a typo),
+a tunnel (ngrok, trycloudflare) and a catch-all site such as webhook.site are danger. A key inside
+the address, a server open to the whole network, an approved address that later points somewhere
+else, an MCP server that is itself an agent, and one agent starting another are shown too. Live
+connections to a look-alike, a tunnel or a catch-all are noticed as well. Nothing is run and
+nothing is sent; it cannot see where a program really connects, only where its settings say it
+will. Look-alikes and catch-alls cannot be approved. Switch it off in Settings.
+
 **Calm notifications.** No notification circus: by default only danger pops up (attention goes to
 the log and the tray dot), what happens at the same time comes as one notification, the same
 finding is not repeated within 6 hours, at most 3 per hour, and nothing pops up while the

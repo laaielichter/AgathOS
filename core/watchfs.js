@@ -5,13 +5,15 @@
 const fs = require('fs');
 const path = require('path');
 const U = require('./util');
+const links = require('./links');
 
 class FileWatch {
-  constructor({ onConfigChange, onMassDelete, onInstructionChange, onActivity, threshold = 40, windowMs = 10000 }) {
+  constructor({ onConfigChange, onMassDelete, onInstructionChange, onLinkFile, onActivity, threshold = 40, windowMs = 10000 }) {
     this.watchers = [];
     this.onConfigChange = onConfigChange;
     this.onMassDelete = onMassDelete;
     this.onInstructionChange = onInstructionChange;
+    this.onLinkFile = onLinkFile;             // a file that can hold the address of a language model (.env, .claude/settings.json ...)
     this.onActivity = onActivity;           // (folder, deleted) for the live chart; names only
     this.threshold = threshold;
     this.windowMs = windowMs;
@@ -57,6 +59,7 @@ class FileWatch {
           if (/^(claude|agents|gemini)\.md$|^\.cursorrules$|^\.mcp\.json$|^skill\.md$/.test(base)) {
             this.debounced(full, () => this.onInstructionChange && this.onInstructionChange(full));
           }
+          if (this.onLinkFile && links.PROJECT_FILE.test(full)) this.debounced('link:' + full, () => this.onLinkFile(full));
           const gone = type === 'rename' && !U.exists(full);
           if (this.onActivity) { try { this.onActivity(/[\\/]/.test(rel) ? path.join(root, rel.split(/[\\/]/)[0]) : root, gone); } catch (_) {} }
           if (gone) this.countDelete(root, rel);

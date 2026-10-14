@@ -95,7 +95,7 @@ class ProcessWatch {
     }
     if (agent && agent.root) {
       const flags = dangerousFlags(p.c);
-      const info = { agent, proc: p, flags, started: p.t || Date.now(), parent };
+      const info = { agent, proc: p, flags, started: p.t || Date.now(), parent, spawnedBy: this.spawnerOf(p, agent) };
       this.roots.set(p.p, info);
       this.agentOf.set(p.p, p.p);
       this.onAgentStart && this.onAgentStart(info, this.first);
@@ -124,6 +124,18 @@ class ProcessWatch {
       agentId: root ? root.agent.id : 'unknown', rootPid, pid: p.p, action, source: 'process',
       detail: cmd.slice(0, 300), sensitive: sensitivePath(cmd), ts: p.t || Date.now(),
     });
+  }
+
+  // The other agent whose process tree this program was started in (Claude Code starting Codex, an agent starting a CLI), or null.
+  spawnerOf(p, agent) {
+    let cur = this.parentOf(p);
+    for (let hops = 0; cur && hops < 12; hops++) {
+      const rp = this.agentOf.get(cur.p);
+      const r = rp !== undefined ? this.roots.get(rp) : null;
+      if (r) return r.agent.id !== agent.id ? { agentId: r.agent.id, pid: r.proc.p } : null;
+      cur = this.parentOf(cur);
+    }
+    return null;
   }
 
   checkLauncher(info) {

@@ -71,6 +71,7 @@ function targetKey(t) {
   if (t.type === 'ext') return `ext:${t.id}`;
   if (t.type === 'backup') return `backup:${t.id}`;
   if (t.type === 'pkg') return `pkg:${t.id}`;
+  if (t.type === 'link') return `link:${t.id}`;
   return null;
 }
 function isDismissed(state, key, reasons) {
@@ -142,6 +143,12 @@ function plan(engine, fix, minSev = 'watch') {
     if (p.state === 'calm') continue;
     add({ id: `manual:pkg:${p.id}`, cat: 'manual', sev: p.state, name: p.name, where: U.shortPath(p.path), reasons: p.reasons, target: { type: 'pkg', id: p.id } });
   }
+  // Where a program sends its prompts: AgathOS does not rewrite your settings; you approve the address or change it yourself.
+  for (const l of inv.links || []) {
+    if (l.dupOf || l.state === 'calm') continue;
+    add({ id: `manual:link:${l.id}`, cat: 'manual', sev: l.state, name: `${l.app} → ${l.label}`, where: l.file && l.file !== 'Environment' ? U.shortPath(l.file) : (l.file || ''),
+      reasons: l.reasons.filter((r) => r.sev !== 'calm'), target: { type: 'link', id: l.id } });
+  }
   // Browser extensions: AgathOS cannot remove them for you; you decide in the browser.
   for (const x of inv.extensions || []) {
     if (x.state === 'calm') continue;
@@ -175,6 +182,7 @@ function itemReasons(engine, key, agents) {
   if (kind === 'ext') { const x = (inv.extensions || []).find((e) => e.id === id); return x ? x.reasons : []; }
   if (kind === 'pkg') { const p = (inv.packages || []).find((e) => e.id === id); return p ? p.reasons : []; }
   if (kind === 'backup') { const b = (inv.backups || []).find((e) => e.id === id); return b ? b.reasons : []; }
+  if (kind === 'link') { const l = (inv.links || []).find((e) => e.id === id); return l ? l.reasons : []; }
   return [];
 }
 
