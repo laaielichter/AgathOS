@@ -23,14 +23,22 @@ try { ({ _electron: electron } = require('playwright-core')); } catch (_) {
   }
 }
 
+let failed = 0;
+const lines = [];
+const say = (s) => { lines.push(String(s)); console.log(s); };
+// In GitHub Actions the result is also written as an annotation, which can be read without the full log.
+const annotate = (level, title, text) => {
+  if (!process.env.GITHUB_ACTIONS) return;
+  const esc = String(text).slice(0, 6000).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+  console.log(`::${level} title=${title}::${esc}`);
+};
+
 const exe = process.argv[2];
-if (!exe) { console.error('usage: node test/smoke.js <program> [arguments]'); process.exit(2); }
+if (!exe) { annotate('error', 'Smoke test', 'no program to start was given'); console.error('usage: node test/smoke.js <program> [arguments]'); process.exit(2); }
 const extra = process.argv.slice(3);
 const want = require('../package.json').version;
 
-let failed = 0;
-const say = (s) => console.log(s);
-const check = (cond, name, detail) => { if (!cond) failed++; say(`${cond ? 'OK  ' : 'FAIL'} ${name}${!cond && detail !== undefined ? '  ' + JSON.stringify(detail) : ''}`); };
+const check =(cond, name, detail) => { if (!cond) failed++; say(`${cond ? 'OK  ' : 'FAIL'} ${name}${!cond && detail !== undefined ? '  ' + JSON.stringify(detail) : ''}`); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function until(fn, ms, every = 1500) {
@@ -71,6 +79,7 @@ async function until(fn, ms, every = 1500) {
     if (failed) { say('\n--- output of the app ---\n' + output.slice(-3000)); }
     try { fs.rmSync(root, { recursive: true, force: true }); } catch (_) { /* a locked file on Windows: leave it */ }
     say(`\nSMOKE ${failed ? 'FAILED (' + failed + ')' : 'PASSED'}`);
+    annotate(failed ? 'error' : 'notice', `Smoke test ${process.platform}`, lines.join('\n'));
     process.exit(failed ? 1 : 0);
   };
   const stop = setTimeout(() => { say('FAIL the whole check took longer than 5 minutes'); failed++; finish(); }, 5 * 60 * 1000);
@@ -139,4 +148,4 @@ async function until(fn, ms, every = 1500) {
   }
   clearTimeout(stop);
   await finish();
-})().catch((e) => { console.error('SMOKE ERROR', e); process.exit(2); });
+})().catch((e) => { annotate('error', 'Smoke test', 'SMOKE ERROR ' + (e && e.stack || e)); console.error('SMOKE ERROR', e); process.exit(2); });

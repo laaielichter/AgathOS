@@ -59,7 +59,11 @@ jobs:
       - name: Smoke test of the built app
         run: |
           npm install --no-save --no-audit --no-fund playwright-core@1.56.0
-          APP="$(find dist -maxdepth 4 -path '*mac-arm64*' -path '*Contents/MacOS/AgathOS' | head -1)"
+          APP="$(find dist -maxdepth 5 -path '*mac-arm64*' -path '*Contents/MacOS/AgathOS' | head -1)"
+          if [ -z "$APP" ]; then
+            echo "::error title=Smoke test::the built app was not found. dist holds: $(find dist -maxdepth 4 | head -40 | tr '\n' ' ')"
+            exit 1
+          fi
           echo "starting $APP"
           node test/smoke.js "$APP"
 
