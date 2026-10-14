@@ -249,6 +249,15 @@
     "set.quietTo": "bis",
     "notif.bundle": "{n} neue Meldungen",
     "notif.more": "In AgathOS warten weitere Meldungen. Schau rein, wenn es dir passt.",
+    "worm.lanSweep": "{process} hat innerhalb einer Minute bei {hosts} Geräten in deinem Netzwerk angeklopft (Ports {sample}). So sucht ein Wurm sein nächstes Opfer.",
+    "worm.portScan": "{process} hat innerhalb einer Minute {ports} verschiedene Ports auf {host} ausprobiert. So sucht ein Wurm einen Weg hinein.",
+    "set.wormWatch": "Wurm-Wächter: warnen, wenn ein Programm dein Netzwerk absucht",
+    "set.wormWatchDesc": "Prüft alle paar Sekunden, welche Programme bei vielen Geräten oder Ports in deinem Heimnetz anklopfen, etwa bei Kameras, Fernsehern und Routern.",
+    "an.worm.simple": "Ein Programm auf diesem Computer sucht dein Heimnetz nach Geräten ab, so wie ein Wurm es tut, bevor er sich ausbreitet.",
+    "an.worm.maybe": "Ein Programm hat in kurzer Zeit viele Geräte oder viele Ports eines Geräts kontaktiert. Das kann ein Netzwerkwerkzeug sein, das du selbst gestartet hast (wie nmap oder Fing), oder Schadsoftware oder ein abtrünniger Agent, der Kameras, Fernseher oder Router zum Einbrechen sucht.",
+    "an.worm.risk": "Ein Wurm, der ein schwaches Gerät findet, kann es übernehmen und sich von dort aus weiter ausbreiten, auf andere Geräte und in andere Haushalte. Smart-TVs, Kameras und Router können keinen Virenscanner ausführen und merken deshalb selten etwas.",
+    "an.worm.todo": "Hast du kein Netzwerkwerkzeug gestartet? Pausiere oder stoppe das Programm, prüfe, woher es kommt, und trenne diesen Computer vom Netzwerk, wenn du unsicher bist.",
+    "an.worm.deep": "AgathOS liest alle drei Sekunden die offenen und halboffenen TCP-Verbindungen pro Prozess (Get-NetTCPConnection unter Windows, lsof unter macOS, Sysmon-Ereignis 3 mit AgathOS Guard). Es zählt verschiedene Geräte und Ports auf privaten Adressen innerhalb einer Minute. 20 Geräte oder 15 Ports eines Geräts gelten als Absuchen. Bekannte Netzwerkwerkzeuge bekommen eine Warnung statt eines Alarms.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.de, d);

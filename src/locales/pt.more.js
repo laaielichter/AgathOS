@@ -249,6 +249,15 @@
     "set.quietTo": "às",
     "notif.bundle": "{n} avisos novos",
     "notif.more": "Há mais avisos esperando no AgathOS. Veja quando for melhor para você.",
+    "worm.lanSweep": "{process} bateu à porta de {hosts} dispositivos da sua rede em um minuto (portas {sample}). É assim que um worm procura a próxima vítima.",
+    "worm.portScan": "{process} tentou {ports} portas diferentes em {host} em um minuto. É assim que um worm procura um jeito de entrar.",
+    "set.wormWatch": "Vigia de worms: avisar quando um programa varre a sua rede",
+    "set.wormWatchDesc": "Verifica a cada poucos segundos quais programas batem em muitos dispositivos ou portas da sua rede doméstica, como câmeras, TVs e roteadores.",
+    "an.worm.simple": "Um programa neste computador está procurando dispositivos na sua rede doméstica, como um worm faz antes de se espalhar.",
+    "an.worm.maybe": "Um programa contatou muitos dispositivos, ou muitas portas de um só, em pouco tempo. Pode ser uma ferramenta de rede que você mesmo abriu (como nmap ou Fing), ou um malware ou agente descontrolado que procura câmeras, TVs ou roteadores para invadir.",
+    "an.worm.risk": "Um worm que encontra um dispositivo fraco pode assumir o controle e se espalhar a partir dele, para outros dispositivos e outras casas. TVs inteligentes, câmeras e roteadores não conseguem rodar um antivírus, então raramente percebem.",
+    "an.worm.todo": "Você não abriu nenhuma ferramenta de rede? Pause ou pare o programa, veja de onde ele veio e desconecte este computador da rede se estiver em dúvida.",
+    "an.worm.deep": "O AgathOS lê a cada três segundos as conexões TCP abertas e semiabertas de cada processo (Get-NetTCPConnection no Windows, lsof no macOS, evento 3 do Sysmon com o AgathOS Guard). Ele conta dispositivos e portas diferentes em endereços privados dentro de um minuto. 20 dispositivos ou 15 portas de um dispositivo contam como uma varredura. Ferramentas de rede conhecidas recebem um aviso em vez de um alarme.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pt, d);

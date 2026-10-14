@@ -249,6 +249,15 @@
     "set.quietTo": "到",
     "notif.bundle": "{n} 条新提醒",
     "notif.more": "AgathOS 中还有更多提醒，方便时再看。",
+    "worm.lanSweep": "{process} 在一分钟内敲了你网络里 {hosts} 台设备的门（端口 {sample}）。蠕虫就是这样寻找下一个目标的。",
+    "worm.portScan": "{process} 在一分钟内尝试了 {host} 上的 {ports} 个不同端口。蠕虫就是这样寻找入口的。",
+    "set.wormWatch": "蠕虫监视：当有程序扫描你的网络时发出警告",
+    "set.wormWatchDesc": "每隔几秒检查哪些程序在你的家庭网络中试探大量设备或端口，比如摄像头、电视和路由器。",
+    "an.worm.simple": "这台电脑上的一个程序正在搜索你家庭网络中的设备，就像蠕虫在扩散之前所做的那样。",
+    "an.worm.maybe": "一个程序在很短的时间内联系了很多设备，或同一设备的很多端口。这可能是你自己启动的网络工具（比如 nmap 或 Fing），也可能是在寻找摄像头、电视或路由器下手的恶意软件或失控的代理。",
+    "an.worm.risk": "蠕虫一旦找到薄弱的设备，就能接管它并从那里扩散到其他设备和其他家庭。智能电视、摄像头和路由器无法运行杀毒软件，所以很少发现问题。",
+    "an.worm.todo": "这不是你自己启动的网络工具？请暂停或停止该程序，查清它的来源；如果不确定，请让这台电脑断开网络。",
+    "an.worm.deep": "AgathOS 每三秒读取一次每个进程的打开和半打开的 TCP 连接（Windows 上用 Get-NetTCPConnection，macOS 上用 lsof，配合 AgathOS Guard 时用 Sysmon 事件 3）。它统计一分钟内私有地址上不同的设备和端口。20 台设备或同一设备的 15 个端口算作一次扫描。已知的网络工具只会收到警告，而不是警报。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);

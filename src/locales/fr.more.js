@@ -249,6 +249,15 @@
     "set.quietTo": "à",
     "notif.bundle": "{n} nouvelles alertes",
     "notif.more": "D’autres alertes vous attendent dans AgathOS. Regardez quand cela vous convient.",
+    "worm.lanSweep": "{process} a frappé à la porte de {hosts} appareils de ton réseau en une minute (ports {sample}). C’est ainsi qu’un ver cherche sa prochaine victime.",
+    "worm.portScan": "{process} a essayé {ports} ports différents sur {host} en une minute. C’est ainsi qu’un ver cherche une porte d’entrée.",
+    "set.wormWatch": "Veille anti-vers : prévenir quand un programme balaie ton réseau",
+    "set.wormWatchDesc": "Vérifie toutes les quelques secondes quels programmes frappent à beaucoup d’appareils ou de ports de ton réseau domestique, comme les caméras, les téléviseurs et les routeurs.",
+    "an.worm.simple": "Un programme de cet ordinateur cherche des appareils dans ton réseau domestique, comme le fait un ver avant de se propager.",
+    "an.worm.maybe": "Un programme a contacté en peu de temps beaucoup d’appareils, ou beaucoup de ports d’un seul appareil. Ce peut être un outil réseau que tu as lancé toi-même (comme nmap ou Fing), ou un logiciel malveillant ou un agent hors de contrôle qui cherche des caméras, des téléviseurs ou des routeurs à pirater.",
+    "an.worm.risk": "Un ver qui trouve un appareil fragile peut le prendre en main et se propager à partir de là, vers d’autres appareils et d’autres foyers. Les téléviseurs connectés, les caméras et les routeurs ne peuvent pas faire tourner d’antivirus, alors ils s’en aperçoivent rarement.",
+    "an.worm.todo": "Tu n’as pas lancé d’outil réseau ? Mets le programme en pause ou arrête-le, vérifie d’où il vient et déconnecte cet ordinateur du réseau si tu as un doute.",
+    "an.worm.deep": "AgathOS lit toutes les trois secondes les connexions TCP ouvertes et semi-ouvertes de chaque processus (Get-NetTCPConnection sous Windows, lsof sous macOS, événement Sysmon 3 avec AgathOS Guard). Il compte les appareils et ports différents sur des adresses privées en une minute. 20 appareils ou 15 ports d’un appareil comptent comme un balayage. Les outils réseau connus reçoivent un avertissement plutôt qu’une alarme.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.fr, d);
