@@ -187,6 +187,18 @@
   const fixBefore = () => fixSnap;
   const emit = () => listeners.forEach((f) => f(JSON.parse(JSON.stringify(snap))));
   const ok = (r = {}) => Promise.resolve({ ok: true, ...r });
+  // Keys of AI programs (Settings > Agent access): two invented keys, a few invented requests. A key made here is a made-up text.
+  const demoKeys = [
+    { id: 'a1b2c3d4', name: 'Claude Code', scopes: ['read', 'ask', 'report'], created: m(2880), lastUsed: m(14), calls: 52 },
+    { id: 'e5f6a7b8', name: 'Codex', scopes: ['read', 'ask', 'report'], created: m(60), lastUsed: 0, calls: 0 },
+  ];
+  const demoLog = [
+    { ts: m(60), who: 'window', id: 'e5f6a7b8', name: 'Codex', method: 'KEY', path: 'created', status: 200 },
+    { ts: m(44), who: 'agent', id: 'a1b2c3d4', name: 'Claude Code', method: 'POST', path: '/v1/check', status: 200, info: 'Bash > ask' },
+    { ts: m(31), who: 'agent', id: 'a1b2c3d4', name: 'Claude Code', method: 'POST', path: '/v1/check-text', status: 200, info: 'text 2210 > alarm' },
+    { ts: m(22), who: 'unknown', method: 'GET', path: '/v1/status', status: 401, n: 3 },
+    { ts: m(14), who: 'agent', id: 'a1b2c3d4', name: 'Claude Code', method: 'GET', path: '/v1/findings', status: 200 },
+  ];
   setInterval(() => { snap.heartbeat = Date.now(); emit(); }, 5000);
   // Live monitor demo: invented numbers, made once a second, only while the live panel asks for them.
   const liveCb = [];
@@ -280,6 +292,28 @@
       const sev = reasons.some((r) => r.sev === 'alarm') ? 'alarm' : reasons.length ? 'watch' : 'calm';
       return Promise.resolve({ sev, reasons, decoded, secrets: keys.map((k) => ({ kind: 'Anthropic', masked: k.slice(0, 6) + '…' + k.slice(-3) })), length: [...text].length, removed: [...text].length - [...clean].length, clean });
     },
+    agentTokens: () => Promise.resolve({
+      keys: demoKeys.map((k) => ({ ...k })), max: 20, port: 47612,
+      ownerFile: 'C:\\Users\\you\\AppData\\Roaming\\AgathOS\\data\\api-token.txt',
+      serverFile: 'C:\\Users\\you\\AppData\\Local\\Programs\\AgathOS\\resources\\app.asar.unpacked\\plugins\\agathos\\server.js',
+    }),
+    agentTokenCreate: (name) => {
+      const clean = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+      if (!clean) return Promise.resolve({ ok: false, error: 'name' });
+      if (demoKeys.length >= 20) return Promise.resolve({ ok: false, error: 'limit' });
+      const id = Math.random().toString(16).slice(2, 10).padEnd(8, '0');
+      demoKeys.push({ id, name: clean, scopes: ['read', 'ask', 'report'], created: Date.now(), lastUsed: 0, calls: 0 });
+      demoLog.push({ ts: Date.now(), who: 'window', id, name: clean, method: 'KEY', path: 'created', status: 200 });
+      return Promise.resolve({ ok: true, id, name: clean, token: 'agt_DEMO' + Math.random().toString(36).slice(2, 10) + 'XXXXXXXXXXXXXXXXXXXXXXXXXXXX'.slice(0, 22) });
+    },
+    agentTokenRevoke: (id) => {
+      const i = demoKeys.findIndex((k) => k.id === id);
+      if (i < 0) return Promise.resolve(false);
+      const [k] = demoKeys.splice(i, 1);
+      demoLog.push({ ts: Date.now(), who: 'window', id: k.id, name: k.name, method: 'KEY', path: 'revoked', status: 200 });
+      return Promise.resolve(true);
+    },
+    agentAudit: (n) => Promise.resolve(demoLog.slice(-(Number(n) || 40)).map((r) => ({ ...r }))),
     copyText: () => ok(), snooze: (w) => { snap.snoozeUntil = w === 'off' ? 0 : Date.now() + 3600000; emit(); return Promise.resolve(snap.snoozeUntil); },
     saveReport: () => ok(), checkUpdate: () => Promise.resolve(/update/.test(location.hash) ? demoNewer : { status: 'latest', current: '0.5.0', version: '0.5.0' }),
     installUpdate: () => (/updatefail/.test(location.hash) ? Promise.resolve({ ok: false, reason: 'checksum' }) : Promise.resolve(snap.platform === 'darwin' ? { ok: true, page: true } : { ok: true })),
