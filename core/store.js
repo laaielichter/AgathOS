@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS = {
   pkgCheck: true,             // look for package and workflow worms (install scripts, GitHub workflows) in your projects
   linkCheck: true,            // AI links: check where every program sends its prompts (addresses, tunnels, look-alike names, agents that start agents)
   boardCheck: true,           // message boards: look for places where agents read orders or hand over data (chat bots, webhooks, paste sites, open channels, agent networks)
+  xrayCheck: true,            // model X-ray: look inside model files (chat templates, tables, code that comes with a model), not only at the format
   hotkey: true,               // Ctrl+Alt+Shift+P pauses all agents
   judge: { enabled: false, model: 'qwen2.5:7b' },
   learning: true,

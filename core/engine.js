@@ -83,7 +83,7 @@ class Engine {
       onAction: (a) => { this.intent.addAction(a); this.liveAction(a); if (!a.historic) this.maybeJudge(a.agentId); },
     });
     this.worm = new LanScanWatch({ onAlert: (a) => this.wormAlert(a) });
-    this.downloads = new DownloadGuard({ onFinding: (f) => this.downloadFinding(f) });
+    this.downloads = new DownloadGuard({ onFinding: (f) => this.downloadFinding(f), xray: () => this.store.settings.xrayCheck !== false });
     this.files = new FileWatch({
       threshold: store.settings.massDeleteThreshold,
       onConfigChange: (f) => this.configChanged(f),
@@ -202,7 +202,7 @@ class Engine {
         this.inventory.autostarts = await inv.autostarts();
         for (const a of this.procs.runningAgents()) this.loadSignature(a.proc.e);
       }],
-      ['files', async () => { this.inventory.models = models.scanModelDirs(this.store.settings.modelDirs); }],
+      ['files', async () => { this.inventory.models = models.scanModelDirs(this.store.settings.modelDirs, { xray: this.store.settings.xrayCheck !== false }); }],
     ];
     this.scanning = { reason, watcher: steps[0][0], done: 0, total: steps.length };
     try {
@@ -442,7 +442,7 @@ class Engine {
     for (const x of this.inventory.extensions || []) note('ext', x.id, x.hash, () => x.state !== 'calm' && this.event({ key: 'ext.flagged', sev: 'watch', watcher: 'gate', params: { name: x.name, browser: x.browser }, target: { type: 'ext', id: x.id, path: x.path } }));
     for (const p of this.inventory.packages || []) note('pkg', p.id, p.hash, () => p.state !== 'calm' && this.event({ key: 'pkg.flagged', sev: p.state, watcher: 'gate', params: { name: p.name }, target: { type: 'pkg', id: p.id, path: p.path } }));
     for (const b of this.inventory.backups || []) note('backup', b.id, b.hash, () => b.state !== 'calm' && this.event({ key: 'backup.flagged', sev: 'watch', watcher: 'files', params: { folders: b.names }, target: { type: 'backup', id: b.id, path: b.path } }));
-    for (const m of this.inventory.models) note('model', U.sha256(m.path).slice(0, 16), String(m.size), (how) => m.state === 'alarm' && this.event({ key: 'model.flagged', sev: 'alarm', watcher: 'files', params: { file: U.shortPath(m.path) } }));
+    for (const m of this.inventory.models) note('model', U.sha256(m.path).slice(0, 16), `${m.size}|${(m.reasons || []).map((r) => r.key).join(',')}`, (how) => m.state === 'alarm' && this.event({ key: 'model.flagged', sev: 'alarm', watcher: 'files', params: { file: U.shortPath(m.path) } }));
     for (const l of this.inventory.links || []) {
       if (l.dupOf) continue;
       note('link', l.id, l.hash, (how) => l.state !== 'calm' && this.event(this.linkEvent(l, how === 'new' ? 'added' : 'moved')));
@@ -702,12 +702,12 @@ class Engine {
 
   // A new download that can run code or carries hidden instructions.
   downloadFinding(f) {
-    this.event({ key: f.key, sev: f.sev, watcher: f.key === 'dl.model' || f.key === 'dl.fakeInstaller' ? 'files' : 'traps', params: f.params, target: { type: 'download', path: f.path } });
+    this.event({ key: f.key, sev: f.sev, watcher: f.key === 'dl.model' || f.key === 'dl.xray' || f.key === 'dl.fakeInstaller' ? 'files' : 'traps', params: f.params, target: { type: 'download', path: f.path } });
     // A fake installer is only a warning: nothing was read, nothing to set aside by "Fix it".
     if (f.key === 'dl.fakeInstaller') { this.changed(true); return; }
     // Make it part of the inventory too, so "Fix it" can set it aside.
-    if (f.key === 'dl.model') {
-      const m = models.scanModel(f.path);
+    if (f.key === 'dl.model' || f.key === 'dl.xray') {
+      const m = models.scanModel(f.path, { xray: this.store.settings.xrayCheck !== false });
       if (m && !this.inventory.models.some((x) => x.path === f.path)) this.inventory.models.push(m);
     } else {
       const id = U.sha256(f.path.toLowerCase()).slice(0, 16);

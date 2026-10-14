@@ -1630,6 +1630,7 @@ const themeTests = () => {
   await linkTests(eng);
   await boardTests(eng);
   await guardTests(eng);
+  await require('./xray-tests')({ ok, tmp, eng });
   themeTests();
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
