@@ -209,6 +209,7 @@
     "set.dlGuardDesc": "Prüft neue Dateien in Downloads sofort: Modelle, die Code ausführen können, und Dateien mit versteckten Anweisungen.",
     "dl.model": "Neuer Download {file} ist ein Modell, das Code ausführen kann ({calls})",
     "dl.text": "Neuer Download {file} enthält versteckten Text oder Angriffstext",
+    "dl.fakeInstaller": "Neuer Download {file} gibt sich als Installationsdatei von {tool} aus. {tool} wird mit einem Befehl von der eigenen Website oder mit npm installiert, nicht mit so einer Datei. Öffne sie nicht, bevor du weißt, woher sie kommt.",
     "report.save": "Bericht speichern",
     "report.saved": "Bericht gespeichert",
     "report.title": "AgathOS-Sicherheitsbericht",

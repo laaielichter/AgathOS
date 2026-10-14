@@ -372,7 +372,9 @@ class Engine {
 
   // A new download that can run code or carries hidden instructions.
   downloadFinding(f) {
-    this.event({ key: f.key, sev: f.sev, watcher: f.key === 'dl.model' ? 'files' : 'traps', params: f.params, target: { type: 'download', path: f.path } });
+    this.event({ key: f.key, sev: f.sev, watcher: f.key === 'dl.model' || f.key === 'dl.fakeInstaller' ? 'files' : 'traps', params: f.params, target: { type: 'download', path: f.path } });
+    // A fake installer is only a warning: nothing was read, nothing to set aside by "Fix it".
+    if (f.key === 'dl.fakeInstaller') { this.changed(true); return; }
     // Make it part of the inventory too, so "Fix it" can set it aside.
     if (f.key === 'dl.model') {
       const m = models.scanModel(f.path);

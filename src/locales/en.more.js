@@ -209,6 +209,7 @@
     "set.dlGuardDesc": "Checks new files in Downloads right away: models that can run code and files with hidden instructions.",
     "dl.model": "New download {file} is a model that can run code ({calls})",
     "dl.text": "New download {file} contains hidden text or attack text",
+    "dl.fakeInstaller": "New download {file} pretends to be the installer of {tool}. {tool} is installed with a command from its own website or with npm, not with a file like this. Do not open it before you know where it came from.",
     "report.save": "Save report",
     "report.saved": "Report saved",
     "report.title": "AgathOS safety report",

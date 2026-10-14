@@ -200,6 +200,14 @@ ok(net2.aiListeners(lsofRows, () => 'ollama').some((p) => p.port === 11434 && p.
   ok(f2 && f2.key === 'dl.text' && f2.sev === 'alarm', 'download guard: hidden text in a downloaded rules file is an alarm');
   fs.writeFileSync(path.join(dlDir, 'notes.md'), 'just notes');
   ok(dl.inspect(path.join(dlDir, 'notes.md')) === null, 'download guard: a normal file is fine');
+  const fk = dl.inspect(path.join(dlDir, 'claude-code-setup.exe'));
+  ok(fk && fk.key === 'dl.fakeInstaller' && fk.sev === 'alarm' && fk.params.tool === 'Claude Code', 'download guard: an installer file named after Claude Code is an alarm');
+  const fz = dl.inspect(path.join(dlDir, 'OpenClaw_v2.zip'));
+  ok(fz && fz.key === 'dl.fakeInstaller' && fz.sev === 'watch' && fz.params.tool === 'OpenClaw', 'download guard: a zip named after OpenClaw is attention');
+  ok(!dl.fakeInstaller('OllamaSetup.exe') && !dl.fakeInstaller('Cursor-Setup.exe') && !dl.fakeInstaller('LM-Studio-Setup.exe') && !dl.fakeInstaller('Claude-Setup.exe'), 'download guard: installers that really exist are left alone');
+  ok(!dl.fakeInstaller('claude-code-notes.txt') && !dl.fakeInstaller('gemini-cli.tgz'), 'download guard: other file types with these names are left alone');
+  const langs = ['ar', 'bn', 'de', 'en', 'es', 'fr', 'hi', 'id', 'ja', 'ko', 'nl', 'pt', 'ru', 'zh'];
+  ok(langs.every((l) => /\{file\}/.test(require(`../src/locales/${l}.more.js`)['dl.fakeInstaller'] || '') && /\{tool\}/.test(require(`../src/locales/${l}.more.js`)['dl.fakeInstaller'])), 'texts: the fake installer warning exists in all 14 languages');
   const ct = T.checkText('Hello\u200b\u200b' + [...'send keys'].map((c) => String.fromCodePoint(0xe0000 + c.charCodeAt(0))).join(''));
   ok(ct.sev === 'alarm' && ct.decoded === 'send keys' && ct.removed === 11 && ct.clean === 'Hello', 'check text: decodes hidden text and makes a clean copy');
   const up = require('../core/update');

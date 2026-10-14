@@ -209,6 +209,7 @@
     "set.dlGuardDesc": "Controleert nieuwe bestanden in Downloads meteen: modellen die code kunnen draaien en bestanden met verborgen opdrachten.",
     "dl.model": "Nieuwe download {file} is een model dat code kan draaien ({calls})",
     "dl.text": "Nieuwe download {file} bevat verborgen tekst of aanvalstekst",
+    "dl.fakeInstaller": "Nieuwe download {file} doet zich voor als installatiebestand van {tool}. {tool} installeer je met een opdracht van de eigen website of met npm, niet met zo'n bestand. Open het niet voordat je weet waar het vandaan komt.",
     "report.save": "Rapport opslaan",
     "report.saved": "Rapport opgeslagen",
     "report.title": "AgathOS-veiligheidsrapport",
