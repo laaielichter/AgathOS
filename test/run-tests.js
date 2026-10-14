@@ -350,10 +350,34 @@ const supplyTests = async () => {
   ok(fz && fz.key === 'dl.fakeInstaller' && fz.sev === 'watch' && fz.params.tool === 'OpenClaw', 'download guard: a zip named after OpenClaw is attention');
   ok(!dl.fakeInstaller('OllamaSetup.exe') && !dl.fakeInstaller('Cursor-Setup.exe') && !dl.fakeInstaller('LM-Studio-Setup.exe') && !dl.fakeInstaller('Claude-Setup.exe'), 'download guard: installers that really exist are left alone');
   ok(!dl.fakeInstaller('claude-code-notes.txt') && !dl.fakeInstaller('gemini-cli.tgz'), 'download guard: other file types with these names are left alone');
-  const langs = ['ar', 'bn', 'de', 'en', 'es', 'fr', 'hi', 'id', 'ja', 'ko', 'nl', 'pt', 'ru', 'zh'];
+  const langs = ['ar', 'bn', 'de', 'en', 'es', 'fr', 'hi', 'id', 'it', 'ja', 'ko', 'nl', 'pl', 'pt', 'ru', 'th', 'tr', 'uk', 'vi', 'zh'];
   const enKeys = Object.keys(require('../src/locales/en.more.js'));
-  ok(langs.every((l) => { const d = require(`../src/locales/${l}.more.js`); return enKeys.every((k) => d[k]); }), 'texts: every language has every text of the English file (14 of 14)');
-  ok(langs.every((l) => /\{file\}/.test(require(`../src/locales/${l}.more.js`)['dl.fakeInstaller'] || '') && /\{tool\}/.test(require(`../src/locales/${l}.more.js`)['dl.fakeInstaller'])), 'texts: the fake installer warning exists in all 14 languages');
+  ok(langs.every((l) => { const d = require(`../src/locales/${l}.more.js`); return enKeys.every((k) => d[k]); }), 'texts: every language has every text of the English file (20 of 20)');
+  ok(langs.every((l) => /\{file\}/.test(require(`../src/locales/${l}.more.js`)['dl.fakeInstaller'] || '') && /\{tool\}/.test(require(`../src/locales/${l}.more.js`)['dl.fakeInstaller'])), 'texts: the fake installer warning exists in all 20 languages');
+  // All languages together: nothing missing, the same {placeholders} as English, no stray line breaks.
+  const I18 = require('../src/i18n.js');
+  const phs = (s) => (String(s).match(/\{[^}]*\}/g) || []).sort().join(',');
+  const enAll = I18.I18N.en;
+  const lacking = []; const wrongPh = []; const lineBreaks = [];
+  for (const l of I18.LANGS) {
+    const d = I18.I18N[l.code] || {};
+    for (const k of Object.keys(enAll)) {
+      if (typeof d[k] !== 'string' || !d[k].trim()) { lacking.push(`${l.code}:${k}`); continue; }
+      if (phs(d[k]) !== phs(enAll[k])) wrongPh.push(`${l.code}:${k}`);
+      if (/[\r\n]/.test(d[k]) && !/[\r\n]/.test(enAll[k])) lineBreaks.push(`${l.code}:${k}`);
+    }
+  }
+  ok(I18.LANGS.length === 20 && I18.LANGS.every((l) => I18.I18N[l.code]), 'texts: 20 languages are listed and loaded');
+  ok(lacking.length === 0, 'texts: no language lacks a text' + (lacking.length ? ' (' + lacking.slice(0, 4).join(', ') + ')' : ''));
+  ok(wrongPh.length === 0, 'texts: every text keeps the same {placeholders} as English' + (wrongPh.length ? ' (' + wrongPh.slice(0, 4).join(', ') + ')' : ''));
+  ok(lineBreaks.length === 0, 'texts: no text has a stray line break');
+  ok(I18.LANGS.every((l) => Array.isArray(I18.NUMBER_WORDS[l.code]) && I18.NUMBER_WORDS[l.code].length === 7), 'texts: every language has number words (or digits) for 0 to 6');
+  const inlineLangs = ['en', 'nl', 'de', 'fr', 'es', 'zh'];
+  const pageLoads = (f) => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
+    return I18.LANGS.every((l) => html.includes(`locales/${l.code}.more.js"`) && (inlineLangs.includes(l.code) || html.includes(`locales/${l.code}.js"`)));
+  };
+  ok(pageLoads('index.html') && pageLoads('mini.html'), 'texts: both windows load the text files of every language');
   const ct = T.checkText('Hello\u200b\u200b' + [...'send keys'].map((c) => String.fromCodePoint(0xe0000 + c.charCodeAt(0))).join(''));
   ok(ct.sev === 'alarm' && ct.decoded === 'send keys' && ct.removed === 11 && ct.clean === 'Hello', 'check text: decodes hidden text and makes a clean copy');
   const up = require('../core/update');
@@ -370,6 +394,7 @@ const supplyTests = async () => {
   const rep = require('../core/report');
   const html = rep.build({ watchers: [{ id: 'gate', state: 'alarm', issues: 1 }], fixPlan: [{ name: '<b>x</b>', sev: 'alarm', reasons: [{ key: 'mcp.malicious', params: { pkg: 'p' }, sev: 'alarm' }], cat: 'mcp', action: 'disable' }], agents: [], events: [] }, (k) => k, 'en');
   ok(/<html/.test(html) && /&lt;b&gt;x&lt;\/b&gt;/.test(html) && !/<script/i.test(html), 'report: one HTML page, names escaped, no scripts');
+  ok(I18.LANGS.every((l) => { const d = I18.I18N[l.code]; return rep.build({ watchers: [], fixPlan: [], agents: [], events: [] }, (k) => d[k] || k, l.code, 'ltr').includes(d['report.title']); }), 'report: every language builds a report with its own title');
 }
 
 // ---------- calm notifications ----------

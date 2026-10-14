@@ -41,7 +41,8 @@
     return t(key, p);
   }
   const numberWord = (n) => ((window.NUMBER_WORDS[lang] || window.NUMBER_WORDS.en)[n] || String(n));
-  const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  // toLocaleUpperCase keeps the Turkish dotted capital I ("iki" -> "İki").
+  const capital = (s) => { try { return s.charAt(0).toLocaleUpperCase(lang) + s.slice(1); } catch (_) { return s.charAt(0).toUpperCase() + s.slice(1); } };
   const pad = (n) => String(n).padStart(2, '0');
   const clock = (ts) => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   // Windows has AgathOS Guard (firewall, deep logging); a Mac uses its built-in tools only.

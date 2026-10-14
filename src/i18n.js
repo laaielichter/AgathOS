@@ -2,23 +2,28 @@
 // Works in the window (window.I18N) and in the main process (require).
 // Missing keys fall back to English.
 (function (root) {
-  // Native names. The top 10 world languages plus Dutch, German, Japanese and Korean.
+  // Native names. The top 10 world languages plus Dutch, German, Japanese and Korean,
+  // then Italian, Turkish, Polish, Vietnamese, Ukrainian and Thai.
   const LANGS = [
     { code: 'en', label: 'English' }, { code: 'zh', label: '中文' }, { code: 'hi', label: 'हिन्दी' },
     { code: 'es', label: 'Español' }, { code: 'ar', label: 'العربية', rtl: true }, { code: 'fr', label: 'Français' },
     { code: 'bn', label: 'বাংলা' }, { code: 'pt', label: 'Português' }, { code: 'ru', label: 'Русский' },
     { code: 'id', label: 'Bahasa Indonesia' }, { code: 'ja', label: '日本語' }, { code: 'ko', label: '한국어' },
-    { code: 'de', label: 'Deutsch' }, { code: 'nl', label: 'Nederlands' },
+    { code: 'de', label: 'Deutsch' }, { code: 'nl', label: 'Nederlands' }, { code: 'it', label: 'Italiano' },
+    { code: 'tr', label: 'Türkçe' }, { code: 'pl', label: 'Polski' }, { code: 'vi', label: 'Tiếng Việt' },
+    { code: 'uk', label: 'Українська' }, { code: 'th', label: 'ไทย' },
   ];
-  const LOCALE_FILES = ['hi', 'ar', 'bn', 'pt', 'ru', 'id', 'ja', 'ko'];
+  const LOCALE_FILES = ['hi', 'ar', 'bn', 'pt', 'ru', 'id', 'ja', 'ko', 'it', 'tr', 'pl', 'vi', 'uk', 'th'];
   const NUMBER_WORDS = {
     nl: ['nul', 'één', 'twee', 'drie', 'vier', 'vijf', 'zes'], en: ['zero', 'one', 'two', 'three', 'four', 'five', 'six'],
     de: ['null', 'ein', 'zwei', 'drei', 'vier', 'fünf', 'sechs'], fr: ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six'],
     es: ['cero', 'una', 'dos', 'tres', 'cuatro', 'cinco', 'seis'], zh: ['零', '一', '两', '三', '四', '五', '六'],
     pt: ['zero', 'uma', 'duas', 'três', 'quatro', 'cinco', 'seis'],
+    it: ['zero', 'uno', 'due', 'tre', 'quattro', 'cinque', 'sei'], tr: ['sıfır', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı'],
+    vi: ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu'],
   };
   // Languages where a digit reads better than a word (counters, grammar cases).
-  for (const c of ['hi', 'ar', 'bn', 'ru', 'id', 'ja', 'ko']) NUMBER_WORDS[c] = ['0', '1', '2', '3', '4', '5', '6'];
+  for (const c of ['hi', 'ar', 'bn', 'ru', 'id', 'ja', 'ko', 'pl', 'uk', 'th']) NUMBER_WORDS[c] = ['0', '1', '2', '3', '4', '5', '6'];
 
   const nl = {
     'pill.live': 'Live', 'pill.off': 'Niet live', 'pill.demo': 'Voorbeeld',
