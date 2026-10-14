@@ -272,6 +272,21 @@
     "an.ext.risk": "2026 kopierten zwei Erweiterungen, die sich als KI-Helfer ausgaben und zusammen etwa 900.000 Nutzer hatten, ChatGPT- und DeepSeek-Gespräche und alle offenen Tabs auf einen Server. Eine Erweiterung, die jede Seite lesen kann, kann auch deine Gespräche, deine Mails und deine Bankseiten lesen.",
     "an.ext.todo": "Kennst du diese Erweiterung nicht oder nutzt du sie nicht mehr? Entferne sie in deinem Browser. Behältst du sie, prüfe, wer sie gemacht hat, und sieh dir die Bewertungen an.",
     "an.ext.deep": "AgathOS liest die manifest.json jeder Erweiterung in Chrome, Edge und Brave (alle Profile) und sonst nichts. Es listet Erweiterungen mit KI-Bezug oder Zugriff auf KI-Chat-Seiten. Es gilt als Hinweis, wenn die Erweiterung alle Websites lesen darf (<all_urls> oder ein Muster wie https://*/*). Es zeigt auch weitergehende Rechte wie tabs, history, cookies, webRequest und clipboardRead. Es sieht nicht, was die Erweiterung wirklich tut, nur was sie darf. Eine Änderung der Rechte nach einem Update wird erneut gemeldet.",
+    "tab.backup": "Backup",
+    "backup.empty": "Keine Arbeitsordner zum Prüfen.",
+    "backup.none": "Kein Hinweis auf ein Backup für {n} Arbeitsordner: {folders}",
+    "backup.cloud": "{folder} liegt in einem Cloud-Ordner ({service})",
+    "backup.git": "{folder}: alle {repos} Git-Projekte haben eine Kopie auf einem Server",
+    "backup.timeMachine": "Time Machine hat ein Backup erstellt",
+    "backup.flagged": "Kein Hinweis auf ein Backup für deine Arbeitsordner ({folders}). Wenn ein Agent dort Dateien löscht, können sie für immer weg sein.",
+    "fix.backup": "Schalte ein Backup ein: Dateiversionsverlauf oder OneDrive-Ordnersicherung unter Windows, Time Machine oder iCloud auf dem Mac. Schiebe Code auf ein Git-Remote wie GitHub. Hast du schon ein Backup, das AgathOS nicht sehen kann (anderes Programm oder externe Festplatte)? Dann drücke auf Ignorieren.",
+    "set.backupCheck": "Backup-Prüfung: warnen, wenn Arbeitsordner keine Kopie haben",
+    "set.backupCheckDesc": "Sucht nach einem Hinweis auf eine Kopie deiner Arbeitsordner: ein Cloud-Ordner (OneDrive, Dropbox, Google Drive, iCloud), Git-Projekte mit Remote oder Time Machine. Deine Dateien liest es nie.",
+    "an.backup.simple": "AgathOS hat keinen Hinweis gefunden, dass deine Arbeitsordner eine zweite Kopie haben. Wenn ein Agent oder ein Wurm sie löscht, können sie für immer weg sein.",
+    "an.backup.maybe": "Vielleicht hast du ein Backup, das AgathOS nicht sehen kann, etwa den Dateiversionsverlauf, eine externe Festplatte oder ein anderes Backup-Programm. Dann ist das ein Fehlalarm und du kannst ihn verwerfen.",
+    "an.backup.risk": "Agenten, die ohne jede Sicherung laufen, haben schon ganze Ordner und Laufwerke gelöscht, und manche Würmer löschen den Home-Ordner, wenn sie sich nicht anmelden können. Ohne zweite Kopie sind diese Daten nicht zurückzuholen.",
+    "an.backup.todo": "Schalte jetzt ein Backup ein: Dateiversionsverlauf oder OneDrive-Ordnersicherung unter Windows, Time Machine oder iCloud auf dem Mac. Schiebe Code zu GitHub oder einem anderen Git-Remote.",
+    "an.backup.deep": "AgathOS prüft jeden überwachten Ordner (außer Downloads) auf einen Hinweis auf eine Kopie: Der Ordner liegt in einem OneDrive-, Dropbox-, Google-Drive- oder iCloud-Ordner, oder jedes Git-Projekt darin hat ein Remote, oder auf dem Mac hat Time Machine ein Backup erstellt. Es sieht nicht in den Dateiversionsverlauf oder andere Backup-Programme und kann keine externen Festplatten sehen, deshalb sagt es nur „kein Hinweis auf ein Backup“. Es liest keine Dateiinhalte und ändert nichts.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.de, d);

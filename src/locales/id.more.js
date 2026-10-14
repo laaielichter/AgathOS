@@ -272,6 +272,21 @@
     "an.ext.risk": "Pada 2026, dua ekstensi yang menyamar sebagai asisten AI, dengan sekitar 900.000 pengguna, menyalin obrolan ChatGPT dan DeepSeek serta semua tab yang terbuka ke sebuah server. Ekstensi yang bisa membaca setiap halaman juga bisa membaca obrolan, email, dan halaman banmu.",
     "an.ext.todo": "Kamu tidak mengenal ekstensi ini atau tidak memakainya lagi? Hapus di browsermu. Jika kamu mempertahankannya, periksa siapa pembuatnya dan lihat ulasannya.",
     "an.ext.deep": "AgathOS membaca manifest.json setiap ekstensi di Chrome, Edge, dan Brave (semua profil) dan tidak ada yang lain. AgathOS mendaftar ekstensi yang berkaitan dengan AI atau bisa menjangkau situs obrolan AI. Dihitung sebagai perhatian jika ekstensi boleh membaca semua situs web (<all_urls> atau pola seperti https://*/*). AgathOS juga menampilkan izin yang lebih luas seperti tabs, history, cookies, webRequest, dan clipboardRead. AgathOS tidak melihat apa yang sebenarnya dilakukan ekstensi, hanya apa yang boleh dilakukannya. Perubahan izin setelah pembaruan dilaporkan lagi.",
+    "tab.backup": "Cadangan",
+    "backup.empty": "Tidak ada folder kerja untuk diperiksa.",
+    "backup.none": "Tidak ada tanda cadangan untuk {n} folder kerja: {folders}",
+    "backup.cloud": "{folder} ada di folder cloud ({service})",
+    "backup.git": "{folder}: semua {repos} proyek Git punya salinan di server",
+    "backup.timeMachine": "Time Machine sudah membuat cadangan",
+    "backup.flagged": "Tidak ada tanda cadangan untuk folder kerjamu ({folders}). Jika agen menghapus file di sana, file itu bisa hilang selamanya.",
+    "fix.backup": "Aktifkan cadangan: File History atau pencadangan folder OneDrive di Windows, Time Machine atau iCloud di Mac. Untuk kode, dorong proyekmu ke remote Git seperti GitHub. Sudah punya cadangan yang tidak bisa dilihat AgathOS (program lain atau disk eksternal)? Tekan Sembunyikan.",
+    "set.backupCheck": "Pemeriksaan cadangan: beri peringatan saat folder kerja tidak punya salinan",
+    "set.backupCheckDesc": "Mencari tanda salinan folder kerjamu: folder cloud (OneDrive, Dropbox, Google Drive, iCloud), proyek Git dengan remote, atau Time Machine. Tidak pernah membaca file-mu.",
+    "an.backup.simple": "AgathOS tidak menemukan tanda bahwa folder kerjamu punya salinan kedua. Jika agen atau worm menghapusnya, folder itu bisa hilang selamanya.",
+    "an.backup.maybe": "Mungkin kamu punya cadangan yang tidak bisa dilihat AgathOS, seperti File History, disk eksternal, atau program cadangan lain. Kalau begitu ini alarm palsu dan bisa kamu abaikan.",
+    "an.backup.risk": "Agen yang berjalan tanpa pengaman sama sekali sudah menghapus seluruh folder dan disk, dan sebagian worm menghapus folder home saat tidak bisa masuk. Tanpa salinan kedua, data itu tidak bisa dikembalikan.",
+    "an.backup.todo": "Aktifkan cadangan sekarang: File History atau pencadangan folder OneDrive di Windows, Time Machine atau iCloud di Mac. Untuk kode, dorong proyekmu ke GitHub atau remote Git lain.",
+    "an.backup.deep": "AgathOS memeriksa setiap folder yang diawasi (kecuali Downloads) untuk mencari tanda salinan: folder berada di dalam folder OneDrive, Dropbox, Google Drive, atau iCloud, atau setiap proyek Git di dalamnya punya remote, atau di Mac Time Machine sudah membuat cadangan. AgathOS tidak melihat ke dalam File History atau program cadangan lain dan tidak bisa melihat disk eksternal, jadi hanya mengatakan 'tidak ada tanda cadangan'. Tidak membaca isi file dan tidak mengubah apa pun.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);

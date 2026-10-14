@@ -273,6 +273,21 @@
     "an.ext.risk": "In 2026 kopieerden twee extensies die zich voordeden als AI-hulp, met samen zo'n 900.000 gebruikers, ChatGPT- en DeepSeek-gesprekken en alle open tabbladen naar een server. Een extensie die elke pagina kan lezen, kan ook je gesprekken, je mail en je bankpagina's lezen.",
     "an.ext.todo": "Ken je deze extensie niet, of gebruik je haar niet meer? Verwijder haar in je browser. Hou je haar, kijk dan wie haar gemaakt heeft en bekijk de beoordelingen.",
     "an.ext.deep": "AgathOS leest het manifest.json van elke extensie in Chrome, Edge en Brave (alle profielen) en verder niets. Het toont extensies die over AI gaan of bij AI-chatsites kunnen. Het telt als aandachtspunt als de extensie alle websites mag lezen (<all_urls> of een patroon zoals https://*/*). Het toont ook bredere rechten zoals tabs, history, cookies, webRequest en clipboardRead. Het ziet niet wat de extensie echt doet, alleen wat ze mag doen. Een verandering in rechten na een update wordt opnieuw gemeld.",
+    "tab.backup": "Back-up",
+    "backup.empty": "Geen werkmappen om te controleren.",
+    "backup.none": "Geen teken van een back-up voor {n} werkmap(pen): {folders}",
+    "backup.cloud": "{folder} staat in een cloudmap ({service})",
+    "backup.git": "{folder}: alle {repos} Git-project(en) hebben een kopie op een server",
+    "backup.timeMachine": "Time Machine heeft een back-up gemaakt",
+    "backup.flagged": "Geen teken van een back-up voor je werkmappen ({folders}). Als een agent daar bestanden wist, kunnen ze voorgoed weg zijn.",
+    "fix.backup": "Zet een back-up aan: Bestandsgeschiedenis of OneDrive-mapback-up op Windows, Time Machine of iCloud op een Mac. Zet code op een Git-remote zoals GitHub. Heb je al een back-up die AgathOS niet kan zien (ander programma of externe schijf)? Druk dan op Negeer.",
+    "set.backupCheck": "Back-upcontrole: waarschuw als werkmappen geen kopie hebben",
+    "set.backupCheckDesc": "Zoekt naar een teken van een kopie van je werkmappen: een cloudmap (OneDrive, Dropbox, Google Drive, iCloud), Git-projecten met een remote, of Time Machine. Het leest nooit je bestanden.",
+    "an.backup.simple": "AgathOS vond geen teken dat je werkmappen een tweede kopie hebben. Als een agent of een worm ze wist, kunnen ze voorgoed weg zijn.",
+    "an.backup.maybe": "Misschien heb je een back-up die AgathOS niet kan zien, zoals Bestandsgeschiedenis, een externe schijf of een ander back-upprogramma. Dan is dit vals alarm en kun je het negeren.",
+    "an.backup.risk": "Agents die zonder enige beveiliging draaien, hebben al hele mappen en schijven gewist, en sommige wormen wissen de thuismap als ze niet kunnen inloggen. Zonder tweede kopie komen die gegevens niet terug.",
+    "an.backup.todo": "Zet nu een back-up aan: Bestandsgeschiedenis of OneDrive-mapback-up op Windows, Time Machine of iCloud op een Mac. Zet code op GitHub of een andere Git-remote.",
+    "an.backup.deep": "AgathOS controleert elke map die het bewaakt (behalve Downloads) op een teken van een kopie: de map staat in een OneDrive-, Dropbox-, Google Drive- of iCloud-map, of elk Git-project erin heeft een remote, of op een Mac heeft Time Machine een back-up gemaakt. Het kijkt niet in Bestandsgeschiedenis of andere back-upprogramma's en ziet geen externe schijven, dus het zegt alleen 'geen teken van een back-up'. Het leest geen bestandsinhoud en verandert niets.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.nl, d);

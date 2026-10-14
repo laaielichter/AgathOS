@@ -272,6 +272,21 @@
     "an.ext.risk": "2026年、AI アシスタントを装った2つの拡張機能（合計約90万人が利用）が、ChatGPT と DeepSeek の会話と開いているすべてのタブをサーバーにコピーしていました。すべてのページを読める拡張機能は、あなたのチャット、メール、銀行のページも読めます。",
     "an.ext.todo": "この拡張機能を知らない、またはもう使っていませんか？ ブラウザーで削除してください。残すなら、作者を確認し、レビューを見てください。",
     "an.ext.deep": "AgathOS は Chrome、Edge、Brave（すべてのプロファイル）の各拡張機能の manifest.json だけを読みます。AI に関するもの、または AI チャットサイトにアクセスできるものを一覧にします。拡張機能がすべてのウェブサイトを読めるとき（<all_urls> や https://*/* のようなパターン）は注意として数えます。tabs、history、cookies、webRequest、clipboardRead などの広い権限も表示します。拡張機能が実際に何をしているかは見えず、許可されていることだけが分かります。更新後に権限が変わると、もう一度知らせます。",
+    "tab.backup": "バックアップ",
+    "backup.empty": "確認する作業フォルダーがありません。",
+    "backup.none": "作業フォルダー {n} 件にバックアップの形跡がありません：{folders}",
+    "backup.cloud": "{folder} はクラウドフォルダー（{service}）の中にあります",
+    "backup.git": "{folder}：{repos} 件すべての Git プロジェクトにサーバー上のコピーがあります",
+    "backup.timeMachine": "Time Machine がバックアップを作成しました",
+    "backup.flagged": "作業フォルダー（{folders}）にバックアップの形跡がありません。エージェントがそこでファイルを削除すると、二度と戻らない可能性があります。",
+    "fix.backup": "バックアップを有効にしてください。Windows ではファイル履歴か OneDrive のフォルダーバックアップ、Mac では Time Machine か iCloud。コードは GitHub などの Git リモートにプッシュしてください。AgathOS から見えないバックアップ（別のプログラムや外付けディスク）が既にある場合は「非表示にする」を押してください。",
+    "set.backupCheck": "バックアップ確認：作業フォルダーにコピーがないときに警告する",
+    "set.backupCheckDesc": "作業フォルダーのコピーの形跡を探します：クラウドフォルダー（OneDrive、Dropbox、Google Drive、iCloud）、リモート付きの Git プロジェクト、または Time Machine。ファイルの中身は読みません。",
+    "an.backup.simple": "AgathOS は、作業フォルダーに2つ目のコピーがある形跡を見つけられませんでした。エージェントやワームが削除すると、二度と戻らない可能性があります。",
+    "an.backup.maybe": "ファイル履歴、外付けディスク、別のバックアップソフトなど、AgathOS から見えないバックアップがあるかもしれません。その場合は誤警報なので、無視して構いません。",
+    "an.backup.risk": "安全機能をすべて切って動かしたエージェントが、フォルダーやドライブごと消した例があります。ログインできないとホームフォルダーを消すワームもあります。2つ目のコピーがなければ、そのデータは戻せません。",
+    "an.backup.todo": "今すぐバックアップを有効にしてください。Windows ではファイル履歴か OneDrive のフォルダーバックアップ、Mac では Time Machine か iCloud。コードは GitHub などの Git リモートにプッシュしてください。",
+    "an.backup.deep": "AgathOS は、監視している各フォルダー（ダウンロードを除く）にコピーの形跡がないか調べます：フォルダーが OneDrive、Dropbox、Google Drive、iCloud のフォルダー内にある、中のすべての Git プロジェクトにリモートがある、または Mac で Time Machine がバックアップを作成している。ファイル履歴や他のバックアップソフトの中は見ず、外付けディスクも見えないため、「バックアップの形跡なし」としか言いません。ファイルの中身は読まず、何も変更しません。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ja, d);

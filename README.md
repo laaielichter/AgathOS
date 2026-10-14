@@ -98,6 +98,14 @@ read every website you open, and it shows wider rights such as tabs, history and
 change in rights after an update is reported again. It cannot see what an extension really does.
 You decide in the browser: AgathOS only shows the way.
 
+**Backup check.** An agent that deletes a folder is only a disaster when there is no second
+copy. AgathOS looks for a sign of a copy of each folder it watches (not Downloads): the folder
+lies inside a OneDrive, Dropbox, Google Drive or iCloud folder, every Git project in it has a
+remote, or on a Mac Time Machine has made a backup (Files > Backup). It never reads your files
+and changes nothing. It does not look inside File History or other backup programs and cannot see
+an external disk, so it only says "no sign of a backup": if you have one it cannot see, press
+*Dismiss*. Switch it off in Settings.
+
 **Check text.** Paste a prompt, README, rules file or web text before an agent reads it.
 AgathOS shows hidden characters (and decodes them), attack text and keys, and copies a clean
 version for you.

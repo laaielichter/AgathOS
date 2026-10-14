@@ -69,6 +69,7 @@ function targetKey(t) {
   if (t.type === 'model') return `model:${U.sha256(String(t.path)).slice(0, 16)}`;
   if (t.type === 'auto') return `auto:${t.id}`;
   if (t.type === 'ext') return `ext:${t.id}`;
+  if (t.type === 'backup') return `backup:${t.id}`;
   return null;
 }
 function isDismissed(state, key, reasons) {
@@ -130,6 +131,11 @@ function plan(engine, fix, minSev = 'watch') {
     const id = U.sha256(m.path).slice(0, 16);
     add({ id: `model:${id}`, cat: 'model', sev: m.state, name: path.basename(m.path), where: U.shortPath(m.path), reasons: m.reasons, target: { type: 'model', path: m.path } });
   }
+  // No sign of a backup: only you can turn one on.
+  for (const b of inv.backups || []) {
+    if (b.state === 'calm') continue;
+    add({ id: `manual:backup:${b.id}`, cat: 'manual', sev: b.state, name: b.names, where: '', reasons: b.reasons.filter((r) => r.sev !== 'calm'), target: { type: 'backup', id: b.id } });
+  }
   // Browser extensions: AgathOS cannot remove them for you; you decide in the browser.
   for (const x of inv.extensions || []) {
     if (x.state === 'calm') continue;
@@ -161,6 +167,7 @@ function itemReasons(engine, key, agents) {
   if (kind === 'model') { const m = inv.models.find((x) => U.sha256(x.path).slice(0, 16) === id); return m ? m.reasons : []; }
   if (kind === 'auto') { const a = inv.autostarts.find((x) => x.id === id); return a ? a.reasons : []; }
   if (kind === 'ext') { const x = (inv.extensions || []).find((e) => e.id === id); return x ? x.reasons : []; }
+  if (kind === 'backup') { const b = (inv.backups || []).find((e) => e.id === id); return b ? b.reasons : []; }
   return [];
 }
 

@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS = {
   massDeleteThreshold: 40,    // files deleted within 10 s
   portCheck: true,
   wormWatch: true,            // warn when a program sweeps the home network (worm behaviour)
+  backupCheck: true,          // warn when work folders show no sign of a second copy
   hotkey: true,               // Ctrl+Alt+Shift+P pauses all agents
   judge: { enabled: false, model: 'qwen2.5:7b' },
   learning: true,

@@ -9,6 +9,7 @@ const inv = require('./inventory');
 const net = require('./network');
 const models = require('./models');
 const extensions = require('./extensions');
+const backup = require('./backup');
 const pause = require('./pause');
 const judge = require('./judge');
 const guard = require('./guard');
@@ -37,7 +38,7 @@ class Engine {
     this.appDir = appDir;
     this.onUpdate = onUpdate || (() => {});
     this.notify = notify || (() => {});
-    this.inventory = { agents: [], mcp: [], files: [], configs: [], models: [], ports: [], autostarts: [], extensions: [] };
+    this.inventory = { agents: [], mcp: [], files: [], configs: [], models: [], ports: [], autostarts: [], extensions: [], backups: [] };
     this.scanning = null;
     this.lastScan = store.state.lastScan || 0;
     this.paused = new Map();        // agentId -> { pids, at }
@@ -144,6 +145,7 @@ class Engine {
         this.inventory.mcp = inv.scanMcp(this.store, files.projectMcp);
         this.inventory.configs = [...inv.scanGlobalConfigs(), ...files.configs, ...(await inv.envBaseUrls())];
         try { this.inventory.extensions = extensions.scan(); } catch (_) { this.inventory.extensions = []; }
+        try { this.inventory.backups = this.store.settings.backupCheck !== false ? await backup.check(this.store.settings) : []; } catch (_) { this.inventory.backups = []; }
       }],
       ['traps', async () => { this.inventory.files = this._files ? this._files.files : []; }],
       ['keys', async () => { /* secrets are part of the file scan; nothing extra to do */ }],
@@ -181,7 +183,7 @@ class Engine {
 
   counts() {
     const i = this.inventory;
-    const issues = [...i.mcp, ...i.files, ...i.configs, ...i.models, ...i.ports, ...i.autostarts, ...(i.extensions || [])].filter((x) => x.state !== 'calm').length;
+    const issues = [...i.mcp, ...i.files, ...i.configs, ...i.models, ...i.ports, ...i.autostarts, ...(i.extensions || []), ...(i.backups || [])].filter((x) => x.state !== 'calm').length;
     return { agents: i.agents.length, mcp: i.mcp.length, files: i.files.length, models: i.models.length, issues };
   }
 
@@ -202,6 +204,7 @@ class Engine {
     for (const f of this.inventory.files) note('file', f.id, f.hash, (how) => f.state !== 'calm' && this.event({ key: 'file.flagged', sev: f.state, watcher: 'traps', params: { file: U.shortPath(f.path) }, target: { type: 'file', id: f.id, path: f.path } }));
     for (const a of this.inventory.autostarts) note('auto', a.id, a.id, (how) => how === 'new' && this.event({ key: 'auto.added', sev: a.state === 'calm' ? 'watch' : a.state, watcher: 'proc', params: { name: a.name, cmd: a.command.slice(0, 160) }, target: { type: 'auto', id: a.id } }));
     for (const x of this.inventory.extensions || []) note('ext', x.id, x.hash, () => x.state !== 'calm' && this.event({ key: 'ext.flagged', sev: 'watch', watcher: 'gate', params: { name: x.name, browser: x.browser }, target: { type: 'ext', id: x.id, path: x.path } }));
+    for (const b of this.inventory.backups || []) note('backup', b.id, b.hash, () => b.state !== 'calm' && this.event({ key: 'backup.flagged', sev: 'watch', watcher: 'files', params: { folders: b.names }, target: { type: 'backup', id: b.id, path: b.path } }));
     for (const m of this.inventory.models) note('model', U.sha256(m.path).slice(0, 16), String(m.size), (how) => m.state === 'alarm' && this.event({ key: 'model.flagged', sev: 'alarm', watcher: 'files', params: { file: U.shortPath(m.path) } }));
     for (const p of this.inventory.ports) note('port', p.id, p.exposed ? 'open' : 'local', (how) => p.exposed && this.event({ key: 'port.open', sev: 'alarm', watcher: 'net', params: { product: p.product, addr: p.addr, port: p.port }, target: { type: 'port', port: p.port } }));
     if (first) {
@@ -654,7 +657,7 @@ class Engine {
     const issues = (list) => list.filter((x) => x.state !== 'calm');
     const st = {
       gate: { list: [...i.mcp, ...(i.extensions || []), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.autoApprove'))] },
-      files: { list: [...i.models], ev: recent('files') },
+      files: { list: [...i.models, ...(i.backups || [])], ev: recent('files') },
       net: { list: [...i.ports], ev: recent('net') },
       keys: { list: [...i.files.filter((f) => f.kind === 'env'), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.baseUrl'))] },
       traps: { list: [...i.files.filter((f) => f.kind !== 'env')] },
@@ -683,6 +686,7 @@ class Engine {
       ports: i.ports.map((p) => mark(`port:${p.port}`, p)),
       autostarts: i.autostarts.map((a) => mark(`auto:${a.id}`, a)),
       extensions: (i.extensions || []).map((x) => mark(`ext:${x.id}`, x)),
+      backups: (i.backups || []).map((b) => mark(`backup:${b.id}`, b)),
     };
     return { agents, view };
   }
@@ -707,6 +711,7 @@ class Engine {
       ports: i.ports,
       autostarts: i.autostarts,
       extensions: i.extensions.map((x) => ({ ...x, short: U.shortPath(x.path) })),
+      backups: i.backups.map((b) => ({ ...b, short: U.shortPath(b.path) })),
       events: this.store.events.slice(-250).reverse(),
       settings: this.store.settings,
       chainOk: this.store.chainOk,

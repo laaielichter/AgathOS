@@ -185,6 +185,41 @@ ok(net2.aiListeners(lsofRows, () => 'ollama').some((p) => p.port === 11434 && p.
   ok(idf('claude.exe', 'claude', '/applications/claude.app/contents/macos/claude') === 'claude-desktop' && idf('claude.exe', 'claude', '/users/a/.local/bin/claude') === 'claude-code', 'mac: Claude Desktop and Claude Code are told apart');
 }
 
+// ---------- backup check ----------
+const backupTests = async () => {
+  const B = require('../core/backup');
+  const home = path.join(tmp, 'bkhome');
+  const mk = (...p) => { const d = path.join(home, ...p); fs.mkdirSync(d, { recursive: true }); return d; };
+  const gitRepo = (dir, remote) => { fs.mkdirSync(path.join(dir, '.git'), { recursive: true }); fs.writeFileSync(path.join(dir, '.git', 'config'), '[core]\n\tbare = false\n' + (remote ? '[remote "origin"]\n\turl = https://github.com/a/b\n' : '')); };
+  const oneDrive = mk('OneDrive');
+  mk('Dropbox');
+  const sync = B.syncRoots(home, { OneDrive: oneDrive });
+  ok(sync.some((s) => s.service === 'OneDrive') && sync.some((s) => s.service === 'Dropbox') && sync.filter((s) => s.service === 'OneDrive').length === 1, 'backup: cloud folders are found once each');
+  const docs = mk('OneDrive', 'Documents');
+  const loose = mk('Projects');
+  const safeRoot = mk('code');
+  gitRepo(path.join(safeRoot, 'app1'), true); gitRepo(path.join(safeRoot, 'deep', 'app2'), true);
+  const mixed = mk('dev');
+  gitRepo(path.join(mixed, 'good'), true); gitRepo(path.join(mixed, 'local-only'), false);
+  const nm = mk('nm'); gitRepo(path.join(nm, 'node_modules', 'pkg'), false);
+  ok(B.gitRepos(safeRoot).total === 2 && B.gitRepos(safeRoot).withRemote === 2, 'backup: Git projects with a remote are counted, also a few levels deep');
+  ok(B.gitRepos(mixed).total === 2 && B.gitRepos(mixed).withRemote === 1, 'backup: a Git project without a remote counts as not copied');
+  ok(B.gitRepos(nm).total === 0, 'backup: node_modules is not searched');
+  const rows = [B.inspectRoot(docs, sync), B.inspectRoot(loose, sync), B.inspectRoot(safeRoot, sync), B.inspectRoot(mixed, sync)];
+  const a = B.assess(rows, {});
+  ok(a.state === 'watch' && a.reasons[0].key === 'backup.none' && a.reasons[0].params.n === 2, 'backup: two of four folders show no sign of a copy');
+  ok(a.reasons.some((r) => r.key === 'backup.cloud' && r.params.service === 'OneDrive') && a.reasons.some((r) => r.key === 'backup.git'), 'backup: the cloud folder and the Git folder are shown as fine');
+  ok(B.assess([rows[0], rows[2]], {}).state === 'calm', 'backup: when every folder has a copy it is calm');
+  ok(B.assess(rows, { timeMachine: true }).state === 'calm', 'backup: a Time Machine backup makes it calm');
+  ok(B.assess([], {}) === null, 'backup: no folders, no verdict');
+  const same1 = B.assess(rows, {}).hash;
+  ok(same1 === B.assess(rows.slice().reverse(), {}).hash && same1 !== B.assess([rows[0], rows[2]], {}).hash, 'backup: the fingerprint changes only when the folders without a copy change');
+  const dl = mk('Downloads');
+  const res = await B.check({ roots: [dl, loose] }, { sync, tm: async () => null });
+  ok(res.length === 1 && res[0].state === 'watch' && res[0].names.includes('Projects') && !res[0].names.includes('Downloads'), 'backup: Downloads is not checked');
+  ok((await B.check({ roots: [dl] }, { sync, tm: async () => null })).length === 0, 'backup: only Downloads means nothing to check');
+};
+
 // ---------- AI browser extensions ----------
 {
   const X = require('../core/extensions');
@@ -345,6 +380,13 @@ ok(net2.aiListeners(lsofRows, () => 'ollama').some((p) => p.port === 11434 && p.
   ok(extStep && extStep.cat === 'manual' && extStep.sev === 'watch', 'engine: a browser extension to check is a step you do yourself');
   ok(eng.snapshot().extensions.length === 1 && eng.counts().issues >= 1, 'engine: extensions are in the snapshot and in the count');
   ok(eng.fixDismiss('ext:e1e1e1e1e1e1e1e1').ok && !eng.fixPlan().some((x) => x.tkey === 'ext:e1e1e1e1e1e1e1e1') && eng.snapshot().extensions[0].state === 'calm', 'engine: an extension can be dismissed');
+  eng.inventory.backups = [{ id: 'work', state: 'watch', reasons: [{ key: 'backup.none', params: { n: 1, folders: '~/Projects' }, sev: 'watch' }], names: '~/Projects', path: tmp, hash: 'h' }];
+  const bkStep = eng.fixPlan().find((x) => x.tkey === 'backup:work');
+  ok(bkStep && bkStep.cat === 'manual' && bkStep.name === '~/Projects', 'engine: no sign of a backup is a step you do yourself');
+  ok(eng.snapshot().backups.length === 1 && eng.snapshot().watchers.find((w) => w.id === 'files').issues >= 1, 'engine: the backup finding shows on the file watcher');
+  ok(eng.fixDismiss('backup:work').ok && !eng.fixPlan().some((x) => x.tkey === 'backup:work'), 'engine: the backup warning can be dismissed');
+  ok(eng.store.settings.backupCheck === true, 'settings: backup check is on by default');
+  await backupTests();
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
   fs.rmSync(tmp, { recursive: true, force: true });

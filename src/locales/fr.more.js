@@ -272,6 +272,21 @@
     "an.ext.risk": "En 2026, deux extensions qui se faisaient passer pour des assistants IA, avec environ 900 000 utilisateurs, copiaient les conversations ChatGPT et DeepSeek et tous les onglets ouverts vers un serveur. Une extension qui peut lire chaque page peut aussi lire tes conversations, tes e-mails et tes pages de banque.",
     "an.ext.todo": "Tu ne connais pas cette extension, ou tu ne l’utilises plus ? Supprime-la dans ton navigateur. Si tu la gardes, vérifie qui l’a créée et regarde les avis.",
     "an.ext.deep": "AgathOS lit le manifest.json de chaque extension de Chrome, Edge et Brave (tous les profils), et rien d’autre. Il liste les extensions liées à l’IA ou pouvant atteindre des sites de chat IA. C’est un point d’attention quand l’extension peut lire tous les sites web (<all_urls> ou un motif comme https://*/*). Il montre aussi des droits plus larges comme tabs, history, cookies, webRequest et clipboardRead. Il ne voit pas ce que l’extension fait vraiment, seulement ce qu’elle a le droit de faire. Un changement de droits après une mise à jour est signalé de nouveau.",
+    "tab.backup": "Sauvegarde",
+    "backup.empty": "Aucun dossier de travail à vérifier.",
+    "backup.none": "Aucun signe de sauvegarde pour {n} dossier(s) de travail : {folders}",
+    "backup.cloud": "{folder} se trouve dans un dossier cloud ({service})",
+    "backup.git": "{folder} : tous les {repos} projet(s) Git ont une copie sur un serveur",
+    "backup.timeMachine": "Time Machine a fait une sauvegarde",
+    "backup.flagged": "Aucun signe de sauvegarde pour tes dossiers de travail ({folders}). Si un agent y supprime des fichiers, ils peuvent être perdus pour toujours.",
+    "fix.backup": "Active une sauvegarde : Historique des fichiers ou sauvegarde de dossiers OneDrive sous Windows, Time Machine ou iCloud sur Mac. Pour le code, envoie tes projets vers un dépôt Git distant comme GitHub. Tu as déjà une sauvegarde qu’AgathOS ne peut pas voir (autre programme ou disque externe) ? Alors appuie sur Ignorer.",
+    "set.backupCheck": "Contrôle des sauvegardes : prévenir quand des dossiers de travail n’ont pas de copie",
+    "set.backupCheckDesc": "Cherche un signe d’une copie de tes dossiers de travail : un dossier cloud (OneDrive, Dropbox, Google Drive, iCloud), des projets Git avec un dépôt distant, ou Time Machine. Il ne lit jamais tes fichiers.",
+    "an.backup.simple": "AgathOS n’a trouvé aucun signe que tes dossiers de travail ont une seconde copie. Si un agent ou un ver les supprime, ils peuvent être perdus pour toujours.",
+    "an.backup.maybe": "Tu as peut-être une sauvegarde qu’AgathOS ne peut pas voir, comme l’Historique des fichiers, un disque externe ou un autre programme de sauvegarde. Dans ce cas, c’est une fausse alerte et tu peux l’ignorer.",
+    "an.backup.risk": "Des agents lancés sans aucune protection ont déjà effacé des dossiers et des disques entiers, et certains vers suppriment le dossier personnel quand ils ne peuvent pas se connecter. Sans seconde copie, ces données ne reviennent pas.",
+    "an.backup.todo": "Active une sauvegarde maintenant : Historique des fichiers ou sauvegarde de dossiers OneDrive sous Windows, Time Machine ou iCloud sur Mac. Pour le code, envoie tes projets sur GitHub ou un autre dépôt Git distant.",
+    "an.backup.deep": "AgathOS cherche pour chaque dossier surveillé (sauf Téléchargements) un signe de copie : le dossier se trouve dans un dossier OneDrive, Dropbox, Google Drive ou iCloud, ou chaque projet Git qu’il contient a un dépôt distant, ou sur Mac Time Machine a fait une sauvegarde. Il ne regarde pas dans l’Historique des fichiers ni dans d’autres programmes de sauvegarde et ne voit pas les disques externes, donc il dit seulement « aucun signe de sauvegarde ». Il ne lit aucun contenu de fichier et ne change rien.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.fr, d);
