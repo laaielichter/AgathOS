@@ -651,6 +651,26 @@
     "api.report": "{name}이(가) 우려되는 점을 알려 왔습니다: “{note}”",
     "api.keyRotated": "이 PC의 다른 사용자가 파일을 읽을 수 있었기 때문에 로컬 API의 소유자 키를 새로 만들었습니다",
     "api.auditTampered": "API 요청 로그가 AgathOS 밖에서 변경되었습니다. 이전 로그의 사본을 보관하고 새 로그를 시작했습니다.",
+
+    "set.perf": "성능",
+    "set.powerSave": "전력 절약",
+    "set.powerSaveDesc": "배터리로 작동 중이거나 컴퓨터가 뜨거울 때는 반복 점검을 덜 자주 합니다. 파일 변경과 Guard는 평소 속도를 유지합니다.",
+    "set.powerNow.normal": "현재: 보통 속도입니다.",
+    "set.powerNow.battery": "현재: 배터리로 작동 중이라 반복 점검이 {x}배 더 오래 기다립니다.",
+    "set.powerNow.hot": "현재: 컴퓨터가 뜨거워서 반복 점검이 {x}배 더 오래 기다립니다.",
+    "set.powerNow.off": "현재: 꺼져 있어 항상 최고 속도로 작동합니다.",
+    "set.effects": "애니메이션",
+    "set.effectsDesc": "애니메이션이 적을수록 전력을 덜 씁니다. 자동은 배터리 사용 중이거나 시스템이 움직임을 줄이라고 요청할 때 줄입니다.",
+    "set.effects.auto": "자동",
+    "set.effects.full": "모두",
+    "set.effects.low": "적게",
+    "set.graphics": "그래픽",
+    "set.graphicsDesc": "자동은 그래픽 카드를 사용합니다. 창이 깜박이거나 화면이 깨지면 소프트웨어를 선택하세요. 그러면 AgathOS가 그래픽 카드 없이 화면을 그립니다.",
+    "set.graphics.auto": "자동",
+    "set.graphics.software": "소프트웨어",
+    "set.graphicsRestart": "AgathOS를 다시 시작하면 적용됩니다.",
+    "set.restartNow": "지금 다시 시작",
+    "gpu.fallback": "그래픽 드라이버가 연달아 여러 번 중단되었습니다. 다음 실행부터 AgathOS는 그래픽 카드 없이 화면을 그립니다(설정 > 성능).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);

@@ -279,6 +279,9 @@ the Start menu, and registers an uninstaller under Settings > Apps.
 
 **Just try it.** Double-click `start.bat` to run it from this folder.
 
+**Windows on ARM** (Snapdragon laptops). Run `AgathOS-Windows-ARM64-Setup-<version>.exe`. It is built and tried out on a real
+ARM Windows machine. The Intel installer runs there too, but slower. The updater picks the right one for your chip.
+
 **Mac.** Download `AgathOS-<version>-arm64.dmg` (Apple chip, M1 and newer) or `-x64.dmg` (Intel),
 open it and drag AgathOS to Applications (macOS 13 or newer). The app is not notarized by Apple yet: the first time,
 open it, then go to System Settings > Privacy & Security and click *Open Anyway*. macOS may ask
@@ -325,18 +328,40 @@ that gave a finding away is never repeated: a finding is described in words of o
 that cannot be changed unnoticed (`api-audit.jsonl`, shown in Settings > Agent access). Keys are limited in how often they
 may ask; a run of wrong keys is reported once, not at every try.
 
+## Performance
+
+AgathOS is a watcher that is always on, so it has to be light. It runs on Intel and AMD, on Windows on ARM (Snapdragon),
+on Apple chips and on Intel Macs, with or without a graphics card. Settings > Performance holds the switches.
+
+- **Saves power.** On battery the checks that repeat (programs, connections, transcripts, Guard, worm watch) wait twice as
+  long; on a Mac that says it is hot, three or four times as long. They never wait longer than a fixed top (12 seconds for
+  programs, 60 for connections), and never longer than the time you chose yourself. What comes by itself keeps its speed:
+  file changes, Guard events, the stop button and the live view. After sleep AgathOS looks at once. A locked screen does
+  not slow it down: a security tool must keep watching. Switch it off at *Save power*.
+- **Quiet in the tray.** Started with Windows or with `--hidden`, AgathOS makes no window at all until you open it. A window
+  that is hidden in the tray gets no updates, and is given back after 10 minutes (the mini pop-up after 5) when *Close to
+  tray* and the live scanner are on; opening it shows the newest state at once.
+- **Fewer animations.** *Animations* is automatic (fewer on battery, and when the system asks for less motion), all, or fewer.
+- **Graphics.** *Automatic* uses the graphics card. If the window flickers or shows glitches, choose *Software*: AgathOS then
+  draws without the graphics card, after a restart. If the graphics driver crashes three times within two minutes, the next
+  start draws in software by itself and the log says so.
+- **Big folders stay calm.** Scanning a large home folder is done in small pieces, so the window and the stop button keep
+  answering. On Windows the list of programs and the network table are asked from Windows directly (a few
+  milliseconds) instead of through the slow WMI commands.
+
 ## Windows and Mac
 
 | | Windows | Mac |
 |---|---|---|
 | Agents, MCP servers, instruction files, keys, models | yes | yes |
 | Live process watching, intent engine, honesty check | yes | yes (`ps`) |
-| Open AI ports and connections | yes | yes (`lsof`) |
-| Worm watch (network sweeps) | yes | yes (`lsof`) |
+| Open AI ports and connections | yes | yes (`netstat`, `lsof` as the way back) |
+| Worm watch (network sweeps) | yes | yes (`netstat`, `lsof` as the way back) |
 | Freeze, resume, stop an agent | yes | yes (signals) |
 | Autostart check and "turn off" | scheduled tasks | LaunchAgents (`launchctl`) |
 | Signature check | Authenticode | `codesign` |
 | AgathOS Guard: firewall, block an agent, lockdown, deep logging | yes | no (shown as a step for you) |
+| Chips | Intel/AMD (x64) and Windows on ARM (Snapdragon) | Apple chip and Intel |
 
 ## Limits (honest list)
 

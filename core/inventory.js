@@ -277,7 +277,8 @@ function projectName(f) {
   return i > 0 ? parts[i - 1] : path.basename(path.dirname(f));
 }
 
-function scanFiles(roots, store) {
+// Written as steps (a generator): scanFiles runs it to the end at once, scanFilesAsync gives the program a turn every few milliseconds.
+function* scanFilesSteps(roots, store) {
   const files = [];
   const configs = [];
   const projectMcp = [];
@@ -316,7 +317,7 @@ function scanFiles(roots, store) {
 
   for (const root of roots) {
     if (!U.exists(root)) continue;
-    const found = U.walk(root, {
+    const found = yield* U.walkSteps(root, {
       maxDepth: 6, maxFiles: 60000,
       filter: (full, name) => {
         const n = name.toLowerCase();
@@ -325,6 +326,7 @@ function scanFiles(roots, store) {
       },
     });
     for (const f of found) {
+      yield;
       const n = path.basename(f).toLowerCase();
       // Files that can hold the address of a language model (AI links look at them; a file with only settings is not an instruction file).
       if (links.PROJECT_FILE.test(f)) linkFiles.push({ path: f, app: `Project ${projectName(f)}` });
@@ -346,10 +348,13 @@ function scanFiles(roots, store) {
   if (!U.IS_WIN) for (const rc of require('./mac').SHELL_RC) if (U.exists(rc)) check(rc, 'env');
   for (const d of C.SKILL_DIRS.map(U.expand)) {
     if (!U.exists(d)) continue;
-    for (const f of U.walk(d, { maxDepth: 5, maxFiles: 5000, filter: (full, n) => /\.(md|mdc|txt|sh|ps1|py|js|ts|json|ya?ml)$/i.test(n) })) check(f, 'skill', boards.kindOf(f, true));
+    const skillFiles = yield* U.walkSteps(d, { maxDepth: 5, maxFiles: 5000, filter: (full, n) => /\.(md|mdc|txt|sh|ps1|py|js|ts|json|ya?ml)$/i.test(n) });
+    for (const f of skillFiles) { check(f, 'skill', boards.kindOf(f, true)); yield; }
   }
   return { files, configs, projectMcp, linkFiles, boardFiles, copyFiles };
 }
+const scanFiles = (roots, store) => U.run(scanFilesSteps(roots, store));
+const scanFilesAsync = (roots, store) => U.runCooperative(scanFilesSteps(roots, store));
 
 function scanGlobalConfigs() {
   const out = [];
@@ -442,6 +447,6 @@ $b = @(Get-ScheduledTask | Where-Object { $_.State -ne 'Disabled' -and $_.TaskPa
 }
 
 module.exports = {
-  isProjectMcp, scanMcp, scanFiles, scanGlobalConfigs, envBaseUrls, envEndpoints, installedAgents, exeVersion, signature, autostarts,
+  isProjectMcp, scanMcp, scanFiles, scanFilesAsync, scanFilesSteps, scanGlobalConfigs, envBaseUrls, envEndpoints, installedAgents, exeVersion, signature, autostarts,
   parseTomlMcp, serversFromJson, analyseServer, pkgFrom, cmpVersion, scanConfigText, projectName,
 };

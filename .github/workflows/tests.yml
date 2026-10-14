@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Only reads the code. Runs the plain-Node tests on the three systems the program is built for;
+# Only reads the code. Runs the plain-Node tests on the systems the program is built for (Windows with an Intel/AMD or an ARM chip, macOS, and Linux for the tests alone);
 # the names of failed tests are also written as an annotation.
 permissions:
   contents: read
@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest, windows-11-arm, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

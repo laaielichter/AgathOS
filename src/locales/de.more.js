@@ -651,6 +651,26 @@
     "api.report": "{name} meldet eine Sorge: „{note}“",
     "api.keyRotated": "Der Eigentümerschlüssel der lokalen API wurde erneuert, weil andere Benutzer dieses PCs seine Datei lesen konnten",
     "api.auditTampered": "Das Protokoll der API-Anfragen wurde außerhalb von AgathOS geändert. Eine Kopie des alten Protokolls wurde behalten und ein neues begonnen.",
+
+    "set.perf": "Leistung",
+    "set.powerSave": "Strom sparen",
+    "set.powerSaveDesc": "Im Akkubetrieb oder wenn der Computer heiß ist, laufen die wiederkehrenden Prüfungen seltener. Dateiänderungen und Guard behalten ihr normales Tempo.",
+    "set.powerNow.normal": "Gerade: normales Tempo.",
+    "set.powerNow.battery": "Gerade: Akkubetrieb, deshalb warten die wiederkehrenden Prüfungen {x}-mal so lange.",
+    "set.powerNow.hot": "Gerade: der Computer ist heiß, deshalb warten die wiederkehrenden Prüfungen {x}-mal so lange.",
+    "set.powerNow.off": "Gerade: ausgeschaltet, immer volles Tempo.",
+    "set.effects": "Animationen",
+    "set.effectsDesc": "Weniger Animationen brauchen weniger Strom. Automatisch heißt: weniger im Akkubetrieb und wenn das System weniger Bewegung wünscht.",
+    "set.effects.auto": "Automatisch",
+    "set.effects.full": "Alle",
+    "set.effects.low": "Weniger",
+    "set.graphics": "Grafik",
+    "set.graphicsDesc": "Automatisch nutzt die Grafikkarte. Flackert das Fenster oder zeigt es Darstellungsfehler, wähle Software: AgathOS zeichnet dann ohne die Grafikkarte.",
+    "set.graphics.auto": "Automatisch",
+    "set.graphics.software": "Software",
+    "set.graphicsRestart": "Gilt nach dem Neustart von AgathOS.",
+    "set.restartNow": "Jetzt neu starten",
+    "gpu.fallback": "Der Grafiktreiber ist mehrmals hintereinander abgestürzt. Ab dem nächsten Start zeichnet AgathOS ohne die Grafikkarte (Einstellungen > Leistung).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.de, d);

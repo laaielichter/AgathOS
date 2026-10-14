@@ -710,6 +710,26 @@
     "api.report": "{name} sana bir endişesini bildiriyor: “{note}”",
     "api.keyRotated": "Yerel API’nin sahip anahtarı yenilendi, çünkü bu bilgisayarın diğer kullanıcıları dosyasını okuyabiliyordu",
     "api.auditTampered": "API isteklerinin kaydı AgathOS dışında değiştirildi. Eski kaydın bir kopyası saklandı ve yeni bir kayıt başlatıldı.",
+
+    "set.perf": "Performans",
+    "set.powerSave": "Güç tasarrufu",
+    "set.powerSaveDesc": "Pilde çalışırken ya da bilgisayar ısındığında yinelenen denetimler daha seyrek yapılır. Dosya değişiklikleri ve Guard normal hızında kalır.",
+    "set.powerNow.normal": "Şu an: normal hız.",
+    "set.powerNow.battery": "Şu an: pilde çalışıyor, bu yüzden yinelenen denetimler {x} kat daha uzun bekliyor.",
+    "set.powerNow.hot": "Şu an: bilgisayar sıcak, bu yüzden yinelenen denetimler {x} kat daha uzun bekliyor.",
+    "set.powerNow.off": "Şu an: kapalı, her zaman tam hız.",
+    "set.effects": "Animasyonlar",
+    "set.effectsDesc": "Daha az animasyon daha az güç harcar. Otomatik, pilde ve sistem daha az hareket istediğinde daha azını gösterir.",
+    "set.effects.auto": "Otomatik",
+    "set.effects.full": "Hepsi",
+    "set.effects.low": "Daha az",
+    "set.graphics": "Grafik",
+    "set.graphicsDesc": "Otomatik, ekran kartını kullanır. Pencere titriyor ya da görüntü bozuk çıkıyorsa Yazılım seçeneğini seçin: AgathOS o zaman ekran kartı olmadan çizer.",
+    "set.graphics.auto": "Otomatik",
+    "set.graphics.software": "Yazılım",
+    "set.graphicsRestart": "AgathOS yeniden başlatıldıktan sonra geçerli olur.",
+    "set.restartNow": "Şimdi yeniden başlat",
+    "gpu.fallback": "Grafik sürücüsü arka arkaya birkaç kez çöktü. Bir sonraki açılıştan itibaren AgathOS ekran kartı olmadan çizecek (Ayarlar > Performans).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.tr, d);

@@ -83,7 +83,9 @@ function stripJsonComments(s) {
 const SKIP_DIRS = new Set(['node_modules', '.git', '.hg', '.svn', 'venv', '.venv', '__pycache__', '$RECYCLE.BIN',
   'System Volume Information', 'AppData', '.cache', 'dist', 'build', 'target', '.next', '.gradle', 'Library']);
 
-function walk(root, { maxDepth = 4, maxFiles = 20000, filter = () => true, skipDirs = SKIP_DIRS } = {}) {
+// The walk is written as steps (a generator that stops after every folder). Run to the end at once (walk), or with a short pause
+// every few milliseconds (runCooperative), so a big folder on a slow disk does not freeze the window, the tray and the stop button.
+function* walkSteps(root, { maxDepth = 4, maxFiles = 20000, filter = () => true, skipDirs = SKIP_DIRS } = {}) {
   const out = [];
   const stack = [[root, 0]];
   while (stack.length && out.length < maxFiles) {
@@ -99,9 +101,33 @@ function walk(root, { maxDepth = 4, maxFiles = 20000, filter = () => true, skipD
         if (out.length >= maxFiles) break;
       }
     }
+    yield;
   }
   return out;
 }
+
+// A stepwise job (a generator) to its end, without a pause.
+function run(job) {
+  let r = job.next();
+  while (!r.done) r = job.next();
+  return r.value;
+}
+
+// A stepwise job to its end, but after every `sliceMs` of work the event loop gets a turn.
+async function runCooperative(job, sliceMs = 12) {
+  let since = Date.now();
+  let r = job.next();
+  while (!r.done) {
+    if (Date.now() - since >= sliceMs) {
+      await new Promise((resolve) => setImmediate(resolve));
+      since = Date.now();
+    }
+    r = job.next();
+  }
+  return r.value;
+}
+
+const walk = (root, opts) => run(walkSteps(root, opts));
 
 // Grok Build keeps its settings, sessions, skills and plugins in GROK_HOME, or in ~/.grok when that is not set.
 const grokHome = () => {
@@ -146,5 +172,5 @@ const psq = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 
 module.exports = {
   IS_WIN, IS_MAC, HOME, APPDATA, LOCALAPPDATA, sha256, exists, statSafe, readText, readHead, readJsonLoose,
-  stripJsonComments, walk, expand, grokHome, shortPath, exclusive, execFileText, ps, psq, SKIP_DIRS,
+  stripJsonComments, walk, walkSteps, run, runCooperative, expand, grokHome, shortPath, exclusive, execFileText, ps, psq, SKIP_DIRS,
 };

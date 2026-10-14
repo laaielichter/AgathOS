@@ -651,6 +651,26 @@
     "api.report": "{name} 向你报告了一个担忧：“{note}”",
     "api.keyRotated": "本地 API 的所有者密钥已更新，因为这台电脑的其他用户可以读取它的文件",
     "api.auditTampered": "API 请求日志在 AgathOS 之外被改动过。旧日志的副本已保留，并已开始新的日志。",
+
+    "set.perf": "性能",
+    "set.powerSave": "节省电量",
+    "set.powerSaveDesc": "使用电池时，或电脑发热时，重复进行的检查会减少。文件变化和 Guard 保持正常速度。",
+    "set.powerNow.normal": "当前：正常速度。",
+    "set.powerNow.battery": "当前：使用电池，因此重复检查的等待时间延长为 {x} 倍。",
+    "set.powerNow.hot": "当前：电脑发热，因此重复检查的等待时间延长为 {x} 倍。",
+    "set.powerNow.off": "当前：已关闭，始终全速运行。",
+    "set.effects": "动画",
+    "set.effectsDesc": "动画越少越省电。“自动”表示使用电池时，以及系统要求减少动态效果时减少动画。",
+    "set.effects.auto": "自动",
+    "set.effects.full": "全部",
+    "set.effects.low": "较少",
+    "set.graphics": "图形",
+    "set.graphicsDesc": "“自动”会使用显卡。如果窗口闪烁或显示异常，请选择“软件”：AgathOS 将不使用显卡来绘制。",
+    "set.graphics.auto": "自动",
+    "set.graphics.software": "软件",
+    "set.graphicsRestart": "AgathOS 重新启动后生效。",
+    "set.restartNow": "立即重启",
+    "gpu.fallback": "显卡驱动连续崩溃了多次。从下次启动起，AgathOS 将不使用显卡绘制（设置 > 性能）。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);

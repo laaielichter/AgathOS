@@ -11,6 +11,9 @@ const DEFAULT_SETTINGS = {
   level: 'balanced',          // strict | balanced | relaxed
   realtime: true,             // keep watching in the background
   pollSeconds: 5,             // process poll interval
+  powerSave: true,            // on battery, or when the computer is hot, the repeating checks run less often
+  graphics: 'auto',           // auto | software: draw the window without the graphics card (core/graphics.js; applies at the next start)
+  effects: 'auto',            // auto | full | low: fewer animations (automatic: while saving power)
   fullScanHours: 6,           // scheduled full scan
   roots: [],                  // project folders to watch (filled on first start)
   modelDirs: [],              // model folders to scan (filled on first start)
@@ -50,6 +53,9 @@ function sanitize(s) {
     s[k] = Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : DEFAULT_SETTINGS[k];
   }
   for (const k of ['roots', 'modelDirs']) s[k] = Array.isArray(s[k]) ? s[k].filter((x) => typeof x === 'string' && x) : [];
+  s.powerSave = s.powerSave !== false;
+  s.graphics = s.graphics === 'software' ? 'software' : 'auto';
+  s.effects = s.effects === 'full' || s.effects === 'low' ? s.effects : 'auto';
   return s;
 }
 

@@ -22,9 +22,23 @@ class Telemetry {
     this.seq = 0;
     this.gauges = { procs: 0, agents: 0, open: 0 };
     this.bucket = new Map();           // folder -> { n, del }
+    this.mark = this.now();            // when the second in progress began
+  }
+
+  // There is no timer that wakes the program every second. When something is counted, or the window asks, the seconds that have
+  // passed since the last time are closed: the one that was in progress with what it counted, and the quiet ones as zeros.
+  catchUp() {
+    const n = Math.floor((this.now() - this.mark) / 1000);
+    if (n <= 0) return;
+    this.sample(this.mark + 1000);
+    // After a long gap (the computer slept) only the last KEEP quiet seconds can still be shown: they end now, not right after the gap began.
+    const quiet = Math.min(n - 1, KEEP);
+    for (let i = 0; i < quiet; i++) this.sample(this.mark + (n - quiet + 1 + i) * 1000);
+    this.mark += n * 1000;
   }
 
   count(channel, n = 1) {
+    this.catchUp();
     if (channel in this.cur) this.cur[channel] += n;
   }
 
@@ -42,6 +56,7 @@ class Telemetry {
 
   // An alert (an event of the audit log). Calm events show in the log only.
   alert(sev) {
+    this.catchUp();
     if (RANK[sev] > 0) {
       this.cur.alerts++;
       if (RANK[sev] > RANK[this.curSev]) this.curSev = sev;
@@ -50,14 +65,15 @@ class Telemetry {
 
   // A file changed below a work folder. Lines are bundled per folder, once per second.
   file(dir, deleted = false) {
+    this.catchUp();
     const b = this.bucket.get(dir) || { n: 0, del: 0 };
     b.n++;
     if (deleted) b.del++;
     this.bucket.set(dir, b);
   }
 
-  // Called every second: closes the current second.
-  sample() {
+  // Closes the second in progress (at time `t`, now unless said otherwise).
+  sample(t = this.now()) {
     let files = 0;
     const lines = [];
     for (const [dir, b] of this.bucket) {
@@ -71,7 +87,7 @@ class Telemetry {
     for (const [dir, b] of lines.slice(0, 3)) {
       this.note('file', b.del ? 'live.filesGone' : 'live.files', { dir, n: b.n, del: b.del }, b.del >= 10 ? 'watch' : 'calm');
     }
-    const row = { t: this.now(), ...this.cur, sev: this.curSev };
+    const row = { t, ...this.cur, sev: this.curSev };
     this.series.push(row);
     if (this.series.length > KEEP) this.series.splice(0, this.series.length - KEEP);
     this.cur = zero();
@@ -81,6 +97,7 @@ class Telemetry {
 
   // What the window needs: the series (small), the gauges and the log lines it has not seen yet.
   view(since = 0) {
+    this.catchUp();
     const from = Number.isFinite(since) ? since : 0;
     return {
       seq: this.seq, t: this.now(), keep: KEEP, gauges: { ...this.gauges },

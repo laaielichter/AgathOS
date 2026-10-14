@@ -155,7 +155,8 @@
       { hash: 'e6', ts: m(26), key: 'flag.dangerous', sev: 'watch', watcher: 'proc', agentId: 'claude-code', params: { agent: 'Claude Code', flag: '--dangerously-skip-permissions' } },
       { hash: 'e7', ts: m(30), key: 'scan.done', sev: 'calm', watcher: 'gate', params: { agents: 4, mcp: 4, issues: 7 } },
     ],
-    settings: { level: 'balanced', realtime: true, pollSeconds: 5, fullScanHours: 6, roots: ['C:\\Users\\you\\Desktop', 'C:\\Users\\you\\Documents', 'C:\\Users\\you\\projects'], modelDirs: ['C:\\Users\\you\\.ollama\\models', 'C:\\Users\\you\\Downloads'], notify: 'notify', autoFreezeOnMassDelete: true, massDeleteThreshold: 40, portCheck: true, hotkey: true, judge: { enabled: false, model: 'qwen2.5:7b' }, learning: true, startWithWindows: true, closeToTray: true, logDays: 30, api: true, fix: { auto: false, level: 'firm', minSev: 'alarm', custom: { agent: 'block', port: 'localOnly', mcp: 'disable', hidden: 'clean', inject: 'off', model: 'quarantine', auto: 'off' } } },
+    power: { speed: 1, why: 'normal', onBattery: false, thermal: 'nominal' }, runtime: { gpuSoftware: false },
+    settings: { level: 'balanced', realtime: true, pollSeconds: 5, powerSave: true, graphics: 'auto', effects: 'auto', fullScanHours: 6, roots: ['C:\\Users\\you\\Desktop', 'C:\\Users\\you\\Documents', 'C:\\Users\\you\\projects'], modelDirs: ['C:\\Users\\you\\.ollama\\models', 'C:\\Users\\you\\Downloads'], notify: 'notify', autoFreezeOnMassDelete: true, massDeleteThreshold: 40, portCheck: true, hotkey: true, judge: { enabled: false, model: 'qwen2.5:7b' }, learning: true, startWithWindows: true, closeToTray: true, logDays: 30, api: true, fix: { auto: false, level: 'firm', minSev: 'alarm', custom: { agent: 'block', port: 'localOnly', mcp: 'disable', hidden: 'clean', inject: 'off', model: 'quarantine', auto: 'off' } } },
     chainOk: true, counts: { agents: 6, mcp: 4, files: 4, models: 5, issues: 9 }, learnedAgents: 2, apiPort: 47612,
   };
   // The same shape core/remedy.js builds from the findings above.
@@ -236,6 +237,7 @@
     snapshot: () => Promise.resolve(JSON.parse(JSON.stringify(snap))),
     onUpdate: (f) => listeners.push(f),
     onLive: (f) => liveCb.push(f),
+    restart: () => ok(),
     liveWatch: (on, since) => { clearInterval(L.timer); L.timer = null; if (on) { L.since = since || 0; livePush(); L.timer = setInterval(livePush, 1000); } return ok(); },
     scan: async () => {
       for (const w of ['gate', 'traps', 'keys', 'net', 'proc', 'files']) { snap.scanning = { watcher: w, done: 0, total: 6 }; emit(); await new Promise((r) => setTimeout(r, 650)); }

@@ -1,7 +1,7 @@
 {
   "name": "agathos-os",
   "productName": "AgathOS",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "The good daemon for your local AI agents. Finds rogue agents, poisoned MCP servers and hidden instructions on Windows and macOS.",
   "main": "main.js",
   "license": "MIT",
@@ -10,6 +10,7 @@
     "start": "electron .",
     "test": "node test/run-tests.js",
     "dist": "npx --yes electron-builder@26 --win nsis --x64",
+    "dist:arm": "npx --yes electron-builder@26 --win nsis --arm64",
     "dist:mac": "npx --yes electron-builder@26 --mac dmg --arm64 --x64"
   },
   "devDependencies": {

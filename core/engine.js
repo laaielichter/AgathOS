@@ -13,6 +13,7 @@ const extensions = require('./extensions');
 const backup = require('./backup');
 const supply = require('./supply');
 const { Telemetry } = require('./telemetry');
+const power = require('./power');
 const pause = require('./pause');
 const judge = require('./judge');
 const guard = require('./guard');
@@ -59,6 +60,9 @@ class Engine {
     this.signatures = new Map();    // exe -> signature
     this.guardState = { installed: guard.installed(), enabled: !store.state.guardOff, running: false, sysmon: false, elevated: false, seq: 0 };
     this.timers = [];
+    this.jobs = null;               // the repeating checks, each wrapped so it never runs twice at once (see jobList)
+    this.runtime = {};              // facts about the program around the engine, set by main.js (does the window draw without the graphics card)
+    this.power = { onBattery: false, thermal: 'nominal' };   // from the system: battery and heat decide how fast the repeating checks run
     this.startedAt = Date.now();
     this.updateTimer = null;
     this.blocked = new Map();       // program path -> true (firewall rules we set)
@@ -136,36 +140,86 @@ class Engine {
     this.store.saveState();
   }
 
+  // The repeating checks. Each one never runs twice at the same time: when one round is slow (a busy PC, a hung helper), the next
+  // tick is skipped instead of piling up behind it or handling the same events twice. Made once, so a change of speed keeps it so.
+  jobList() {
+    if (this.jobs) return this.jobs;
+    const once = U.exclusive;
+    return (this.jobs = {
+      proc: once(() => this.pollProcesses()),
+      net: once(() => this.pollNetwork()),
+      // While the live view is open the network is checked more often, so new connections show up quickly.
+      liveNet: once(async () => { if (this.liveWatching && Date.now() - this.lastNetPoll > 4000) await this.pollNetwork(); }),
+      transcripts: once(async () => { this.transcripts.poll(); }),
+      minute: once(async () => { this.intent.tick(); this.intent.honestyCheck(this.transcripts.recent()); this.changed(); }),
+      guard: once(() => this.pollGuard()),
+      worm: once(() => this.pollWorm()),
+    });
+  }
+
+  // How many times slower the repeating checks run: on battery, or when the computer is hot (core/power.js).
+  speed() {
+    return power.slowdown({ saving: this.store.settings.powerSave !== false, ...this.power });
+  }
+
+  // The system says the computer runs on battery or has become hot (or no longer does). Only the timers change.
+  setPower(patch = {}) {
+    const before = this.speed();
+    this.power = { ...this.power, ...patch };
+    // Before the first start there are no timers yet, and start() makes them at the right speed.
+    if (this.speed() === before || !this.timers.length) return;
+    if (this.store.settings.realtime) this.applyTimers(false);
+    this.changed();
+  }
+
+  // The computer woke from sleep: look at once, instead of after the next wait (a minute or more on a slow setting).
+  wake() {
+    if (!this.store.settings.realtime || !this.jobs || !this.timers.length) return;
+    this.jobs.proc();
+    this.jobs.net();
+  }
+
   applySchedule() {
+    this.applyTimers(true);
+    this.applyWatchers();
+  }
+
+  // The timers of the repeating checks. `first`: run each check right away (after a start or a change of settings), not after its first wait.
+  applyTimers(first = true) {
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
-    this.timers.push(setInterval(() => this.tel.sample(), 1000));       // the live chart: one sample per second
+    const s = this.store.settings;
+    const f = this.speed();
+    if (s.realtime) {
+      const ms = power.intervals(s.pollSeconds, f);
+      const jobs = this.jobList();
+      const every = (key) => {
+        this.timers.push(setInterval(jobs[key], ms[key]));
+        if (first) jobs[key]();
+      };
+      every('proc');
+      every('net');
+      every('liveNet');
+      every('transcripts');
+      every('minute');
+      every('guard');
+      if (s.wormWatch !== false) every('worm');
+    }
+    const full = setInterval(() => this.fullScan('schedule').catch(() => {}), Math.max(1, s.fullScanHours) * 3600 * 1000);
+    this.timers.push(full);
+  }
+
+  // What watches by itself, without a timer: changes in files, new files in Downloads.
+  applyWatchers() {
     const s = this.store.settings;
     this.files.threshold = s.massDeleteThreshold;
     if (s.realtime) {
-      // A job never runs twice at the same time: when one round is slow (a busy PC, a hung helper),
-      // the next tick is skipped instead of piling up behind it or handling the same events twice.
-      const every = (ms, fn) => {
-        const run = U.exclusive(fn);
-        this.timers.push(setInterval(run, ms));
-        run();
-      };
-      every(Math.max(2, s.pollSeconds) * 1000, () => this.pollProcesses());
-      every(15000, () => this.pollNetwork());
-      // While the live view is open the network is checked more often, so new connections show up quickly.
-      every(5000, async () => { if (this.liveWatching && Date.now() - this.lastNetPoll > 4000) await this.pollNetwork(); });
-      every(8000, async () => { this.transcripts.poll(); });
-      every(60000, async () => { this.intent.tick(); this.intent.honestyCheck(this.transcripts.recent()); this.changed(); });
-      every(2500, () => this.pollGuard());
-      if (s.wormWatch !== false) every(3000, () => this.pollWorm());
       this.files.start(this.configPaths(), s.roots, this.boardWatch());
       if (s.downloadGuard) this.downloads.start(); else this.downloads.stop();
     } else {
       this.files.stop();
       this.downloads.stop();
     }
-    const full = setInterval(() => this.fullScan('schedule').catch(() => {}), Math.max(1, s.fullScanHours) * 3600 * 1000);
-    this.timers.push(full);
   }
 
   configPaths() {
@@ -191,7 +245,7 @@ class Engine {
     const steps = [
       ['gate', async () => {
         this.inventory.agents = await inv.installedAgents();
-        const files = inv.scanFiles(this.store.settings.roots, this.store);
+        const files = await inv.scanFilesAsync(this.store.settings.roots, this.store);   // with a turn for the rest of the program every few milliseconds
         this._files = files;
         this._boardFiles = new Map((files.boardFiles || []).map((f) => [f.file.toLowerCase(), f]));
         this.inventory.mcp = inv.scanMcp(this.store, files.projectMcp);
@@ -1253,6 +1307,9 @@ class Engine {
       dismissed: Object.entries(this.store.state.dismissed || {}).map(([key, d]) => ({ key, name: d.name, at: d.at, sev: d.sev })),
       remedies: (this.store.state.remedies || []).slice(0, 30).map(({ undo, ...r }) => ({ ...r, canUndo: !!undo && !r.undone })),
       apiPort: require('./api').PORT,
+      // How fast the repeating checks run now: 1 = normal, more = spread out (on battery or hot), and why.
+      runtime: { ...this.runtime },
+      power: { speed: this.speed(), why: power.reason({ saving: this.store.settings.powerSave !== false, ...this.power }), onBattery: !!this.power.onBattery, thermal: this.power.thermal },
     };
   }
 

@@ -76,10 +76,25 @@ async function check() {
   return { status: cmp(version, CURRENT) > 0 ? 'newer' : 'latest', current: CURRENT, version, page: rel.html_url, assets, at: Date.now() };
 }
 
+// Which installer of a release belongs to this computer. A Windows PC with an ARM chip (Snapdragon) can run the Intel installer too,
+// but slower, so the ARM one is taken when the release has it and GitHub published its checksum. The ARM installer has a name that
+// the older versions of AgathOS do not match, so they keep taking the Intel one.
+const SETUP_X64 = /^AgathOS-Setup-.*\.exe$/i;
+const SETUP_ARM64 = /^AgathOS-Windows-ARM64-Setup-.*\.exe$/i;
+const HAS_SUM = /^sha256:[a-f0-9]{64}$/i;
+function pickInstaller(info, arch = process.arch) {
+  const assets = ((info && info.assets) || []).filter((a) => a && typeof a === 'object');
+  if (arch === 'arm64') {
+    const arm = assets.find((a) => SETUP_ARM64.test(a.name) && HAS_SUM.test(a.digest || ''));
+    if (arm) return arm;
+  }
+  return assets.find((a) => SETUP_X64.test(a.name)) || null;
+}
+
 // Windows installer: download, verify, run silently (/S) and start AgathOS again (--force-run).
 async function install(info) {
   if (process.platform !== 'win32' || !info || info.status !== 'newer') return { ok: false, reason: 'page' };
-  const asset = (info.assets || []).find((a) => /^AgathOS-Setup-.*\.exe$/i.test(a.name));
+  const asset = pickInstaller(info);
   const want = asset && /^sha256:([a-f0-9]{64})$/i.exec(asset.digest || '');
   // Without a published checksum we do not run anything: the download page opens instead.
   if (!asset || !want) return { ok: false, reason: 'page' };
@@ -109,10 +124,10 @@ function calmMoment(s) {
 
 // Can this app put the new version on by itself? Only the installed Windows app can, and only when
 // GitHub publishes a SHA-256 checksum for the installer. Anything else opens the download page.
-function canSelfInstall(info, platform = process.platform, packaged = false) {
+function canSelfInstall(info, platform = process.platform, packaged = false, arch = process.arch) {
   if (platform !== 'win32' || !packaged || !info || info.status !== 'newer') return false;
-  const asset = (info.assets || []).find((a) => /^AgathOS-Setup-.*\.exe$/i.test(a.name));
-  return !!asset && /^sha256:[a-f0-9]{64}$/i.test(asset.digest || '');
+  const asset = pickInstaller(info, arch);
+  return !!asset && HAS_SUM.test(asset.digest || '');
 }
 
 // A look that failed (offline, GitHub busy) must not wipe out an update that was found before.
@@ -131,4 +146,4 @@ function autoDecision({ platform, packaged, autoUpdate, info, failedVersion, cal
   return calm ? 'go' : 'wait';
 }
 
-module.exports = { check, install, cmp, calmMoment, autoDecision, canSelfInstall, keepKnown, RETRY_MS, REPO, CURRENT };
+module.exports = { check, install, pickInstaller, cmp, calmMoment, autoDecision, canSelfInstall, keepKnown, RETRY_MS, REPO, CURRENT };

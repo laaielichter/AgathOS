@@ -25,7 +25,7 @@ const crashed = (e) => {
 };
 process.on('uncaughtException', crashed);
 process.on('unhandledRejection', crashed);
-const ok = (cond, name) => { if (cond) { pass++; console.log('PASS', name); } else { fail++; failed.push(String(name)); console.log('FAIL', name); } };
+const ok = (cond, name, detail) => { if (cond) { pass++; console.log('PASS', name); } else { fail++; failed.push(String(name)); console.log('FAIL', name, detail === undefined ? '' : '-> ' + String(detail).slice(0, 400)); } };
 
 const T = require('../core/textscan');
 const K = require('../core/classify');
@@ -259,6 +259,95 @@ const backupTests = async () => {
   ok(T.series.length === KEEP && T.feed.length === FEED && T.view(0).feed.length <= 80, 'telemetry: memory stays small (a short history, a capped log, capped pushes)');
 }
 
+// ---------- Telemetry without a timer: the seconds are closed when something asks ----------
+{
+  const { Telemetry, KEEP } = require('../core/telemetry');
+  let clock = 5000000;
+  const T = new Telemetry({ now: () => clock });
+  T.count('spawns', 2);
+  ok(T.series.length === 0, 'telemetry (no timer): nothing is closed while the second is still running');
+  clock += 3500;
+  T.count('conns', 1);
+  ok(T.series.length === 3 && T.series[0].spawns === 2 && T.series[1].spawns === 0 && T.series[2].conns === 0 && T.cur.conns === 1,
+    'telemetry (no timer): the second that was counted is closed with its numbers, the quiet ones after it as zeros');
+  ok(T.series.map((r) => r.t).join() === '5001000,5002000,5003000', 'telemetry (no timer): every closed second has its own time');
+  clock += 3600 * 1000;
+  const v = T.view(0);
+  ok(T.series.length === KEEP && v.series.length === KEEP && T.series[KEEP - 1].t === T.mark && T.series.every((r) => r.spawns === 0 && r.conns === 0),
+    'telemetry (no timer): after an hour of sleep only the last quiet seconds are kept, and they end now');
+  const before = T.series.length;
+  T.view(0); T.view(0);
+  ok(T.series.length === before && T.mark === 5003000 + 3600 * 1000, 'telemetry (no timer): asking again within the same second closes nothing');
+  let at = 100000;
+  const Q = new Telemetry({ now: () => at });
+  Q.file('~/proj', false);
+  at += 1500;
+  Q.file('~/proj', false);
+  ok(Q.series.length === 1 && Q.series[0].files === 1 && Q.bucket.get('~/proj').n === 1, 'telemetry (no timer): file changes of a closed second are counted in that second');
+}
+
+// ---------- Power: how fast the repeating checks run ----------
+{
+  const P = require('../core/power');
+  ok(P.slowdown() === 1 && P.slowdown({ onBattery: true }) === 2 && P.slowdown({ thermal: 'fair' }) === 1 && P.slowdown({ thermal: 'serious' }) === 3 && P.slowdown({ thermal: 'critical' }) === 4,
+    'power: normal speed on mains, twice as slow on battery, three or four times when the computer is hot');
+  ok(P.slowdown({ onBattery: true, thermal: 'serious' }) === 3 && P.slowdown({ onBattery: true, thermal: 'unknown' }) === 2 && P.slowdown({ thermal: 'nonsense' }) === 1,
+    'power: the larger slowdown wins, an unknown heat reading changes nothing');
+  ok(P.slowdown({ saving: false, onBattery: true, thermal: 'critical' }) === 1 && P.reason({ saving: false, onBattery: true }) === 'normal',
+    'power: with saving switched off the speed never changes');
+  ok(P.reason() === 'normal' && P.reason({ onBattery: true }) === 'battery' && P.reason({ onBattery: true, thermal: 'critical' }) === 'hot' && P.reason({ thermal: 'fair' }) === 'normal',
+    'power: the window is told why: normal, battery or hot');
+  const base = P.intervals(5, 1);
+  ok(base.proc === 5000 && base.net === 15000 && base.transcripts === 8000 && base.guard === 2500 && base.worm === 3000 && base.minute === 60000 && base.liveNet === 5000,
+    'power: at normal speed the checks run as they always did');
+  const bat = P.intervals(5, 2);
+  ok(bat.proc === 10000 && bat.net === 30000 && bat.transcripts === 16000 && bat.guard === 5000 && bat.worm === 6000 && bat.liveNet === 5000 && bat.minute === 60000,
+    'power: on battery the repeating checks are twice as far apart, the live view and the minute round do not change');
+  const hot = P.intervals(5, 4);
+  ok(hot.proc === 12000 && hot.net === 60000 && hot.transcripts === 30000 && hot.guard === 10000 && hot.worm === 12000,
+    'power: a check never becomes slower than a fixed top, however hot it gets');
+  ok(P.intervals(30, 4).proc === 30000 && P.intervals(1, 1).proc === 2000 && P.intervals('x', 2).proc === 10000,
+    'power: never slower than the person set it, never faster than every two seconds, and a broken setting falls back to five seconds');
+  ok(P.releaseAfter({}).win === 600000 && P.releaseAfter({}).mini === 300000 && P.releaseAfter({ AGATHOS_RELEASE_MS: '4000' }).win === 4000 && P.releaseAfter({ AGATHOS_RELEASE_MS: '4000' }).mini === 4000,
+    'power: a hidden window goes after ten minutes, the pop-up after five; the check of the installed app can shorten it');
+  ok(P.releaseAfter({ AGATHOS_RELEASE_MS: '5' }).win === 600000 && P.releaseAfter({ AGATHOS_RELEASE_MS: 'abc' }).win === 600000 && P.releaseAfter({ AGATHOS_RELEASE_MS: '99999999' }).win === 600000,
+    'power: a nonsense wait is ignored');
+}
+
+// ---------- Graphics: the safety net for drivers ----------
+{
+  const G = require('../core/graphics');
+  const gdir = path.join(tmp, 'gfx');
+  ok(G.read(gdir).mode === 'auto', 'graphics: no file means automatic');
+  ok(G.write(gdir, 'software', 'crashes') && G.read(gdir).mode === 'software' && G.read(gdir).why === 'crashes', 'graphics: the choice is written and read back');
+  fs.writeFileSync(path.join(gdir, G.FILE), '{ nonsense');
+  ok(G.read(gdir).mode === 'auto', 'graphics: a broken file means automatic');
+  fs.writeFileSync(path.join(gdir, G.FILE), JSON.stringify({ mode: 'turbo', why: 5 }));
+  ok(G.read(gdir).mode === 'auto' && G.read(gdir).why === '', 'graphics: an unknown mode means automatic');
+  ok(G.write(gdir, 'nonsense') && G.read(gdir).mode === 'auto', 'graphics: an unknown mode is written as automatic');
+  const t0 = 1000000;
+  let list = G.record([], t0, 'crashed');
+  list = G.record(list, t0 + 30000, 'abnormal-exit');
+  ok(list.length === 2 && !G.tooMany(list), 'graphics: two crashes in two minutes are not yet too many');
+  const three = G.record(list, t0 + 60000, 'launch-failed');
+  ok(three.length === 3 && G.tooMany(three), 'graphics: three crashes within two minutes are too many');
+  ok(G.record(list, t0 + 60000, 'clean-exit').length === 2 && G.record(list, t0 + 60000, 'killed').length === 2, 'graphics: a process that ended on purpose does not count');
+  ok(G.record(three, t0 + 200000, 'crashed').length === 1, 'graphics: crashes that are more than two minutes old are forgotten');
+  ok(!G.tooMany(G.record(null, t0, 'crashed')) && !G.tooMany(undefined), 'graphics: no list means nothing to count');
+  const gs = new Store(path.join(tmp, 'store-gfx'));
+  ok(gs.settings.graphics === 'auto' && gs.settings.effects === 'auto' && gs.settings.powerSave === true, 'settings: graphics, animations and power saving start on automatic');
+  gs.updateSettings({ graphics: 'software', effects: 'low' });
+  ok(gs.settings.graphics === 'software' && gs.settings.effects === 'low', 'settings: the choices are kept');
+  gs.updateSettings({ graphics: 'turbo', effects: 7 });
+  ok(gs.settings.graphics === 'auto' && gs.settings.effects === 'auto', 'settings: nonsense falls back to automatic');
+  // The program asks the browser for software drawing before it is ready, and only for what this file says.
+  const mainText = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8').replace(/\r\n/g, '\n');
+  ok(/graphics\.read\(.*\)\.mode === 'software'\) \{ app\.disableHardwareAcceleration\(\)/.test(mainText) && mainText.indexOf('disableHardwareAcceleration') < mainText.indexOf('app.whenReady'),
+    'graphics: software drawing is asked for before the browser is ready');
+  ok(!/win\.webContents\.send\('agathos:update'/.test(mainText.replace(/if \(seen\(win\)\) \{ winStale = false; win\.webContents\.send\('agathos:update', snap\); \}/, '')),
+    'power: the state is only pushed to a window that is on screen');
+}
+
 // ---------- Worm watch part 2: packages and workflows ----------
 const supplyTests = async () => {
   const S = require('../core/supply');
@@ -403,6 +492,18 @@ const supplyTests = async () => {
   ok(up.calmMoment({ runningAgents: 0, scanning: false, windowInUse: false, paused: false }) && !up.calmMoment({ runningAgents: 1 }) && !up.calmMoment({ scanning: true }) && !up.calmMoment({ windowInUse: true }) && !up.calmMoment({ paused: true }), 'auto update: quiet means no agent, no scan, window not in use, nothing paused');
   ok(new Store(path.join(tmp, 'store-auto')).settings.autoUpdate === true, 'settings: auto update is on by default');
   ok(up.cmp('0.10.0', '0.9.9') > 0 && up.cmp('v1.0.0', '1.0.0') === 0 && up.cmp('0.4.1', '0.5.0') < 0, 'update: versions compare correctly');
+  // Which installer: the Intel one for everybody, the ARM one for a Windows PC with an ARM chip when the release has it (with its checksum).
+  const sum = 'sha256:' + 'b'.repeat(64);
+  const both = { status: 'newer', version: '9.9.9', assets: [
+    { name: 'AgathOS-Windows-ARM64-Setup-9.9.9.exe', digest: sum }, { name: 'AgathOS-Setup-9.9.9.exe', digest: sum },
+    { name: 'AgathOS-9.9.9-arm64.dmg', digest: sum }, { name: 'AgathOS-Setup-9.9.9.exe.blockmap', digest: sum }] };
+  ok(up.pickInstaller(both, 'x64').name === 'AgathOS-Setup-9.9.9.exe' && up.pickInstaller(both, 'ia32').name === 'AgathOS-Setup-9.9.9.exe', 'update: an Intel or AMD PC gets the Intel installer');
+  ok(up.pickInstaller(both, 'arm64').name === 'AgathOS-Windows-ARM64-Setup-9.9.9.exe', 'update: a Windows PC with an ARM chip gets the ARM installer');
+  ok(up.pickInstaller({ assets: [both.assets[1]] }, 'arm64').name === 'AgathOS-Setup-9.9.9.exe', 'update: without an ARM installer an ARM PC takes the Intel one (it runs there too)');
+  ok(up.pickInstaller({ assets: [{ ...both.assets[0], digest: null }, both.assets[1]] }, 'arm64').name === 'AgathOS-Setup-9.9.9.exe', 'update: an ARM installer without a published checksum is not taken');
+  ok(up.pickInstaller({ assets: [both.assets[0]] }, 'x64') === null && up.pickInstaller({ assets: [] }, 'arm64') === null && up.pickInstaller(null) === null && up.pickInstaller({ assets: [null, 5, { name: 7 }] }, 'x64') === null, 'update: nothing to pick gives nothing');
+  ok(!/^AgathOS-Setup-.*\.exe$/i.test('AgathOS-Windows-ARM64-Setup-9.9.9.exe'), 'update: older versions never mistake the ARM installer for theirs');
+  ok(up.canSelfInstall(both, 'win32', true, 'x64') === true && up.canSelfInstall({ status: 'newer', assets: [both.assets[0]] }, 'win32', true, 'x64') === false && up.canSelfInstall({ status: 'newer', assets: [both.assets[0]] }, 'win32', true, 'arm64') === true, 'update: only an installer for this computer allows updating by itself');
   const rep = require('../core/report');
   const html = rep.build({ watchers: [{ id: 'gate', state: 'alarm', issues: 1 }], fixPlan: [{ name: '<b>x</b>', sev: 'alarm', reasons: [{ key: 'mcp.malicious', params: { pkg: 'p' }, sev: 'alarm' }], cat: 'mcp', action: 'disable' }], agents: [], events: [] }, (k) => k, 'en');
   ok(/<html/.test(html) && /&lt;b&gt;x&lt;\/b&gt;/.test(html) && !/<script/i.test(html), 'report: one HTML page, names escaped, no scripts');
@@ -1549,6 +1650,80 @@ const themeTests = () => {
   ok(snap.events.some((e) => e.key === 'scan.done'), 'scan.done event logged');
   ok(eng.checkToolCall({ agent: 'x', tool: 'Bash', input: { command: 'schtasks /create /tn a /tr b' } }).decision === 'deny', 'API check denies persistence');
   ok(eng.checkToolCall({ agent: 'x', tool: 'Read', input: { file_path: 'src/a.js' } }).decision === 'allow', 'API check allows a normal read');
+
+  // ---------- power: the speed of the repeating checks ----------
+  {
+    ok(eng.speed() === 1 && eng.snapshot().power.speed === 1 && eng.snapshot().power.why === 'normal', 'engine: normal speed on mains power');
+    eng.setPower({ onBattery: true });
+    const onBat = eng.snapshot().power;
+    ok(eng.speed() === 2 && onBat.speed === 2 && onBat.why === 'battery' && onBat.onBattery === true, 'engine: on battery the repeating checks are slower, and the snapshot says why');
+    eng.setPower({ thermal: 'serious' });
+    ok(eng.speed() === 3 && eng.snapshot().power.why === 'hot' && eng.snapshot().power.thermal === 'serious', 'engine: a hot computer is slower still');
+    est.updateSettings({ powerSave: false });
+    ok(eng.speed() === 1 && eng.snapshot().power.why === 'normal' && eng.snapshot().power.speed === 1, 'engine: with power saving switched off nothing is slowed');
+    est.updateSettings({ powerSave: 'nonsense' });
+    ok(est.settings.powerSave === true, 'engine: a broken power saving setting means on');
+    eng.setPower({ onBattery: false, thermal: 'nominal' });
+    ok(eng.speed() === 1 && eng.snapshot().power.why === 'normal', 'engine: back on mains power the speed is normal again');
+
+    // The timers themselves: made at the speed the computer is in, and made again when it changes.
+    const pst = new Store(path.join(tmp, 'store-power'));
+    pst.updateSettings({ realtime: true, roots: [], modelDirs: [], pollSeconds: 5 });
+    const pe = new Engine(pst, { appDir: path.join(__dirname, '..'), onUpdate: () => {}, notify: () => {} });
+    pe.changed = () => {};              // this engine was never started: nothing may build a snapshot of it later
+    const realSet = global.setInterval;
+    let asked = [];
+    global.setInterval = (fn, ms) => { asked.push(ms); return { unref() {} }; };
+    const round = (patch) => { asked = []; pe.setPower(patch); return asked.slice(); };
+    try {
+      pe.setPower({ onBattery: true });
+      ok(pe.timers.length === 0 && pe.speed() === 2, 'engine: before the first start only the speed is kept, the start makes the timers');
+      asked = [];
+      pe.applyTimers(false);
+      ok(asked.join() === '10000,30000,5000,16000,60000,5000,6000,21600000', 'engine: the timers start at battery speed when the computer already is on battery', asked.join());
+      const back = round({ onBattery: false });
+      ok(back.join() === '5000,15000,5000,8000,60000,2500,3000,21600000', 'engine: back on mains power the timers are made again at normal speed', back.join());
+      ok(round({ onBattery: false }).length === 0, 'engine: the same speed again makes no new timers');
+      const hot = round({ thermal: 'critical' });
+      ok(hot.join() === '12000,60000,5000,30000,60000,10000,12000,21600000', 'engine: a computer that is too hot gets the slowest timers', hot.join());
+      pst.updateSettings({ powerSave: false });
+      asked = [];
+      pe.applyTimers(false);
+      ok(asked.join() === '5000,15000,5000,8000,60000,2500,3000,21600000', 'engine: with power saving off the timers stay at normal speed, however hot the computer is', asked.join());
+      pst.updateSettings({ powerSave: true });
+      // wake: the programs and the network are looked at at once; a stopped scanner does not look
+      const looked = [];
+      pe.jobs = { proc: () => looked.push('proc'), net: () => looked.push('net') };
+      pe.wake();
+      ok(looked.join() === 'proc,net', 'engine: after sleep the programs and the network are looked at at once');
+      pst.updateSettings({ realtime: false });
+      pe.wake();
+      ok(looked.length === 2, 'engine: after sleep nothing is looked at when the live scanner is off');
+    } finally {
+      global.setInterval = realSet;
+      pe.timers = [];
+    }
+  }
+
+  // ---------- the file scan gives the program a turn between its steps ----------
+  {
+    const UT = require('../core/util');
+    const turns = [];
+    const meter = setInterval(() => turns.push(Date.now()), 1);
+    function* busy() { for (let i = 0; i < 40; i++) { const t = Date.now(); while (Date.now() - t < 3); yield; } return 'done'; }
+    const out = await UT.runCooperative(busy(), 5);
+    clearInterval(meter);
+    ok(out === 'done' && turns.length >= 5, 'cooperative: a long job gives the rest of the program turns between its steps', turns.length);
+    ok(UT.run(busy()) === 'done' && UT.run((function* () { return 7; })()) === 7, 'cooperative: the same job can also run to its end at once');
+    const docs = path.join(tmp, 'Documents');
+    const opts = { maxDepth: 6, maxFiles: 60000 };
+    const w1 = UT.walk(docs, opts);
+    const w2 = UT.run(UT.walkSteps(docs, opts));
+    ok(w1.length > 0 && JSON.stringify(w1) === JSON.stringify(w2), 'cooperative: the walk in steps finds the same files in the same order');
+    const plain = inv.scanFiles([docs], { state: { ignored: {} } });
+    const turned = await inv.scanFilesAsync([docs], { state: { ignored: {} } });
+    ok(plain.files.length > 0 && JSON.stringify(plain) === JSON.stringify(turned), 'cooperative: the scan with turns in between finds exactly what the plain scan finds');
+  }
 
   // ---------- fix it ----------
   const remedy = require('../core/remedy');

@@ -710,6 +710,26 @@
     "api.report": "{name} zgłasza obawę: „{note}”",
     "api.keyRotated": "Klucz właściciela lokalnego API został odnowiony, bo inni użytkownicy tego komputera mogli odczytać jego plik",
     "api.auditTampered": "Dziennik zapytań do API został zmieniony poza AgathOS. Kopia starego dziennika została zachowana i zaczęto nowy.",
+
+    "set.perf": "Wydajność",
+    "set.powerSave": "Oszczędzanie energii",
+    "set.powerSaveDesc": "Na baterii albo gdy komputer jest gorący, powtarzane kontrole są wykonywane rzadziej. Zmiany w plikach i Guard działają w normalnym tempie.",
+    "set.powerNow.normal": "Teraz: normalna prędkość.",
+    "set.powerNow.battery": "Teraz: praca na baterii, więc powtarzane kontrole czekają {x} razy dłużej.",
+    "set.powerNow.hot": "Teraz: komputer jest gorący, więc powtarzane kontrole czekają {x} razy dłużej.",
+    "set.powerNow.off": "Teraz: wyłączone, zawsze pełna prędkość.",
+    "set.effects": "Animacje",
+    "set.effectsDesc": "Mniej animacji to mniejsze zużycie energii. Automatycznie oznacza mniej na baterii i gdy system prosi o mniej ruchu.",
+    "set.effects.auto": "Automatycznie",
+    "set.effects.full": "Wszystkie",
+    "set.effects.low": "Mniej",
+    "set.graphics": "Grafika",
+    "set.graphicsDesc": "Automatycznie używa karty graficznej. Jeśli okno miga albo pokazuje usterki, wybierz Programowo: AgathOS rysuje wtedy bez karty graficznej.",
+    "set.graphics.auto": "Automatycznie",
+    "set.graphics.software": "Programowo",
+    "set.graphicsRestart": "Zadziała po ponownym uruchomieniu AgathOS.",
+    "set.restartNow": "Uruchom ponownie teraz",
+    "gpu.fallback": "Sterownik grafiki kilka razy z rzędu przestał działać. Od następnego uruchomienia AgathOS rysuje bez karty graficznej (Ustawienia > Wydajność).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pl, d);

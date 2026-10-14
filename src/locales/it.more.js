@@ -710,6 +710,26 @@
     "api.report": "{name} ti segnala una preoccupazione: «{note}»",
     "api.keyRotated": "La chiave del proprietario dell’API locale è stata rinnovata perché altri utenti di questo PC potevano leggerne il file",
     "api.auditTampered": "Il registro delle richieste API è stato modificato fuori da AgathOS. Una copia del vecchio registro è stata conservata e ne è stato iniziato uno nuovo.",
+
+    "set.perf": "Prestazioni",
+    "set.powerSave": "Risparmio energetico",
+    "set.powerSaveDesc": "A batteria, o quando il computer è caldo, i controlli ripetuti vengono eseguiti meno spesso. Le modifiche ai file e Guard mantengono la velocità normale.",
+    "set.powerNow.normal": "Adesso: velocità normale.",
+    "set.powerNow.battery": "Adesso: a batteria, quindi i controlli ripetuti aspettano {x} volte di più.",
+    "set.powerNow.hot": "Adesso: il computer è caldo, quindi i controlli ripetuti aspettano {x} volte di più.",
+    "set.powerNow.off": "Adesso: disattivato, sempre a piena velocità.",
+    "set.effects": "Animazioni",
+    "set.effectsDesc": "Meno animazioni consumano meno energia. Automatico significa meno a batteria e quando il sistema chiede meno movimento.",
+    "set.effects.auto": "Automatico",
+    "set.effects.full": "Tutte",
+    "set.effects.low": "Meno",
+    "set.graphics": "Grafica",
+    "set.graphicsDesc": "Automatico usa la scheda grafica. Se la finestra sfarfalla o mostra difetti, scegli Software: AgathOS disegna allora senza la scheda grafica.",
+    "set.graphics.auto": "Automatico",
+    "set.graphics.software": "Software",
+    "set.graphicsRestart": "Vale dopo il riavvio di AgathOS.",
+    "set.restartNow": "Riavvia ora",
+    "gpu.fallback": "Il driver grafico si è bloccato più volte di seguito. Dal prossimo avvio AgathOS disegna senza la scheda grafica (Impostazioni > Prestazioni).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.it, d);

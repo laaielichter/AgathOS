@@ -652,6 +652,26 @@
     "api.report": "{name} tells you about a worry: “{note}”",
     "api.keyRotated": "The owner key of the local API was renewed, because other users of this PC could read its file",
     "api.auditTampered": "The log of API requests was changed outside AgathOS. A copy of the old log was kept and a new one was started.",
+
+    "set.perf": "Performance",
+    "set.powerSave": "Save power",
+    "set.powerSaveDesc": "On battery, or when the computer is hot, the repeating checks run less often. File changes and Guard keep their normal speed.",
+    "set.powerNow.normal": "Right now: normal speed.",
+    "set.powerNow.battery": "Right now: on battery, so the repeating checks wait {x} times as long.",
+    "set.powerNow.hot": "Right now: the computer is hot, so the repeating checks wait {x} times as long.",
+    "set.powerNow.off": "Right now: switched off, always full speed.",
+    "set.effects": "Animations",
+    "set.effectsDesc": "Fewer animations use less power. Automatic means fewer on battery, and when the system asks for less motion.",
+    "set.effects.auto": "Automatic",
+    "set.effects.full": "All",
+    "set.effects.low": "Fewer",
+    "set.graphics": "Graphics",
+    "set.graphicsDesc": "Automatic uses the graphics card. If the window flickers or shows glitches, choose Software: AgathOS then draws without the graphics card.",
+    "set.graphics.auto": "Automatic",
+    "set.graphics.software": "Software",
+    "set.graphicsRestart": "Applies after AgathOS restarts.",
+    "set.restartNow": "Restart now",
+    "gpu.fallback": "The graphics driver crashed several times in a row. From the next start AgathOS draws without the graphics card (Settings > Performance).",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);
