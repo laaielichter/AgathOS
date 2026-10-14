@@ -249,6 +249,15 @@
     "set.quietTo": "종료",
     "notif.bundle": "새 알림 {n}개",
     "notif.more": "AgathOS에 알림이 더 있습니다. 편할 때 확인하세요.",
+    "worm.lanSweep": "{process}이(가) 1분 안에 네트워크의 기기 {hosts}대에 접속을 시도했습니다(포트 {sample}). 웜은 이렇게 다음 목표를 찾습니다.",
+    "worm.portScan": "{process}이(가) 1분 안에 {host}의 서로 다른 포트 {ports}개를 시도했습니다. 웜은 이렇게 침입 경로를 찾습니다.",
+    "set.wormWatch": "웜 감시: 프로그램이 네트워크를 훑으면 경고",
+    "set.wormWatchDesc": "몇 초마다 어떤 프로그램이 집 네트워크의 많은 기기나 포트(카메라, TV, 공유기 등)에 접속을 시도하는지 확인합니다.",
+    "an.worm.simple": "이 컴퓨터의 한 프로그램이 웜이 퍼지기 전에 하는 것처럼 집 네트워크의 기기를 찾고 있습니다.",
+    "an.worm.maybe": "한 프로그램이 짧은 시간 안에 많은 기기, 또는 한 기기의 많은 포트에 접속했습니다. 직접 실행한 네트워크 도구(nmap, Fing 등)일 수도 있지만, 카메라, TV, 공유기를 뚫으려는 악성코드나 통제를 벗어난 에이전트일 수도 있습니다.",
+    "an.worm.risk": "약한 기기를 찾은 웜은 그 기기를 장악하고 거기서 다른 기기와 다른 집으로 퍼질 수 있습니다. 스마트 TV, 카메라, 공유기는 백신을 실행할 수 없어서 거의 알아차리지 못합니다.",
+    "an.worm.todo": "네트워크 도구를 직접 실행하지 않았나요? 프로그램을 일시 중지하거나 중지하고, 어디서 왔는지 확인하세요. 확실하지 않으면 이 컴퓨터를 네트워크에서 분리하세요.",
+    "an.worm.deep": "AgathOS는 3초마다 프로세스별로 열려 있는 TCP 연결과 반쯤 열린 TCP 연결을 읽습니다(Windows는 Get-NetTCPConnection, macOS는 lsof, AgathOS Guard가 있으면 Sysmon 이벤트 3). 1분 안에 사설 주소의 서로 다른 기기와 포트를 셉니다. 기기 20대 또는 한 기기의 포트 15개는 스캔으로 판단합니다. 알려진 네트워크 도구는 경보 대신 주의로 표시됩니다.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);

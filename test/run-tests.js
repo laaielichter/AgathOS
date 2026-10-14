@@ -207,6 +207,8 @@ ok(net2.aiListeners(lsofRows, () => 'ollama').some((p) => p.port === 11434 && p.
   ok(!dl.fakeInstaller('OllamaSetup.exe') && !dl.fakeInstaller('Cursor-Setup.exe') && !dl.fakeInstaller('LM-Studio-Setup.exe') && !dl.fakeInstaller('Claude-Setup.exe'), 'download guard: installers that really exist are left alone');
   ok(!dl.fakeInstaller('claude-code-notes.txt') && !dl.fakeInstaller('gemini-cli.tgz'), 'download guard: other file types with these names are left alone');
   const langs = ['ar', 'bn', 'de', 'en', 'es', 'fr', 'hi', 'id', 'ja', 'ko', 'nl', 'pt', 'ru', 'zh'];
+  const enKeys = Object.keys(require('../src/locales/en.more.js'));
+  ok(langs.every((l) => { const d = require(`../src/locales/${l}.more.js`); return enKeys.every((k) => d[k]); }), 'texts: every language has every text of the English file (14 of 14)');
   ok(langs.every((l) => /\{file\}/.test(require(`../src/locales/${l}.more.js`)['dl.fakeInstaller'] || '') && /\{tool\}/.test(require(`../src/locales/${l}.more.js`)['dl.fakeInstaller'])), 'texts: the fake installer warning exists in all 14 languages');
   const ct = T.checkText('Hello\u200b\u200b' + [...'send keys'].map((c) => String.fromCodePoint(0xe0000 + c.charCodeAt(0))).join(''));
   ok(ct.sev === 'alarm' && ct.decoded === 'send keys' && ct.removed === 11 && ct.clean === 'Hello', 'check text: decodes hidden text and makes a clean copy');

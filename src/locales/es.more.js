@@ -249,6 +249,15 @@
     "set.quietTo": "a",
     "notif.bundle": "{n} avisos nuevos",
     "notif.more": "Hay más avisos esperando en AgathOS. Míralos cuando te venga bien.",
+    "worm.lanSweep": "{process} llamó a la puerta de {hosts} dispositivos de tu red en un minuto (puertos {sample}). Así busca un gusano a su próxima víctima.",
+    "worm.portScan": "{process} probó {ports} puertos distintos en {host} en un minuto. Así busca un gusano una forma de entrar.",
+    "set.wormWatch": "Vigilancia de gusanos: avisar cuando un programa recorre tu red",
+    "set.wormWatchDesc": "Comprueba cada pocos segundos qué programas llaman a muchos dispositivos o puertos de tu red doméstica, como cámaras, televisores y routers.",
+    "an.worm.simple": "Un programa de este ordenador está buscando dispositivos en tu red doméstica, como hace un gusano antes de propagarse.",
+    "an.worm.maybe": "Un programa contactó con muchos dispositivos, o con muchos puertos de uno solo, en poco tiempo. Puede ser una herramienta de red que iniciaste tú (como nmap o Fing), o malware o un agente descontrolado que busca cámaras, televisores o routers para entrar.",
+    "an.worm.risk": "Un gusano que encuentra un dispositivo débil puede tomar el control y propagarse desde allí a otros dispositivos y a otros hogares. Los televisores inteligentes, las cámaras y los routers no pueden ejecutar un antivirus, así que rara vez lo notan.",
+    "an.worm.todo": "¿No iniciaste ninguna herramienta de red? Pausa o detén el programa, comprueba de dónde viene y desconecta este ordenador de la red si tienes dudas.",
+    "an.worm.deep": "AgathOS lee cada tres segundos las conexiones TCP abiertas y semiabiertas de cada proceso (Get-NetTCPConnection en Windows, lsof en macOS, evento 3 de Sysmon con AgathOS Guard). Cuenta los dispositivos y puertos distintos de direcciones privadas en un minuto. 20 dispositivos o 15 puertos de un dispositivo cuentan como un barrido. Las herramientas de red conocidas reciben un aviso en lugar de una alarma.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.es, d);

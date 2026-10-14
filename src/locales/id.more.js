@@ -249,6 +249,15 @@
     "set.quietTo": "sampai",
     "notif.bundle": "{n} notifikasi baru",
     "notif.more": "Masih ada notifikasi lain di AgathOS. Buka saat Anda sempat.",
+    "worm.lanSweep": "{process} mengetuk {hosts} perangkat di jaringanmu dalam satu menit (port {sample}). Begitulah cara worm mencari korban berikutnya.",
+    "worm.portScan": "{process} mencoba {ports} port berbeda di {host} dalam satu menit. Begitulah cara worm mencari jalan masuk.",
+    "set.wormWatch": "Pengawas worm: beri peringatan saat sebuah program memindai jaringanmu",
+    "set.wormWatchDesc": "Memeriksa setiap beberapa detik program mana yang mengetuk banyak perangkat atau port di jaringan rumahmu, seperti kamera, TV, dan router.",
+    "an.worm.simple": "Sebuah program di komputer ini sedang mencari perangkat di jaringan rumahmu, seperti yang dilakukan worm sebelum menyebar.",
+    "an.worm.maybe": "Sebuah program menghubungi banyak perangkat, atau banyak port dari satu perangkat, dalam waktu singkat. Bisa jadi itu alat jaringan yang kamu jalankan sendiri (seperti nmap atau Fing), atau malware atau agen liar yang mencari kamera, TV, atau router untuk dibobol.",
+    "an.worm.risk": "Worm yang menemukan perangkat lemah bisa mengambil alih dan menyebar dari sana ke perangkat lain dan rumah lain. TV pintar, kamera, dan router tidak bisa menjalankan pemindai virus, jadi jarang menyadarinya.",
+    "an.worm.todo": "Kamu tidak menjalankan alat jaringan? Jeda atau hentikan programnya, periksa dari mana asalnya, dan putuskan komputer ini dari jaringan jika kamu ragu.",
+    "an.worm.deep": "AgathOS membaca koneksi TCP yang terbuka dan setengah terbuka per proses setiap tiga detik (Get-NetTCPConnection di Windows, lsof di macOS, kejadian Sysmon 3 dengan AgathOS Guard). AgathOS menghitung perangkat dan port berbeda pada alamat privat dalam satu menit. 20 perangkat atau 15 port pada satu perangkat dihitung sebagai pemindaian. Alat jaringan yang dikenal mendapat peringatan, bukan alarm.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);
