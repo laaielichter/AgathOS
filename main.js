@@ -62,7 +62,8 @@ function createWindow() {
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
-  const hidden = process.argv.includes('--hidden') || (IS_MAC && (() => { try { return app.getLoginItemSettings().wasOpenedAsHidden; } catch (_) { return false; } })());
+  // Windows starts us with --hidden. On a Mac the system only says "opened at login" (the older "opened as hidden" is gone).
+  const hidden = process.argv.includes('--hidden') || (IS_MAC && (() => { try { return !!app.getLoginItemSettings().wasOpenedAtLogin; } catch (_) { return false; } })());
   win.once('ready-to-show', () => { if (!hidden) win.show(); });
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
   win.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://')) shell.openExternal(url); return { action: 'deny' }; });
@@ -228,6 +229,9 @@ function showNotification(events, { sound, overflow }) {
   const body = overflow ? tt('notif.more') : events.length > 1 ? events.slice(0, 3).map((x) => `• ${eventText(x)}`).join('\n').slice(0, 300) : eventText(first).slice(0, 220);
   const n = new Notification({ title, body, icon: path.join(__dirname, 'src', 'icon.png'), silent: !sound });
   n.on('click', () => showWindow(overflow || events.length > 1 ? 'overview' : viewOf(first)));
+  // Mac (Electron 42 and newer): a notification fails when the app is not code signed or the system blocks it.
+  // Then the Dock icon bounces instead, so a danger message is not lost silently.
+  n.on('failed', () => { try { if (IS_MAC && app.dock && !(win && !win.isDestroyed() && win.isFocused())) app.dock.bounce(first.sev === 'alarm' ? 'critical' : 'informational'); } catch (_) { /* no Dock */ } });
   n.show();
   if (store.settings.notify === 'ask' && first.sev === 'alarm' && !overflow) showWindow();
 }
@@ -248,7 +252,7 @@ function applyOsSettings() {
   const s = store.settings;
   // Installed app: start AgathOS.exe itself. From source (npm start): electron.exe needs the app folder too.
   const args = app.isPackaged ? ['--hidden'] : [app.getAppPath(), '--hidden'];
-  try { app.setLoginItemSettings(IS_MAC ? { openAtLogin: !!s.startWithWindows, openAsHidden: true } : { openAtLogin: !!s.startWithWindows, args }); } catch (_) {}
+  try { app.setLoginItemSettings(IS_MAC ? { openAtLogin: !!s.startWithWindows } : { openAtLogin: !!s.startWithWindows, args }); } catch (_) {}
   globalShortcut.unregisterAll();
   if (s.hotkey) {
     globalShortcut.register('Control+Alt+Shift+P', () => {
@@ -404,7 +408,8 @@ function wireIpc() {
   h('uiState', () => ({ ...(store.state.ui || {}), snoozeUntil: store.state.snoozeUntil || 0, update: updateInfo, version: app.getVersion() }));
   // From the mini pop-up: open the full window (optionally on a page or the fix dialog).
   h('checkText', (text) => checkText(typeof text === 'string' ? text : ''));
-  h('copyText', (text) => { if (typeof text === 'string') clipboard.writeText(text); return true; });
+  // Since Electron 44 the clipboard writes through a promise; older versions return nothing. Await handles both.
+  h('copyText', async (text) => { if (typeof text !== 'string') return false; try { await clipboard.writeText(text); return true; } catch (_) { return false; } });
   h('snooze', (what) => { snooze(what === '1h' ? 3600 * 1000 : what === 'tomorrow' ? untilTomorrow() : 0); return store.state.snoozeUntil || 0; });
   h('saveReport', async () => {
     const d = new Date();

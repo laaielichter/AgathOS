@@ -26,11 +26,18 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
+      - run: node test/run-tests.js
       - run: npx --yes electron-builder@26 --win nsis --x64 --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: AgathOS-Windows
           path: dist/*.exe
+      # Starts the built app once, with a few bad files in a throw-away home folder, and checks that it
+      # scans, finds them, answers and has no hidden errors. A failure here stops the release.
+      - name: Smoke test of the built app
+        run: |
+          npm install --no-save --no-audit --no-fund playwright-core@1.56.0
+          node test/smoke.js dist/win-unpacked/AgathOS.exe
 
   mac:
     runs-on: macos-latest
@@ -48,6 +55,13 @@ jobs:
         with:
           name: AgathOS-macOS
           path: dist/*.dmg
+      # The runner is an Apple-chip Mac, so the arm64 build is the one that is started.
+      - name: Smoke test of the built app
+        run: |
+          npm install --no-save --no-audit --no-fund playwright-core@1.56.0
+          APP="$(find dist -maxdepth 4 -path '*mac-arm64*' -path '*Contents/MacOS/AgathOS' | head -1)"
+          echo "starting $APP"
+          node test/smoke.js "$APP"
 
   release:
     needs: [windows, mac]
