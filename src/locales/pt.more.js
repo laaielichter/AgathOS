@@ -258,6 +258,20 @@
     "an.worm.risk": "Um worm que encontra um dispositivo fraco pode assumir o controle e se espalhar a partir dele, para outros dispositivos e outras casas. TVs inteligentes, câmeras e roteadores não conseguem rodar um antivírus, então raramente percebem.",
     "an.worm.todo": "Você não abriu nenhuma ferramenta de rede? Pause ou pare o programa, veja de onde ele veio e desconecte este computador da rede se estiver em dúvida.",
     "an.worm.deep": "O AgathOS lê a cada três segundos as conexões TCP abertas e semiabertas de cada processo (Get-NetTCPConnection no Windows, lsof no macOS, evento 3 do Sysmon com o AgathOS Guard). Ele conta dispositivos e portas diferentes em endereços privados dentro de um minuto. 20 dispositivos ou 15 portas de um dispositivo contam como uma varredura. Ferramentas de rede conhecidas recebem um aviso em vez de um alarme.",
+    "tab.ext": "Extensões do navegador",
+    "ext.empty": "Nenhuma extensão de IA encontrada no Chrome, Edge ou Brave.",
+    "ev.version": "Versão",
+    "ext.aiTheme": "Apresenta-se como um assistente de IA",
+    "ext.aiChats": "Tem acesso a sites de chat de IA ({sites})",
+    "ext.allSites": "Pode ler e alterar qualquer site que você abrir",
+    "ext.reads": "Também pode usar: {perms}",
+    "ext.flagged": "A extensão de navegador {name} ({browser}) é sobre IA e pode ler qualquer site que você abrir. Confira se você ainda confia nela.",
+    "fix.ext": "Abra a página de extensões do seu navegador (no Chrome, digite chrome://extensions na barra de endereços) e encontre esta extensão. Se você não a conhece ou não a usa mais, remova-a. Se for mantê-la, veja antes quem a criou e leia as avaliações.",
+    "an.ext.simple": "Uma extensão de navegador ligada à IA pode ler e alterar qualquer site que você abrir.",
+    "an.ext.maybe": "Muitos assistentes de IA precisam disso para funcionar, por exemplo para resumir uma página ou escrever em uma caixa de texto. Uma extensão confiável de um autor conhecido não é problema.",
+    "an.ext.risk": "Em 2026, duas extensões que se passavam por assistentes de IA, com cerca de 900.000 usuários, copiavam conversas do ChatGPT e do DeepSeek e todas as abas abertas para um servidor. Uma extensão que lê todas as páginas também pode ler suas conversas, seus e-mails e as páginas do seu banco.",
+    "an.ext.todo": "Você não conhece esta extensão ou não a usa mais? Remova-a no navegador. Se for mantê-la, veja quem a criou e confira as avaliações.",
+    "an.ext.deep": "O AgathOS lê o manifest.json de cada extensão do Chrome, Edge e Brave (todos os perfis) e nada mais. Ele lista extensões ligadas à IA ou que podem alcançar sites de chat de IA. Conta como atenção quando a extensão pode ler todos os sites (<all_urls> ou um padrão como https://*/*). Também mostra permissões mais amplas como tabs, history, cookies, webRequest e clipboardRead. Ele não vê o que a extensão realmente faz, só o que ela pode fazer. Uma mudança de permissões após uma atualização é avisada de novo.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.pt, d);

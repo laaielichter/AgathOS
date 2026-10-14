@@ -258,6 +258,20 @@
     "an.worm.risk": "약한 기기를 찾은 웜은 그 기기를 장악하고 거기서 다른 기기와 다른 집으로 퍼질 수 있습니다. 스마트 TV, 카메라, 공유기는 백신을 실행할 수 없어서 거의 알아차리지 못합니다.",
     "an.worm.todo": "네트워크 도구를 직접 실행하지 않았나요? 프로그램을 일시 중지하거나 중지하고, 어디서 왔는지 확인하세요. 확실하지 않으면 이 컴퓨터를 네트워크에서 분리하세요.",
     "an.worm.deep": "AgathOS는 3초마다 프로세스별로 열려 있는 TCP 연결과 반쯤 열린 TCP 연결을 읽습니다(Windows는 Get-NetTCPConnection, macOS는 lsof, AgathOS Guard가 있으면 Sysmon 이벤트 3). 1분 안에 사설 주소의 서로 다른 기기와 포트를 셉니다. 기기 20대 또는 한 기기의 포트 15개는 스캔으로 판단합니다. 알려진 네트워크 도구는 경보 대신 주의로 표시됩니다.",
+    "tab.ext": "브라우저 확장 프로그램",
+    "ext.empty": "Chrome, Edge, Brave에서 AI 확장 프로그램을 찾지 못했습니다.",
+    "ev.version": "버전",
+    "ext.aiTheme": "AI 도우미인 척합니다",
+    "ext.aiChats": "AI 채팅 사이트에 접근할 수 있습니다({sites})",
+    "ext.allSites": "내가 여는 모든 웹사이트를 읽고 바꿀 수 있습니다",
+    "ext.reads": "그 밖에 쓸 수 있는 권한: {perms}",
+    "ext.flagged": "브라우저 확장 프로그램 {name}({browser})은(는) AI와 관련이 있고, 내가 여는 모든 웹사이트를 읽을 수 있습니다. 여전히 믿을 수 있는지 확인하세요.",
+    "fix.ext": "브라우저의 확장 프로그램 페이지를 열고(Chrome은 주소창에 chrome://extensions 입력) 이 확장 프로그램을 찾으세요. 모르거나 더 이상 쓰지 않는다면 삭제하세요. 계속 쓸 거라면 먼저 만든 사람을 확인하고 후기를 읽어 보세요.",
+    "an.ext.simple": "AI와 관련된 브라우저 확장 프로그램은 내가 여는 모든 웹사이트를 읽고 바꿀 수 있습니다.",
+    "an.ext.maybe": "많은 AI 도우미는 페이지를 요약하거나 입력창에 글을 쓰기 위해 이 권한이 필요합니다. 알려진 제작자의 믿을 만한 확장 프로그램은 괜찮습니다.",
+    "an.ext.risk": "2026년에 AI 도우미인 척한 확장 프로그램 두 개(사용자 약 90만 명)가 ChatGPT와 DeepSeek 대화와 열려 있는 모든 탭을 서버로 복사했습니다. 모든 페이지를 읽을 수 있는 확장 프로그램은 내 채팅, 메일, 은행 페이지도 읽을 수 있습니다.",
+    "an.ext.todo": "이 확장 프로그램을 모르거나 더 이상 쓰지 않나요? 브라우저에서 삭제하세요. 계속 쓸 거라면 만든 사람을 확인하고 후기를 보세요.",
+    "an.ext.deep": "AgathOS는 Chrome, Edge, Brave(모든 프로필)의 각 확장 프로그램의 manifest.json만 읽고 그 밖에는 아무것도 읽지 않습니다. AI와 관련되었거나 AI 채팅 사이트에 접근할 수 있는 확장 프로그램을 나열합니다. 확장 프로그램이 모든 웹사이트를 읽을 수 있으면(<all_urls> 또는 https://*/* 같은 패턴) 주의로 셉니다. tabs, history, cookies, webRequest, clipboardRead 같은 더 넓은 권한도 보여 줍니다. 확장 프로그램이 실제로 무엇을 하는지는 볼 수 없고, 허용된 것만 볼 수 있습니다. 업데이트 후 권한이 바뀌면 다시 알려 줍니다.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);

@@ -259,6 +259,20 @@
     "an.worm.risk": "A worm that finds a weak device can take it over and spread from there, to other devices and other homes. Smart TVs, cameras and routers cannot run a virus scanner, so they rarely notice.",
     "an.worm.todo": "Did you not start a network tool? Pause or stop the program, check where it came from, and disconnect this computer from the network if you are unsure.",
     "an.worm.deep": "AgathOS reads the open and half-open TCP connections per process every three seconds (Get-NetTCPConnection on Windows, lsof on macOS, Sysmon event 3 with AgathOS Guard). It counts different devices and ports on private addresses within one minute. 20 devices or 15 ports on one device count as a sweep. Known network tools get a warning instead of an alarm.",
+    "tab.ext": "Browser extensions",
+    "ext.empty": "No AI extensions found in Chrome, Edge or Brave.",
+    "ev.version": "Version",
+    "ext.aiTheme": "Presents itself as an AI helper",
+    "ext.aiChats": "Has access to AI chat sites ({sites})",
+    "ext.allSites": "May read and change every website you open",
+    "ext.reads": "Can also use: {perms}",
+    "ext.flagged": "Browser extension {name} ({browser}) is about AI and may read every website you open. Check that you still trust it.",
+    "fix.ext": "Open the extensions page of your browser (in Chrome, type chrome://extensions in the address bar) and find this extension. If you do not know it or no longer use it, remove it. If you keep it, check who made it and read the reviews first.",
+    "an.ext.simple": "A browser extension that is about AI is allowed to read and change every website you open.",
+    "an.ext.maybe": "Many AI helpers need this to work, for example to summarise a page or to write in a text box. A trustworthy extension from a known maker is fine.",
+    "an.ext.risk": "In 2026 two extensions that posed as AI helpers, with about 900,000 users, copied ChatGPT and DeepSeek chats and all open tabs to a server. An extension that can read every page can also read your chats, your mail and your bank pages.",
+    "an.ext.todo": "Do you not know this extension, or do you no longer use it? Remove it in your browser. If you keep it, check who made it and look at the reviews.",
+    "an.ext.deep": "AgathOS reads the manifest.json of every extension in Chrome, Edge and Brave (all profiles) and nothing else. It lists extensions that are about AI or may reach AI chat sites. It counts as attention when the extension may read all websites (<all_urls> or a pattern such as https://*/*). It also shows wider permissions such as tabs, history, cookies, webRequest and clipboardRead. It cannot see what the extension really does, only what it is allowed to do. A change in permissions after an update is reported again.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.en, d);

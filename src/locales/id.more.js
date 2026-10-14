@@ -258,6 +258,20 @@
     "an.worm.risk": "Worm yang menemukan perangkat lemah bisa mengambil alih dan menyebar dari sana ke perangkat lain dan rumah lain. TV pintar, kamera, dan router tidak bisa menjalankan pemindai virus, jadi jarang menyadarinya.",
     "an.worm.todo": "Kamu tidak menjalankan alat jaringan? Jeda atau hentikan programnya, periksa dari mana asalnya, dan putuskan komputer ini dari jaringan jika kamu ragu.",
     "an.worm.deep": "AgathOS membaca koneksi TCP yang terbuka dan setengah terbuka per proses setiap tiga detik (Get-NetTCPConnection di Windows, lsof di macOS, kejadian Sysmon 3 dengan AgathOS Guard). AgathOS menghitung perangkat dan port berbeda pada alamat privat dalam satu menit. 20 perangkat atau 15 port pada satu perangkat dihitung sebagai pemindaian. Alat jaringan yang dikenal mendapat peringatan, bukan alarm.",
+    "tab.ext": "Ekstensi browser",
+    "ext.empty": "Tidak ada ekstensi AI di Chrome, Edge, atau Brave.",
+    "ev.version": "Versi",
+    "ext.aiTheme": "Mengaku sebagai asisten AI",
+    "ext.aiChats": "Punya akses ke situs obrolan AI ({sites})",
+    "ext.allSites": "Boleh membaca dan mengubah setiap situs web yang kamu buka",
+    "ext.reads": "Juga boleh memakai: {perms}",
+    "ext.flagged": "Ekstensi browser {name} ({browser}) berkaitan dengan AI dan boleh membaca setiap situs web yang kamu buka. Periksa apakah kamu masih memercayainya.",
+    "fix.ext": "Buka halaman ekstensi browsermu (di Chrome, ketik chrome://extensions di bilah alamat) dan cari ekstensi ini. Jika kamu tidak mengenalnya atau tidak memakainya lagi, hapus. Jika kamu mempertahankannya, periksa dulu siapa pembuatnya dan baca ulasannya.",
+    "an.ext.simple": "Ekstensi browser yang berkaitan dengan AI boleh membaca dan mengubah setiap situs web yang kamu buka.",
+    "an.ext.maybe": "Banyak asisten AI membutuhkan ini agar berfungsi, misalnya untuk merangkum halaman atau menulis di kotak teks. Ekstensi tepercaya dari pembuat yang dikenal tidak masalah.",
+    "an.ext.risk": "Pada 2026, dua ekstensi yang menyamar sebagai asisten AI, dengan sekitar 900.000 pengguna, menyalin obrolan ChatGPT dan DeepSeek serta semua tab yang terbuka ke sebuah server. Ekstensi yang bisa membaca setiap halaman juga bisa membaca obrolan, email, dan halaman banmu.",
+    "an.ext.todo": "Kamu tidak mengenal ekstensi ini atau tidak memakainya lagi? Hapus di browsermu. Jika kamu mempertahankannya, periksa siapa pembuatnya dan lihat ulasannya.",
+    "an.ext.deep": "AgathOS membaca manifest.json setiap ekstensi di Chrome, Edge, dan Brave (semua profil) dan tidak ada yang lain. AgathOS mendaftar ekstensi yang berkaitan dengan AI atau bisa menjangkau situs obrolan AI. Dihitung sebagai perhatian jika ekstensi boleh membaca semua situs web (<all_urls> atau pola seperti https://*/*). AgathOS juga menampilkan izin yang lebih luas seperti tabs, history, cookies, webRequest, dan clipboardRead. AgathOS tidak melihat apa yang sebenarnya dilakukan ekstensi, hanya apa yang boleh dilakukannya. Perubahan izin setelah pembaruan dilaporkan lagi.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);

@@ -258,6 +258,20 @@
     "an.worm.risk": "Ein Wurm, der ein schwaches Gerät findet, kann es übernehmen und sich von dort aus weiter ausbreiten, auf andere Geräte und in andere Haushalte. Smart-TVs, Kameras und Router können keinen Virenscanner ausführen und merken deshalb selten etwas.",
     "an.worm.todo": "Hast du kein Netzwerkwerkzeug gestartet? Pausiere oder stoppe das Programm, prüfe, woher es kommt, und trenne diesen Computer vom Netzwerk, wenn du unsicher bist.",
     "an.worm.deep": "AgathOS liest alle drei Sekunden die offenen und halboffenen TCP-Verbindungen pro Prozess (Get-NetTCPConnection unter Windows, lsof unter macOS, Sysmon-Ereignis 3 mit AgathOS Guard). Es zählt verschiedene Geräte und Ports auf privaten Adressen innerhalb einer Minute. 20 Geräte oder 15 Ports eines Geräts gelten als Absuchen. Bekannte Netzwerkwerkzeuge bekommen eine Warnung statt eines Alarms.",
+    "tab.ext": "Browser-Erweiterungen",
+    "ext.empty": "Keine KI-Erweiterungen in Chrome, Edge oder Brave gefunden.",
+    "ev.version": "Version",
+    "ext.aiTheme": "Gibt sich als KI-Helfer aus",
+    "ext.aiChats": "Hat Zugriff auf KI-Chat-Seiten ({sites})",
+    "ext.allSites": "Darf jede Website lesen und ändern, die du öffnest",
+    "ext.reads": "Darf außerdem nutzen: {perms}",
+    "ext.flagged": "Browser-Erweiterung {name} ({browser}) hat mit KI zu tun und darf jede Website lesen, die du öffnest. Prüfe, ob du ihr noch vertraust.",
+    "fix.ext": "Öffne die Erweiterungsseite deines Browsers (in Chrome gibst du chrome://extensions in die Adressleiste ein) und suche diese Erweiterung. Kennst du sie nicht oder nutzt du sie nicht mehr, entferne sie. Behältst du sie, prüfe vorher, wer sie gemacht hat, und lies die Bewertungen.",
+    "an.ext.simple": "Eine Browser-Erweiterung mit KI-Bezug darf jede Website lesen und ändern, die du öffnest.",
+    "an.ext.maybe": "Viele KI-Helfer brauchen das, um zu funktionieren, zum Beispiel um eine Seite zusammenzufassen oder in ein Textfeld zu schreiben. Eine vertrauenswürdige Erweiterung eines bekannten Herstellers ist in Ordnung.",
+    "an.ext.risk": "2026 kopierten zwei Erweiterungen, die sich als KI-Helfer ausgaben und zusammen etwa 900.000 Nutzer hatten, ChatGPT- und DeepSeek-Gespräche und alle offenen Tabs auf einen Server. Eine Erweiterung, die jede Seite lesen kann, kann auch deine Gespräche, deine Mails und deine Bankseiten lesen.",
+    "an.ext.todo": "Kennst du diese Erweiterung nicht oder nutzt du sie nicht mehr? Entferne sie in deinem Browser. Behältst du sie, prüfe, wer sie gemacht hat, und sieh dir die Bewertungen an.",
+    "an.ext.deep": "AgathOS liest die manifest.json jeder Erweiterung in Chrome, Edge und Brave (alle Profile) und sonst nichts. Es listet Erweiterungen mit KI-Bezug oder Zugriff auf KI-Chat-Seiten. Es gilt als Hinweis, wenn die Erweiterung alle Websites lesen darf (<all_urls> oder ein Muster wie https://*/*). Es zeigt auch weitergehende Rechte wie tabs, history, cookies, webRequest und clipboardRead. Es sieht nicht, was die Erweiterung wirklich tut, nur was sie darf. Eine Änderung der Rechte nach einem Update wird erneut gemeldet.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.de, d);

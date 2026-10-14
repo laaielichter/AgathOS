@@ -185,6 +185,40 @@ ok(net2.aiListeners(lsofRows, () => 'ollama').some((p) => p.port === 11434 && p.
   ok(idf('claude.exe', 'claude', '/applications/claude.app/contents/macos/claude') === 'claude-desktop' && idf('claude.exe', 'claude', '/users/a/.local/bin/claude') === 'claude-code', 'mac: Claude Desktop and Claude Code are told apart');
 }
 
+// ---------- AI browser extensions ----------
+{
+  const X = require('../core/extensions');
+  const root = path.join(tmp, 'ChromeUD');
+  const put = (id, ver, manifest, locales) => {
+    const d = path.join(root, 'Default', 'Extensions', id, ver);
+    fs.mkdirSync(d, { recursive: true });
+    fs.writeFileSync(path.join(d, 'manifest.json'), '﻿' + JSON.stringify(manifest));
+    for (const [loc, msgs] of Object.entries(locales || {})) {
+      fs.mkdirSync(path.join(d, '_locales', loc), { recursive: true });
+      fs.writeFileSync(path.join(d, '_locales', loc, 'messages.json'), JSON.stringify(msgs));
+    }
+  };
+  put('aiaiaiaiaiaiaiaiaiaiaiaiaiaiaiai', '1.9_0', { manifest_version: 3, name: 'Old name', version: '1.9' });
+  put('aiaiaiaiaiaiaiaiaiaiaiaiaiaiaiai', '1.10_0', { manifest_version: 3, name: '__MSG_appName__', default_locale: 'en', version: '1.10', permissions: ['tabs', 'history', 'storage'], host_permissions: ['<all_urls>'] },
+    { en: { appName: { message: 'Super ChatGPT Sidebar' } } });
+  put('plainplainplainplainplainplainpl', '2.0_0', { manifest_version: 3, name: 'Page Notes', version: '2.0', host_permissions: ['<all_urls>'], permissions: ['tabs'] });
+  put('gptonlygptonlygptonlygptonlygpto', '1.0_0', { manifest_version: 3, name: 'AI Notes', version: '1.0', host_permissions: ['https://example.com/*'] });
+  put('chatsitechatsitechatsitechatsite', '1.0_0', { manifest_version: 3, name: 'Export tool', version: '1.0', host_permissions: ['https://chatgpt.com/*', 'https://claude.ai/*'], content_scripts: [{ matches: ['https://*/*'] }] });
+  const found = X.scan([{ browser: 'Chrome', dir: root }]);
+  const byName = (n) => found.find((x) => x.name === n);
+  const big = byName('Super ChatGPT Sidebar');
+  ok(big && big.state === 'watch' && big.version === '1.10' && big.reasons.some((r) => r.key === 'ext.allSites') && big.reasons.some((r) => r.key === 'ext.reads' && /tabs, history/.test(r.params.perms)), 'extensions: an AI extension that may read every site is attention, newest version, name looked up');
+  ok(!byName('Page Notes') && !found.some((x) => x.name === 'Old name'), 'extensions: an extension that is not about AI is left out');
+  const small = byName('AI Notes');
+  ok(small && small.state === 'calm', 'extensions: an AI extension with limited access is listed as calm');
+  const chat = byName('Export tool');
+  ok(chat && chat.state === 'watch' && chat.reasons.some((r) => r.key === 'ext.aiChats' && /chatgpt\.com/.test(r.params.sites)), 'extensions: access to AI chat sites is shown, all-sites from a content script counts');
+  ok(X.scan([{ browser: 'Chrome', dir: path.join(tmp, 'nothing-here') }]).length === 0, 'extensions: a missing browser folder is fine');
+  const h1 = big.hash;
+  put('aiaiaiaiaiaiaiaiaiaiaiaiaiaiaiai', '1.11_0', { manifest_version: 3, name: '__MSG_appName__', default_locale: 'en', version: '1.11', permissions: ['tabs', 'history', 'cookies'], host_permissions: ['<all_urls>'] }, { en: { appName: { message: 'Super ChatGPT Sidebar' } } });
+  ok(X.scan([{ browser: 'Chrome', dir: root }]).find((x) => x.name === 'Super ChatGPT Sidebar').hash !== h1, 'extensions: new permissions after an update change the fingerprint');
+}
+
 // ---------- download guard, check text, report, updates ----------
 {
   const dl = require('../core/dlguard');
@@ -305,6 +339,12 @@ ok(net2.aiListeners(lsofRows, () => 'ollama').some((p) => p.port === 11434 && p.
   netMod.attempts = realAttempts;
   const wev = est.events.filter((e) => e.key === 'worm.lanSweep');
   ok(wev.length === 1 && wev[0].sev === 'alarm' && wev[0].params.process === 'worm.exe' && /camera/.test(wev[0].params.kinds), 'engine: a network sweep becomes one worm alarm with the program name');
+  // browser extensions in the fix plan and the snapshot
+  eng.inventory.extensions = [{ id: 'e1e1e1e1e1e1e1e1', browser: 'Chrome', profile: 'Default', extId: 'x', version: '1.0', path: path.join(tmp, 'Chrome', 'x'), name: 'Fake AI Helper', state: 'watch', reasons: [{ key: 'ext.allSites', params: {}, sev: 'watch' }], hash: 'h' }];
+  const extStep = eng.fixPlan().find((x) => x.tkey === 'ext:e1e1e1e1e1e1e1e1');
+  ok(extStep && extStep.cat === 'manual' && extStep.sev === 'watch', 'engine: a browser extension to check is a step you do yourself');
+  ok(eng.snapshot().extensions.length === 1 && eng.counts().issues >= 1, 'engine: extensions are in the snapshot and in the count');
+  ok(eng.fixDismiss('ext:e1e1e1e1e1e1e1e1').ok && !eng.fixPlan().some((x) => x.tkey === 'ext:e1e1e1e1e1e1e1e1') && eng.snapshot().extensions[0].state === 'calm', 'engine: an extension can be dismissed');
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
   fs.rmSync(tmp, { recursive: true, force: true });
