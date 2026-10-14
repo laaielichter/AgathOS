@@ -192,12 +192,14 @@ const OFFICIAL_HOSTS = new RegExp(`(^|\\.)(${AI_PROVIDER_HOSTS.map((h) => h.repl
 
 // ---------- Instruction files (read by agents as orders) ----------
 const INSTRUCTION_FILES = new Set(['claude.md', 'agents.md', 'gemini.md', 'qwen.md', '.cursorrules', '.windsurfrules',
-  '.clinerules', 'copilot-instructions.md', 'skill.md', 'conventions.md', '.goosehints', 'agent.md', 'claude.local.md']);
+  '.clinerules', 'copilot-instructions.md', 'skill.md', 'conventions.md', '.goosehints', 'agent.md', 'claude.local.md',
+  'heartbeat.md', 'soul.md', 'boot.md']);       // the last three: the list an agent works through by itself, its character, its start-up task (OpenClaw style workspaces)
 const INSTRUCTION_DIR_HINTS = [/[\\/]\.cursor[\\/]rules[\\/]/i, /[\\/]\.clinerules[\\/]/i, /[\\/]\.roo[\\/]rules/i,
   /[\\/]\.claude[\\/](commands|agents|skills)[\\/]/i, /[\\/]\.github[\\/]instructions[\\/]/i,
   /[\\/]\.grok[\\/](rules|skills|commands|agents)[\\/]/i];
 const SKILL_DIRS = ['%USERPROFILE%\\.claude\\skills', '%USERPROFILE%\\.openclaw\\skills', '%USERPROFILE%\\.agents\\skills',
-  '%USERPROFILE%\\.codex\\skills', '%USERPROFILE%\\.claude\\plugins', '%GROK_HOME%\\skills', '%GROK_HOME%\\plugins'];
+  '%USERPROFILE%\\.codex\\skills', '%USERPROFILE%\\.claude\\plugins', '%GROK_HOME%\\skills', '%GROK_HOME%\\plugins',
+  '%USERPROFILE%\\.openclaw\\workspace\\skills', '%USERPROFILE%\\.clawdbot\\skills', '%USERPROFILE%\\.moltbot\\skills'];
 
 // ---------- Local AI servers ----------
 const AI_PORTS = {

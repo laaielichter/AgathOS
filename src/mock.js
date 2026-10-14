@@ -83,11 +83,39 @@
         reasons: [R('mcp.ok', {}, 'calm')], hash: 'm3', approved: true, approvable: false, dupOf: 'mcp', mcpId: 'm3' },
       { id: 'l9', kind: 'server', app: 'Ollama', label: '0.0.0.0:11434', key: '11434', url: '', host: '0.0.0.0', via: 'port', file: '', short: '', scope: 'global', cls: 'exposed', provider: '', state: 'alarm',
         reasons: [R('port.open', { product: 'Ollama', addr: '0.0.0.0', port: 11434 }, 'alarm')], hash: 'p1', approved: false, approvable: false, dupOf: 'port' },
+      // Message boards (kind 'board'): the same shape core/boards.js gives.
+      { id: 'b1', kind: 'board', btype: 'agentnet', bid: 'moltbook', name: 'Moltbook', app: 'OpenClaw', label: 'www.moltbook.com/heartbeat.md', key: 'moltbook', url: 'www.moltbook.com/heartbeat.md', host: 'www.moltbook.com',
+        via: 'file', file: 'C:\\Users\\you\\.openclaw\\workspace\\HEARTBEAT.md', short: '~\\.openclaw\\workspace\\HEARTBEAT.md', scope: 'global', cls: 'board', dir: 'both', state: 'alarm',
+        reasons: [R('board.r.agentnet', { name: 'Moltbook', host: 'www.moltbook.com' }, 'watch'), R('board.r.orders', { host: 'www.moltbook.com' }, 'alarm')], hash: 'b1h', approved: false, approvable: true, dupOf: null, watcher: 'traps',
+        uses: [{ app: 'OpenClaw', kind: 'instruction', short: '~\\.openclaw\\workspace\\HEARTBEAT.md' }], more: 0, orders: true, open: false },
+      { id: 'b2', kind: 'board', btype: 'chat', bid: 'telegram', name: 'Telegram', app: 'OpenClaw', label: 'api.telegram.org', key: 'channels.telegram', url: 'api.telegram.org', host: 'api.telegram.org',
+        via: 'config', file: 'C:\\Users\\you\\.openclaw\\openclaw.json', short: '~\\.openclaw\\openclaw.json', scope: 'global', cls: 'board', dir: 'both', state: 'alarm',
+        reasons: [R('board.r.chat', { name: 'Telegram', host: 'api.telegram.org' }, 'watch'), R('board.r.openChannel', { setting: 'channels.telegram.allowFrom' }, 'alarm')], hash: 'b2h', approved: false, approvable: true, dupOf: null, watcher: 'keys',
+        uses: [{ app: 'OpenClaw', kind: 'config', short: '~\\.openclaw\\openclaw.json' }], more: 0, orders: false, open: false },
+      { id: 'b3', kind: 'board', btype: 'paste', bid: 'pastebin', name: 'Pastebin', app: 'Project repo-from-internet', label: 'pastebin.com/raw/Xk3b…9q', key: 'paste', url: 'pastebin.com/raw/Xk3b…9q', host: 'pastebin.com',
+        via: 'file', file: 'C:\\Users\\you\\Downloads\\repo-from-internet\\AGENTS.md', short: '~\\Downloads\\repo-from-internet\\AGENTS.md', scope: 'global', cls: 'board', dir: 'in', state: 'watch',
+        reasons: [R('board.r.paste', { name: 'Pastebin', host: 'pastebin.com' }, 'watch'), R('board.r.ordersOnce', { host: 'pastebin.com' }, 'watch')], hash: 'b3h', approved: false, approvable: true, dupOf: null, watcher: 'traps',
+        uses: [{ app: 'Project repo-from-internet', kind: 'instruction', short: '~\\Downloads\\repo-from-internet\\AGENTS.md' }], more: 0, orders: true, open: false },
+      { id: 'b4', kind: 'board', btype: 'webhook', bid: 'discord', name: 'Discord', app: 'Project game', label: 'discord.com/api/webhooks/1234…78/•••', key: 'webhook', url: 'discord.com/api/webhooks/1234…78/•••', host: 'discord.com',
+        via: 'config', file: 'C:\\Users\\you\\projects\\game\\.env', short: '~\\projects\\game\\.env', scope: 'global', cls: 'board', dir: 'out', state: 'watch',
+        reasons: [R('board.r.webhook', { name: 'Discord', host: 'discord.com' }, 'watch')], hash: 'b4h', approved: false, approvable: true, dupOf: null, watcher: 'keys',
+        uses: [{ app: 'Project game', kind: 'env', short: '~\\projects\\game\\.env' }], more: 0, orders: false, open: false },
+      { id: 'b5', kind: 'board', btype: 'chat', bid: 'slack', name: 'Slack', app: 'Claude Code', label: 'slack.com', key: 'slack', url: 'slack.com', host: 'slack.com',
+        via: 'live', file: '', short: '', scope: 'global', cls: 'board', dir: 'both', state: 'watch',
+        reasons: [R('board.live', { agent: 'Claude Code', host: 'slack.com', name: 'Slack' }, 'watch')], hash: 'b5h', approved: false, approvable: true, dupOf: null, watcher: 'net', uses: [], more: 0, orders: false, open: false },
+      { id: 'b6', kind: 'board', btype: 'chat', bid: 'slack', name: 'Slack', app: 'Claude Desktop', label: 'slack', key: 'slack', url: '', host: '',
+        via: 'mcp', file: '', short: '', scope: 'global', cls: 'board', dir: 'both', state: 'calm',
+        reasons: [R('board.r.viaMcp', { name: 'Slack' }, 'calm')], hash: 'm2', approved: true, approvable: false, dupOf: 'mcp', mcpId: 'm2', uses: [], more: 0 },
+      { id: 'b7', kind: 'board', btype: 'chat', bid: 'discord', name: 'Discord', app: 'OpenClaw', label: 'discord.com', key: 'channels.discord', url: 'discord.com', host: 'discord.com',
+        via: 'config', file: 'C:\\Users\\you\\.openclaw\\openclaw.json', short: '~\\.openclaw\\openclaw.json', scope: 'global', cls: 'board', dir: 'both', state: 'calm',
+        reasons: [R('board.trusted', {}, 'calm')], hash: 'b7h', approved: true, approvable: true, dupOf: null, watcher: 'keys',
+        uses: [{ app: 'OpenClaw', kind: 'config', short: '~\\.openclaw\\openclaw.json' }], more: 0, orders: false, open: false },
     ],
     ports: [{ id: 'p1', port: 11434, addr: '0.0.0.0', pid: 5512, process: 'ollama.exe', product: 'Ollama', exposed: true, state: 'alarm', reasons: [R('port.open', { product: 'Ollama', addr: '0.0.0.0', port: 11434 }, 'alarm')] }],
     autostarts: [{ id: 'a1', kind: 'task', name: 'NodeUpdater', command: 'node C:\\Users\\you\\AppData\\Local\\Temp\\upd.js', where: '\\', state: 'watch', reasons: [R('auto.tempPath', {}, 'watch'), R('auto.scriptRuntime', {}, 'watch')] }],
     events: [
       { hash: 'e0', ts: m(1), key: 'link.added', sev: 'alarm', watcher: 'keys', params: { app: 'Project repo-from-internet', label: 'api.openai.com.evil.example/v1', host: 'api.openai.com.evil.example' }, target: { type: 'link', id: 'l1' } },
+      { hash: 'e0b', ts: m(2), key: 'board.added', sev: 'alarm', watcher: 'traps', params: { app: 'OpenClaw', label: 'www.moltbook.com/heartbeat.md', host: 'www.moltbook.com', name: 'Moltbook' }, target: { type: 'link', id: 'b1' } },
       { hash: 'e1', ts: m(1), key: 'intent.chain', sev: 'watch', watcher: 'proc', agentId: 'claude-code', params: { chain: 'exfil', next: 'EXFIL' } },
       { hash: 'e2', ts: m(3), key: 'port.open', sev: 'alarm', watcher: 'net', params: { product: 'Ollama', addr: '0.0.0.0', port: 11434 }, target: { type: 'port', port: 11434 } },
       { hash: 'e3', ts: m(9), key: 'mcp.defChanged', sev: 'alarm', watcher: 'gate', params: { name: 'filesystem', app: 'Claude Desktop' }, target: { type: 'mcp', id: 'm2' } },
@@ -112,7 +140,7 @@
     S('manual:f3', 'manual', 'watch', '.env', snap.files[2].short, snap.files[2].reasons, 'guide', 'guide', ['guide']),
     S('manual:flag:claude-code', 'manual', 'watch', 'Claude Code', '--dangerously-skip-permissions', [R('flag.dangerous', { flag: '--dangerously-skip-permissions' }, 'watch')], 'guide', 'guide', ['guide']),
   ];
-  const LS = (l) => S(`manual:link:${l.id}`, 'manual', l.state, `${l.app} → ${l.label}`, l.short || '', l.reasons, 'guide', 'guide', ['guide'], { type: 'link', id: l.id });
+  const LS = (l) => S(`manual:link:${l.id}`, 'manual', l.state, l.kind === 'board' ? `${l.name} · ${l.label}` : `${l.app} → ${l.label}`, l.short || '', l.reasons, 'guide', 'guide', ['guide'], { type: 'link', id: l.id });
   snap.fixPlan.push(...snap.links.filter((l) => !l.dupOf && l.state !== 'calm').map(LS));
   snap.remedies = [];
   snap.dismissed = [];
@@ -176,7 +204,7 @@
     trust: (tg) => {
       if (tg && tg.type === 'link') {
         const l = snap.links.find((y) => y.id === tg.id);
-        if (l && l.approvable) { l.approved = true; l.state = 'calm'; l.reasons = [R('link.trusted', {}, 'calm')]; snap.fixPlan = snap.fixPlan.filter((x) => x.tkey !== `link:${l.id}`); }
+        if (l && l.approvable) { l.approved = true; l.state = 'calm'; l.reasons = [R(l.kind === 'board' ? 'board.trusted' : 'link.trusted', {}, 'calm')]; snap.fixPlan = snap.fixPlan.filter((x) => x.tkey !== `link:${l.id}`); }
       }
       if (tg && tg.type === 'mcp') { const x = snap.mcp.find((y) => y.id === tg.id); if (x) { x.approved = true; x.state = 'calm'; x.reasons = [R('mcp.ok', {}, 'calm')]; } } emit(); return ok(); },
     settings: (p) => { const f = p.fix; Object.assign(snap.settings, p); if (f) snap.settings.fix = { ...fixBefore(), ...f }; fixSnap = { ...snap.settings.fix }; emit(); return ok(); },

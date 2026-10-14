@@ -7,6 +7,7 @@ const U = require('./util');
 const C = require('./catalog');
 const { scanText, findSecrets } = require('./textscan');
 const links = require('./links');
+const boards = require('./boards');
 
 // ---------- MCP configs ----------
 function tomlVal(v) {
@@ -280,12 +281,20 @@ function scanFiles(roots, store) {
   const configs = [];
   const projectMcp = [];
   const linkFiles = [];
+  const boardFiles = [];       // message boards named in instruction files, skills and variable files: [{ file, app, kind, hits }]
+  const boardOn = !(store.settings && store.settings.boardCheck === false);
   const seenPaths = new Set();
-  const check = (file, kind) => {
+  const check = (file, kind, boardKind) => {
     if (seenPaths.has(file.toLowerCase())) return;
     seenPaths.add(file.toLowerCase());
     const text = U.readText(file, 4 * 1024 * 1024);
     if (text == null) return;
+    if (boardOn) {
+      try {
+        const hits = boards.extract(text, { kind: boardKind || (kind === 'env' ? 'env' : 'instruction') });
+        if (hits.length) boardFiles.push({ file, app: boards.appOf(file, projectName(file)), kind: boardKind || (kind === 'env' ? 'env' : 'instruction'), hits });
+      } catch (_) { /* a file that cannot be searched gives no boards */ }
+    }
     const res = scanText(text);
     const reasons = kind === 'env' ? res.reasons.filter((r) => r.key === 'file.secret') : res.reasons;
     let state = reasons.some((r) => r.sev === 'alarm') ? 'alarm' : reasons.some((r) => r.sev === 'watch') ? 'watch' : 'calm';
@@ -328,9 +337,9 @@ function scanFiles(roots, store) {
   if (!U.IS_WIN) for (const rc of require('./mac').SHELL_RC) if (U.exists(rc)) check(rc, 'env');
   for (const d of C.SKILL_DIRS.map(U.expand)) {
     if (!U.exists(d)) continue;
-    for (const f of U.walk(d, { maxDepth: 5, maxFiles: 5000, filter: (full, n) => /\.(md|mdc|txt|sh|ps1|py|js|ts|json|ya?ml)$/i.test(n) })) check(f, 'skill');
+    for (const f of U.walk(d, { maxDepth: 5, maxFiles: 5000, filter: (full, n) => /\.(md|mdc|txt|sh|ps1|py|js|ts|json|ya?ml)$/i.test(n) })) check(f, 'skill', boards.kindOf(f, true));
   }
-  return { files, configs, projectMcp, linkFiles };
+  return { files, configs, projectMcp, linkFiles, boardFiles };
 }
 
 function scanGlobalConfigs() {

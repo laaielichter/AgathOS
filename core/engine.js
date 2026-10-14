@@ -2,6 +2,7 @@
 // AgathOS - the engine. Runs all scanners and watchers, feeds the intent engine,
 // keeps the event log, and builds the snapshot the window shows.
 const os = require('os');
+const fs = require('fs');
 const path = require('path');
 const U = require('./util');
 const C = require('./catalog');
@@ -24,6 +25,7 @@ const remedy = require('./remedy');
 const { DownloadGuard } = require('./dlguard');
 const { LanScanWatch } = require('./worm');
 const links = require('./links');
+const boards = require('./boards');
 
 const WATCHERS = ['gate', 'files', 'net', 'keys', 'traps', 'proc'];
 const RANK = { calm: 0, watch: 1, alarm: 2 };
@@ -34,6 +36,9 @@ const AI_API = new RegExp(`(^|\\.)(${[...C.AI_PROVIDER_HOSTS, 'claude.ai', 'chat
   'codeium.com', 'windsurf.com', 'sentry.io', 'statsig.com', 'segment.io', 'cloudfront.net', 'windows.net', 'akamaized.net', 'kiro.dev',
   'ampcode.com', 'sourcegraph.com', 'factory.ai', 'augmentcode.com', 'zed.dev', 'trae.ai', 'charm.sh']
   .map((h) => h.replace(/\./g, '\\.')).join('|')})$`, 'i');
+
+// A browser that an agent started is browsing, not taking part in a message board.
+const BROWSER_IMAGE = /^(chrome|chromium|msedge|msedgewebview2|firefox|brave|opera|vivaldi|safari|webkit|headless_shell|chrome_crashpad|playwright|electron)(\.exe)?$|helper|renderer|webview/i;
 
 class Engine {
   constructor(store, { appDir, onUpdate, notify }) {
@@ -61,6 +66,10 @@ class Engine {
     this.lastNetPoll = 0;
     this.connSeen = new Set();      // connections already shown in the live log
     this.connInit = false;          // the first network poll only learns what is there already
+    this._boardFiles = new Map();   // file -> { file, app, kind, hits }: message boards named in instruction files, skills and variable files
+    this._boardCache = new Map();   // file -> { sig, res }: the search of a file, kept until the file changes
+    this._boardPending = new Map(); // files that changed and wait for one common look
+    this._boardTimer = null;
 
     this.intent = new IntentEngine(store, { onAlert: (a) => this.event(a) });
     this.procs = new ProcessWatch({
@@ -80,6 +89,7 @@ class Engine {
       onConfigChange: (f) => this.configChanged(f),
       onInstructionChange: (f) => this.instructionChanged(f),
       onLinkFile: (f) => this.linkFileChanged(f),
+      onBoardFile: (f) => this.boardFileChanged(f),
       onMassDelete: (d) => this.massDelete(d).catch(() => {}),
       onActivity: (dir, deleted) => this.tel.file(U.shortPath(dir), deleted),
     });
@@ -102,6 +112,7 @@ class Engine {
     this.timers = [];
     this.files.stop();
     this.downloads.stop();
+    clearTimeout(this._boardTimer);
     U.ps.stop();
   }
 
@@ -140,7 +151,7 @@ class Engine {
       every(60000, async () => { this.intent.tick(); this.intent.honestyCheck(this.transcripts.recent()); this.changed(); });
       every(2500, () => this.pollGuard());
       if (s.wormWatch !== false) every(3000, () => this.pollWorm());
-      this.files.start(this.configPaths(), s.roots);
+      this.files.start(this.configPaths(), s.roots, this.boardWatch());
       if (s.downloadGuard) this.downloads.start(); else this.downloads.stop();
     } else {
       this.files.stop();
@@ -152,7 +163,19 @@ class Engine {
 
   configPaths() {
     const linkFiles = this.store.settings.linkCheck !== false ? links.globalFiles().map((f) => f.path) : [];
-    return [...new Set([...C.MCP_CONFIGS.map((c) => U.expand(c.path)), ...this.inventory.configs.map((c) => c.path).filter((p) => !p.startsWith('Environment')), ...linkFiles])];
+    const boardConfigs = this.store.settings.boardCheck !== false ? boards.globalFiles().filter((f) => f.kind === 'config').map((f) => f.path) : [];
+    return [...new Set([...C.MCP_CONFIGS.map((c) => U.expand(c.path)), ...this.inventory.configs.map((c) => c.path).filter((p) => !p.startsWith('Environment')), ...linkFiles, ...boardConfigs])];
+  }
+
+  // What else is watched for message boards: the instruction files of agents in your home folder, the workspaces of agents, the folders of skills and plugins.
+  boardWatch() {
+    if (this.store.settings.boardCheck === false) return { files: [], dirs: [] };
+    try {
+      return {
+        files: boards.globalFiles().filter((f) => f.kind === 'instruction').map((f) => f.path),
+        dirs: [...boards.instructionDirs().map((d) => d.path), ...C.SKILL_DIRS.map(U.expand).filter(U.exists)],
+      };
+    } catch (_) { return { files: [], dirs: [] }; }
   }
 
   // ---------- full scan ----------
@@ -163,6 +186,7 @@ class Engine {
         this.inventory.agents = await inv.installedAgents();
         const files = inv.scanFiles(this.store.settings.roots, this.store);
         this._files = files;
+        this._boardFiles = new Map((files.boardFiles || []).map((f) => [f.file.toLowerCase(), f]));
         this.inventory.mcp = inv.scanMcp(this.store, files.projectMcp);
         this.inventory.configs = [...inv.scanGlobalConfigs(), ...files.configs, ...(await inv.envBaseUrls())];
         try { this._env = this.store.settings.linkCheck !== false ? await inv.envEndpoints() : []; } catch (_) { this._env = []; }
@@ -204,7 +228,7 @@ class Engine {
     } finally {
       this.scanning = null;
     }
-    if (this.store.settings.realtime) this.files.start(this.configPaths(), this.store.settings.roots);
+    if (this.store.settings.realtime) this.files.start(this.configPaths(), this.store.settings.roots, this.boardWatch());
     this.event({ key: 'scan.done', sev: 'calm', watcher: 'gate', params: this.counts() }, true);
     this.changed(true);
     if (reason !== 'fix') this.autoFix();
@@ -215,18 +239,116 @@ class Engine {
     const i = this.inventory;
     const own = (i.links || []).filter((l) => !l.dupOf);
     const issues = [...i.mcp, ...i.files, ...i.configs, ...i.models, ...i.ports, ...i.autostarts, ...(i.extensions || []), ...(i.backups || []), ...(i.packages || []), ...own].filter((x) => x.state !== 'calm').length;
-    return { agents: i.agents.length, mcp: i.mcp.length, files: i.files.length, models: i.models.length, links: (i.links || []).length, issues };
+    const all = i.links || [];
+    return { agents: i.agents.length, mcp: i.mcp.length, files: i.files.length, models: i.models.length, links: all.filter((l) => l.kind !== 'board').length,
+      boards: all.filter((l) => l.kind === 'board').length, issues };
   }
 
   // ---------- AI links ----------
   // Where does each program send its prompts? Built from the settings files, the variables, the MCP list, the open ports and the programs that started programs.
+  // The list also holds the message boards (kind 'board'): they follow the same rules (approve, report when new or moved), with their own switch.
   refreshLinks() {
-    if (this.store.settings.linkCheck === false) { this.inventory.links = []; return; }
-    try {
-      this.inventory.links = links.scan({ store: this.store, mcp: this.inventory.mcp, ports: this.inventory.ports, installed: this.inventory.agents,
-        files: this._files ? this._files.linkFiles || [] : [], env: this._env || [], chains: this.chainList() });
-    } catch (_) { this.inventory.links = []; }
-    this.absorbBaseUrl();
+    const linkOn = this.store.settings.linkCheck !== false;
+    this.inventory.links = [];
+    if (linkOn) {
+      try {
+        this.inventory.links = links.scan({ store: this.store, mcp: this.inventory.mcp, ports: this.inventory.ports, installed: this.inventory.agents,
+          files: this._files ? this._files.linkFiles || [] : [], env: this._env || [], chains: this.chainList() });
+      } catch (_) { this.inventory.links = []; }
+      this.absorbBaseUrl();
+    }
+    this.inventory.links = this.inventory.links.concat(this.boardList());
+  }
+
+  // ---------- message boards ----------
+  // Where could an agent read orders or leave what it knows? Chat channels, webhooks, public pages, open channels, networks of agents.
+  boardList() {
+    if (this.store.settings.boardCheck === false) return [];
+    try { return boards.scan({ store: this.store, hits: this.boardHits(), mcp: this.inventory.mcp, live: this.liveBoardList() }); } catch (_) { return []; }
+  }
+
+  // All files that were searched: the scan of the project folders and skills, the files of the agents in your home folder, the settings files.
+  boardHits() {
+    const out = [];
+    const seen = new Set();
+    const add = (res) => {
+      if (!res || !res.hits || !res.hits.length) return;
+      const k = String(res.file).toLowerCase();
+      if (!seen.has(k)) { seen.add(k); out.push(res); }
+    };
+    for (const f of this._boardFiles.values()) add(f);
+    for (const g of boards.globalFiles()) add(this.boardHitsOf(g.path, g.kind, g.app));
+    const f = this._files || {};
+    for (const x of f.linkFiles || []) add(this.boardHitsOf(x.path, boards.kindOf(x.path), x.app));
+    for (const x of f.projectMcp || []) add(this.boardHitsOf(x.path, 'config', x.app));
+    return out;
+  }
+
+  // The search of one file; the answer is kept as long as the file is the same (same size, same time).
+  boardHitsOf(file, kind, app) {
+    let st;
+    try { st = fs.statSync(file); } catch (_) { return null; }
+    if (!st.isFile() || st.size > 4 * 1024 * 1024) return null;
+    const key = String(file).toLowerCase();
+    const sig = `${st.mtimeMs}:${st.size}:${kind}`;
+    const c = this._boardCache.get(key);
+    if (c && c.sig === sig) return c.res;
+    const res = boards.fileHits(file, kind, app);
+    if (this._boardCache.size > 3000) this._boardCache.clear();
+    this._boardCache.set(key, { sig, res });
+    return res;
+  }
+
+  // A program that was seen connecting to a board (Guard's name lookups), kept for 30 days.
+  liveBoardList() {
+    const cut = Date.now() - 30 * 86400000;
+    return Object.values(this.store.state.boardLive || {}).filter((l) => l && l.last >= cut).sort((a, b) => b.last - a.last).slice(0, 50)
+      .map((l) => ({ bid: l.bid, name: l.name, type: l.type, open: !!l.open, host: l.host, agentName: l.agentName }));
+  }
+
+  noteLiveBoard(agent, host, b) {
+    if (this.store.settings.boardCheck === false || !agent || !b) return;
+    const live = this.store.state.boardLive;
+    const k = `${agent.id}>${b.id}`;
+    const now = Date.now();
+    if (live[k]) { live[k].last = now; live[k].n++; return; }
+    live[k] = { agent: agent.id, agentName: agent.name, host: String(host).slice(0, 120), bid: b.id, name: b.name, type: b.type, open: !!b.open, first: now, last: now, n: 1 };
+    const keys = Object.keys(live);
+    if (keys.length > 60) delete live[keys.sort((x, y) => live[x].last - live[y].last)[0]];
+    this.store.saveState();
+    this.refreshLinks();
+    const e = this.inventory.links.find((x) => x.kind === 'board' && x.via === 'live' && x.bid === b.id);
+    if (!e || e.state === 'calm') { this.changed(); return; }
+    const params = { agent: agent.name, host: String(host).slice(0, 120), name: b.name };
+    this.event({ key: 'board.live', sev: e.state, watcher: 'net', params, agentId: agent.id, target: { type: 'link', id: e.id } });
+    this.intent.addSignal(agent.id, { key: 'board.live', params, sev: e.state, points: e.state === 'alarm' ? 35 : 15 });
+    this.store.state.seen[`link:${e.id}`] = e.hash;
+  }
+
+  // A file that agents read was created or changed. Several changes at once (a plugin that was installed) get one common look.
+  boardFileChanged(file) {
+    if (this.store.settings.boardCheck === false || !file) return;
+    this._boardPending.set(String(file).toLowerCase(), String(file));
+    if (this._boardPending.size > 400) this._boardPending.delete(this._boardPending.keys().next().value);
+    clearTimeout(this._boardTimer);
+    this._boardTimer = setTimeout(() => this.boardFlush(), 900);
+  }
+
+  boardFlush() {
+    clearTimeout(this._boardTimer);
+    this._boardTimer = null;
+    const items = [...this._boardPending.values()];
+    this._boardPending.clear();
+    if (this.store.settings.boardCheck === false || !items.length) return;
+    const skillDirs = C.SKILL_DIRS.map(U.expand).map((d) => d.toLowerCase());
+    for (const file of items) {
+      const key = file.toLowerCase();
+      if (!U.exists(file)) { this._boardFiles.delete(key); this._boardCache.delete(key); continue; }
+      const inSkill = skillDirs.some((d) => key.startsWith(d + path.sep) || key.startsWith(d + '/'));
+      const res = this.boardHitsOf(file, boards.kindOf(file, inSkill), undefined);
+      if (res) this._boardFiles.set(key, res); else this._boardFiles.delete(key);
+    }
+    this.refreshLinksWithEvents();
   }
 
   // The older "settings send traffic to ..." finding is now part of AI links, where you can also approve an address.
@@ -273,21 +395,28 @@ class Engine {
 
   // The settings of a program or a project changed: look at the addresses again and report what is new or moved.
   refreshLinksWithEvents() {
-    if (this.store.settings.linkCheck === false) return;
+    if (this.store.settings.linkCheck === false && this.store.settings.boardCheck === false) return;
     const before = new Map(this.inventory.links.map((l) => [l.id, l.hash]));
     this.refreshLinks();
     for (const l of this.inventory.links) {
       if (l.dupOf || before.get(l.id) === l.hash) continue;
       this.store.state.seen[`link:${l.id}`] = l.hash;
       if (l.state === 'calm') continue;
-      this.event({ key: before.has(l.id) ? 'link.moved' : 'link.added', sev: l.state, watcher: l.watcher || 'keys', params: { app: l.app, label: l.label, host: l.host }, target: { type: 'link', id: l.id } });
+      this.event(this.linkEvent(l, before.has(l.id) ? 'moved' : 'added'));
     }
     this.changed();
   }
 
+  // The event for a new or changed entry of the list: an address or a message board.
+  linkEvent(l, how) {
+    const board = l.kind === 'board';
+    return { key: `${board ? 'board' : 'link'}.${how}`, sev: l.state, watcher: l.watcher || 'keys', params: board ? { app: l.app, label: l.label, host: l.host, name: l.name } : { app: l.app, label: l.label, host: l.host },
+      target: { type: 'link', id: l.id } };
+  }
+
   // A file in a project folder that can hold an address was created or changed (a repository was cloned, a settings file was edited).
   linkFileChanged(file) {
-    if (this.store.settings.linkCheck === false || !links.PROJECT_FILE.test(file) || !U.exists(file)) return;
+    if (!links.PROJECT_FILE.test(file) || !U.exists(file)) return;
     if (!this._files) this._files = { files: [], configs: [], projectMcp: [], linkFiles: [] };
     const list = this._files.linkFiles || (this._files.linkFiles = []);
     if (!list.some((x) => x.path.toLowerCase() === file.toLowerCase())) list.push({ path: file, app: `Project ${inv.projectName(file)}` });
@@ -316,7 +445,7 @@ class Engine {
     for (const m of this.inventory.models) note('model', U.sha256(m.path).slice(0, 16), String(m.size), (how) => m.state === 'alarm' && this.event({ key: 'model.flagged', sev: 'alarm', watcher: 'files', params: { file: U.shortPath(m.path) } }));
     for (const l of this.inventory.links || []) {
       if (l.dupOf) continue;
-      note('link', l.id, l.hash, (how) => l.state !== 'calm' && this.event({ key: how === 'new' ? 'link.added' : 'link.moved', sev: l.state, watcher: l.watcher || 'keys', params: { app: l.app, label: l.label, host: l.host }, target: { type: 'link', id: l.id } }));
+      note('link', l.id, l.hash, (how) => l.state !== 'calm' && this.event(this.linkEvent(l, how === 'new' ? 'added' : 'moved')));
     }
     for (const p of this.inventory.ports) note('port', p.id, p.exposed ? 'open' : 'local', (how) => p.exposed && this.event({ key: 'port.open', sev: 'alarm', watcher: 'net', params: { product: p.product, addr: p.addr, port: p.port }, target: { type: 'port', port: p.port } }));
     if (first) {
@@ -492,6 +621,11 @@ class Engine {
         this.event({ key: bad.key, sev: bad.sev, watcher: 'net', params, agentId: info.agent.id, pid: e.pid });
         this.intent.addSignal(info.agent.id, { key: bad.key, params, sev: bad.sev, points: bad.sev === 'alarm' ? 45 : 25 });
       }
+      // A message board (a chat service, a public channel, a text page) that the program reaches although no file names it.
+      if (isNew && this.store.settings.boardCheck !== false && !BROWSER_IMAGE.test(path.basename(String(e.image || '')))) {
+        const lb = boards.liveBoard(String(e.name).toLowerCase());
+        if (lb) this.noteLiveBoard(info.agent, String(e.name).toLowerCase(), lb);
+      }
       dm.set(String(e.name).toLowerCase(), e.ts || Date.now());
       if (isNew && root !== e.pid && !AI_API.test(e.name)) {
         this.intent.addAction({ agentId: info.agent.id, action: 'NET_NEW', source: 'dns', detail: `${path.basename(String(e.image || '')) || e.pid} → ${e.name}`, pid: e.pid });
@@ -562,6 +696,7 @@ class Engine {
     const i = this.inventory.files.findIndex((f) => f.path.toLowerCase() === file.toLowerCase());
     const entry = { id: U.sha256(file.toLowerCase()).slice(0, 16), path: file, kind: 'instruction', state: res.sev, reasons: res.reasons.length ? res.reasons : [{ key: 'file.ok', params: {}, sev: 'calm' }], hash: '' };
     if (i >= 0) this.inventory.files[i] = entry; else this.inventory.files.push(entry);
+    this.boardFileChanged(file);
     this.changed();
   }
 
@@ -737,7 +872,7 @@ class Engine {
       if (l && l.approvable) {
         this.store.state.approvals[l.id] = { hash: l.hash, at: Date.now() };
         this.refreshLinks();
-        this.event({ key: 'link.trusted', sev: 'calm', watcher: l.watcher || 'keys', params: { app: l.app, label: l.label }, target: { type: 'link', id: l.id } });
+        this.event({ key: l.kind === 'board' ? 'board.trusted' : 'link.trusted', sev: 'calm', watcher: l.watcher || 'keys', params: { app: l.app, label: l.label, name: l.name || '' }, target: { type: 'link', id: l.id } });
       }
     } else if (target.type === 'file' || target.type === 'auto') {
       this.store.state.ignored[target.id] = Date.now();
@@ -870,9 +1005,9 @@ class Engine {
     const st = {
       gate: { list: [...i.mcp, ...(i.extensions || []), ...(i.packages || []), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.autoApprove')), ...(i.links || []).filter((l) => l.watcher === 'gate')] },
       files: { list: [...i.models, ...(i.backups || [])], ev: recent('files') },
-      net: { list: [...i.ports], ev: recent('net') },
+      net: { list: [...i.ports, ...(i.links || []).filter((l) => l.watcher === 'net')], ev: recent('net') },
       keys: { list: [...i.files.filter((f) => f.kind === 'env'), ...i.configs.filter((c) => c.reasons.some((r) => r.key === 'config.baseUrl')), ...(i.links || []).filter((l) => l.watcher === 'keys')] },
-      traps: { list: [...i.files.filter((f) => f.kind !== 'env')] },
+      traps: { list: [...i.files.filter((f) => f.kind !== 'env'), ...(i.links || []).filter((l) => l.watcher === 'traps')] },
       proc: { list: [...agents.map((a) => ({ state: a.state })), ...i.autostarts], ev: recent('proc', 1800000) },
     };
     return WATCHERS.map((id) => {
@@ -927,7 +1062,7 @@ class Engine {
       extensions: i.extensions.map((x) => ({ ...x, short: U.shortPath(x.path) })),
       backups: i.backups.map((b) => ({ ...b, short: U.shortPath(b.path) })),
       packages: (i.packages || []).map((p) => ({ ...p, short: U.shortPath(p.path) })),
-      links: (i.links || []).map((l) => ({ ...l, short: l.file && l.file !== 'Environment' ? U.shortPath(l.file) : '' })),
+      links: (i.links || []).map((l) => ({ ...l, short: l.file && l.file !== 'Environment' ? U.shortPath(l.file) : '', ...(l.uses ? { uses: l.uses.map((u) => ({ app: u.app, kind: u.kind, short: U.shortPath(u.file) })) } : {}) })),
       events: this.store.events.slice(-250).reverse(),
       settings: this.store.settings,
       chainOk: this.store.chainOk,

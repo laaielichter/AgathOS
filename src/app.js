@@ -346,7 +346,7 @@
       out.push({ label: t('btn.ignore'), fn: () => run(A.trust(tg)) });
     } else if (tg.type === 'link') {
       const l = (snap.links || []).find((x) => x.id === tg.id);
-      if (l && l.approvable && !l.approved && l.state !== 'calm') out.push({ label: t('btn.approve'), cls: 'fix', fn: () => run(A.trust(tg), t('link.approved')) });
+      if (l && l.approvable && !l.approved && l.state !== 'calm') out.push({ label: t('btn.approve'), cls: 'fix', fn: () => run(A.trust(tg), approvedText(l)) });
       if (l && l.file && l.file !== 'Environment') out.push({ label: t('btn.open'), fn: () => A.reveal(l.file) });
     } else if (e.key === 'model.flagged') {
       out.push({ label: t('btn.how'), fn: () => modal(t('btn.how'), t('fix.model')) });
@@ -397,6 +397,9 @@
     linkBad: ['link.look.embed', 'link.look.homoglyph', 'link.tunnel', 'link.catchall', 'link.liveLookalike', 'link.liveTunnel', 'link.liveCatchall', 'link.changed', 'link.fromProject'],
     linkOdd: ['link.look.typo', 'link.look.brand', 'link.look.idn', 'link.unknown', 'link.cloud', 'link.ip', 'link.lan', 'link.clear', 'link.keyInUrl', 'link.bind', 'link.added', 'link.moved'],
     linkAgent: ['link.agentChain', 'link.agentMcp'],
+    boardBad: ['board.r.hidden', 'board.r.onion', 'board.r.open', 'board.r.openChannel', 'board.changed'],
+    boardOrders: ['board.r.orders', 'board.r.ordersOnce'],
+    boardOdd: ['board.r.chat', 'board.r.webhook', 'board.r.pubsub', 'board.r.paste', 'board.r.social', 'board.r.agentnet', 'board.r.viaMcp', 'board.live', 'board.added', 'board.moved'],
     model: ['model.pickleDanger', 'model.pickle', 'model.pickleUnknown', 'model.unreadable', 'model.flagged'],
     port: ['port.open'],
     worm: ['worm.lanSweep', 'worm.portScan'],
@@ -424,11 +427,11 @@
 
   // How sure AgathOS is per kind of finding, and the matching public technique IDs
   // (MITRE ATT&CK for classic attacks, MITRE ATLAS for attacks on AI systems).
-  const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', linkBad: 'high', tamper: 'high',
-    linkOdd: 'medium', linkAgent: 'medium', inject: 'medium', worm: 'medium', ext: 'medium', pkg: 'medium', backup: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
+  const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', linkBad: 'high', tamper: 'high', boardBad: 'high',
+    linkOdd: 'medium', linkAgent: 'medium', boardOrders: 'medium', boardOdd: 'medium', inject: 'medium', worm: 'medium', ext: 'medium', pkg: 'medium', backup: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
     chain: 'low', odd: 'low', generic: 'low' };
   const MITRE = { hidden: 'AML.T0051.001 · T1027', inject: 'AML.T0051.001', secret: 'T1552.001', mcpBad: 'T1195.002 · AML.T0053', supply: 'T1195.002 · T1195.001',
-    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', linkBad: 'T1557 · T1583.001 · T1090', linkOdd: 'T1090 · T1071.001', linkAgent: 'AML.T0053 · T1059', model: 'AML.T0010.003 · T1204.002', port: 'T1133', worm: 'T1046 · T1210 · T1570', ext: 'T1176', pkg: 'T1195.002 · T1059 · T1552.001', backup: 'T1485 · M1053',
+    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', linkBad: 'T1557 · T1583.001 · T1090', linkOdd: 'T1090 · T1071.001', linkAgent: 'AML.T0053 · T1059', boardBad: 'T1102.002 · T1090.003 · T1027', boardOrders: 'T1102.001 · T1102.003 · AML.T0051.001', boardOdd: 'T1102.002 · T1567.004', model: 'AML.T0010.003 · T1204.002', port: 'T1133', worm: 'T1046 · T1210 · T1570', ext: 'T1176', pkg: 'T1195.002 · T1059 · T1552.001', backup: 'T1485 · M1053',
     destroy: 'T1485', persist: 'T1053.005 · T1543.001 · T1547.001', cred: 'T1555 · T1552', secOff: 'T1562.001 · T1562.004', exfil: 'AML.T0057 · T1567 · T1041',
     chain: 'AML.T0051 · T1059', tamper: 'T1070' };
   let anLevel = null;     // 'simple' | 'deep'; follows the view until you pick a tab
@@ -457,7 +460,10 @@
       if (p) { add(t('ev.file'), p.path); }
     } else if (kind === 'link') {
       const l = (snap.links || []).find((e) => e.id === id);
-      if (l) {
+      if (l && l.kind === 'board') {
+        add(t('ev.app'), l.app); add(t('ev.url'), l.url || l.host); add(t('ev.setting'), l.key);
+        add(t('ev.file'), (l.uses || []).map((u) => u.short).filter(Boolean).join('\n'));
+      } else if (l) {
         add(t('ev.app'), l.app); add(t('ev.address'), l.url || l.host); add(t('ev.setting'), l.via === 'env' ? t('link.env', { name: l.key }) : l.key);
         add(t('ev.file'), l.file && l.file !== 'Environment' ? l.file : '');
       }
@@ -532,7 +538,7 @@
       ...body,
       h('div', { class: 'sheet-foot' },
         item.trust ? h('button', { class: 'btn-small fix', type: 'button', text: t('btn.approve'),
-          onclick: async () => { $('anDlg').close(); const r = await A.trust(item.trust); if (r !== false) toast(t('link.approved')); } }) : null,
+          onclick: async () => { $('anDlg').close(); const r = await A.trust(item.trust); if (r !== false) toast(approvedText((snap.links || []).find((x) => x.id === item.trust.id))); } }) : null,
         key && A.fixDismiss ? h('button', { class: 'btn-ghost', type: 'button', text: t('fix.dismiss'), title: t('fix.dismissHint'),
           onclick: async () => { $('anDlg').close(); const r = await A.fixDismiss(key); if (r && r.ok) { toast(t('fix.dismissed', { name: item.name || '' })); dropRow(key); } } }) : null,
         h('span', { class: 'grow' }),
@@ -576,7 +582,7 @@
       step = stepBy([`auto:${tg.id}`, `manual:${tg.id}`]);
     } else if (tg.type === 'link') {
       const l = (snap.links || []).find((x) => x.id === tg.id);
-      if (l) { name = `${l.app} → ${l.label}`; where = l.short || l.file || ''; reasons = []; merge(l.reasons); if (l.approvable && !l.approved && l.state !== 'calm') trust = tg; }
+      if (l) { name = l.kind === 'board' ? `${l.name} · ${l.label}` : `${l.app} → ${l.label}`; where = l.short || l.file || ''; reasons = []; merge(l.reasons); if (l.approvable && !l.approved && l.state !== 'calm') trust = tg; }
       step = stepBy([`manual:link:${tg.id}`]);
     }
     if (!step && e.agentId) {
@@ -809,9 +815,12 @@
 
   // ---------- AI shield: where the AI programs talk to, what is inside the models, where copies of AI end up ----------
   let aiTab = 'links';
-  const linkRows = () => (snap && snap.links ? snap.links : []);
+  const linkRows = () => (snap && snap.links ? snap.links.filter((l) => l.kind !== 'board') : []);
+  const boardRows = () => (snap && snap.links ? snap.links.filter((l) => l.kind === 'board') : []);
+  const approvedText = (l) => t(l && l.kind === 'board' ? 'board.approved' : 'link.approved');
   const AI_TABS = [
     { id: 'links', has: () => !!(snap && snap.links), items: () => linkRows().filter((l) => !l.dupOf) },
+    { id: 'boards', has: () => !!(snap && snap.links && snap.settings && snap.settings.boardCheck !== false), items: () => boardRows().filter((b) => !b.dupOf) },
   ];
   const aiItems = () => AI_TABS.filter((x) => x.has()).flatMap((x) => x.items());
   function renderAi() {
@@ -824,6 +833,7 @@
         t('ai.tab.' + x.id), h('span', { class: `n ${worst(bad.map((i) => i.state))}`, text: String(bad.length || list.length) }));
     }));
     if (aiTab === 'links') renderLinks();
+    else if (aiTab === 'boards') renderBoards();
   }
 
   const linkName = (l) => (l.kind === 'mcp' ? `${l.app} → ${t('link.kind.mcp')} · ${l.label}` : l.kind === 'server' ? `${l.app} · ${l.label}` : `${l.app} → ${l.label}`);
@@ -861,6 +871,50 @@
     fill($('aiBody'),
       h('p', { class: 'set-note', text: t('link.sub') }),
       sums.length ? h('div', { class: 'link-sum' }, sums.map(([k, n]) => h('span', { class: `chip${k === 'bad' ? ' bad' : ''}`, text: t('link.sum.' + k, { n }) }))) : null,
+      ul);
+  }
+
+  // ---------- message boards: places where agents read orders or leave what they know ----------
+  const boardName = (b) => `${b.name} · ${b.label}`;
+  function boardWhere(b) {
+    const bits = [t('board.t.' + b.btype), t('board.dir.' + b.dir)];
+    if (b.via === 'mcp') bits.push(`${b.app} → ${t('link.kind.mcp')}`);
+    else if (b.via === 'live') bits.push(t('board.where.live', { agent: b.app }));
+    else {
+      bits.push(b.app);
+      const first = b.uses && b.uses[0];
+      if (first && first.short) bits.push(first.short);
+    }
+    if (b.more > 0) bits.push(t('board.more', { n: b.more }));
+    return bits.join(' · ');
+  }
+  function renderBoards() {
+    const all = boardRows();
+    const own = all.filter((b) => !b.dupOf);
+    const sums = [
+      ['read', own.filter((b) => b.dir !== 'out').length], ['write', own.filter((b) => b.dir !== 'in').length],
+      ['open', own.filter((b) => b.open).length],
+    ].filter(([, n]) => n);
+    const bad = own.filter((b) => b.state === 'alarm').length;
+    const ul = h('ul', { class: 'rows' });
+    rowList(ul, all, {
+      empty: t('board.empty'),
+      name: boardName, where: boardWhere,
+      step: (b) => (b.dupOf === 'mcp' ? stepBy([`mcp:${b.mcpId}`]) : stepBy([`manual:link:${b.id}`])),
+      key: (b) => (b.dupOf === 'mcp' ? `mcp:${b.mcpId}` : `link:${b.id}`),
+      trust: (b) => (b.approvable && !b.approved && !b.dupOf && b.state !== 'calm' ? { type: 'link', id: b.id } : null),
+      actions: (b) => [
+        b.approvable && !b.approved && !b.dupOf && b.state !== 'calm' ? btn(t('btn.approve'), () => run(A.trust({ type: 'link', id: b.id }), t('board.approved')), 'fix') : null,
+        b.approved && !b.dupOf ? h('span', { class: 'chip', text: t('mcp.approved') }) : null,
+        b.file && !b.dupOf ? btn(t('btn.open'), () => A.reveal(b.file)) : null,
+        b.dupOf === 'mcp' ? btn(t('nav.mcp'), () => show('mcp')) : null,
+        b.state !== 'calm' && !b.dupOf ? btn(t('btn.how'), () => modal(t('btn.how'), t('fix.board'))) : null,
+      ],
+    });
+    fill($('aiBody'),
+      h('p', { class: 'set-note', text: t('board.sub') }),
+      sums.length || bad ? h('div', { class: 'link-sum' }, [...sums.map(([k, n]) => h('span', { class: `chip${k === 'open' ? ' bad' : ''}`, text: t('board.sum.' + k, { n }) })),
+        bad ? h('span', { class: 'chip bad', text: t('link.sum.bad', { n: bad }) }) : null]) : null,
       ul);
   }
 
@@ -1065,6 +1119,7 @@
         setRow(t('set.portCheck'), sw(s.portCheck, () => save({ portCheck: !s.portCheck })), null, 'adv'),
         setRow(t('set.pkgCheck'), sw(s.pkgCheck !== false, () => save({ pkgCheck: s.pkgCheck === false })), t('set.pkgCheckDesc')),
         setRow(t('set.linkCheck'), sw(s.linkCheck !== false, () => save({ linkCheck: s.linkCheck === false })), t('set.linkCheckDesc')),
+        setRow(t('set.boardCheck'), sw(s.boardCheck !== false, () => save({ boardCheck: s.boardCheck === false })), t('set.boardCheckDesc')),
         setRow(t('set.backupCheck'), sw(s.backupCheck !== false, () => save({ backupCheck: s.backupCheck === false })), t('set.backupCheckDesc')),
         setRow(t('set.wormWatch'), sw(s.wormWatch !== false, () => save({ wormWatch: s.wormWatch === false })), t('set.wormWatchDesc')),
         setRow(t('set.dlGuard'), sw(s.downloadGuard !== false, () => save({ downloadGuard: s.downloadGuard === false })), t('set.dlGuardDesc')),

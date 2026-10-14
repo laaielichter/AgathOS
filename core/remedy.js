@@ -146,7 +146,7 @@ function plan(engine, fix, minSev = 'watch') {
   // Where a program sends its prompts: AgathOS does not rewrite your settings; you approve the address or change it yourself.
   for (const l of inv.links || []) {
     if (l.dupOf || l.state === 'calm') continue;
-    add({ id: `manual:link:${l.id}`, cat: 'manual', sev: l.state, name: `${l.app} → ${l.label}`, where: l.file && l.file !== 'Environment' ? U.shortPath(l.file) : (l.file || ''),
+    add({ id: `manual:link:${l.id}`, cat: 'manual', sev: l.state, name: l.kind === 'board' ? `${l.name} · ${l.label}` : `${l.app} → ${l.label}`, where: l.file && l.file !== 'Environment' ? U.shortPath(l.file) : (l.file || ''),
       reasons: l.reasons.filter((r) => r.sev !== 'calm'), target: { type: 'link', id: l.id } });
   }
   // Browser extensions: AgathOS cannot remove them for you; you decide in the browser.
