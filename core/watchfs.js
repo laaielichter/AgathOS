@@ -69,7 +69,8 @@ class FileWatch {
 
   debounced(key, fn) {
     clearTimeout(this.debounce.get(key));
-    this.debounce.set(key, setTimeout(() => { this.debounce.delete(key); fn(); }, 700));
+    // A failing handler (a config that cannot be read, say) must not end up as an error box in the main process.
+    this.debounce.set(key, setTimeout(() => { this.debounce.delete(key); try { fn(); } catch (_) { /* the next change tries again */ } }, 700));
   }
 
   countDelete(root, rel) {

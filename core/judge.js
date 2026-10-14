@@ -21,6 +21,9 @@ function ask({ model, task, actions, labels }, timeout = 45000) {
     const req = http.request({ host: '127.0.0.1', port: 11434, path: '/api/generate', method: 'POST', timeout,
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, (res) => {
       let data = '';
+      // A connection that breaks half way never gets to 'end': answer "no opinion" instead of waiting for ever.
+      res.on('error', () => resolve(null));
+      res.on('close', () => { if (!res.complete) resolve(null); });
       res.on('data', (d) => { data += d; if (data.length > 200000) req.destroy(); });
       res.on('end', () => {
         try {
@@ -41,6 +44,8 @@ function models(timeout = 4000) {
   return new Promise((resolve) => {
     const req = http.get({ host: '127.0.0.1', port: 11434, path: '/api/tags', timeout }, (res) => {
       let d = '';
+      res.on('error', () => resolve([]));
+      res.on('close', () => { if (!res.complete) resolve([]); });
       res.on('data', (x) => (d += x));
       res.on('end', () => { try { resolve(JSON.parse(d).models.map((m) => m.name)); } catch (_) { resolve([]); } });
     });

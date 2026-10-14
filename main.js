@@ -13,6 +13,7 @@ const updater = require('./core/update');
 const report = require('./core/report');
 const { checkText } = require('./core/textscan');
 const { Notifier } = require('./core/notifier');
+const errlog = require('./core/errlog');
 const { I18N } = require('./src/i18n.js');
 
 const THEMES = {
@@ -35,8 +36,11 @@ let trayLive = null;
 let trayState = null;     // calm | watch | alarm | paused: the tray icon shows it
 let updateInfo = null;    // last update check
 
-// Only one AgathOS at a time.
-if (!app.requestSingleInstanceLock()) { app.quit(); }
+// Only one AgathOS at a time. A second copy quits at once and must not start an engine of its own.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) app.quit();
+// Errors nobody caught go to a small log file instead of an error box (core/errlog.js).
+try { errlog.install(path.join(app.getPath('userData'), 'data')); } catch (_) { /* no log, but still running */ }
 app.on('second-instance', () => showWindow());
 app.on('activate', () => showWindow());   // macOS: clicking the Dock icon
 // Must match the installer's appId, or Windows drops the notifications.
@@ -114,13 +118,22 @@ function toggleMini() {
   mini.focus();
 }
 
+// The window to put a dialog on, or nothing when it is gone (a destroyed window cannot be a parent).
+const parentWin = () => (win && !win.isDestroyed() ? win : undefined);
+
 function showWindow(view) {
-  if (mini && mini.isVisible()) mini.hide();
-  if (!win) return;
+  if (mini && !mini.isDestroyed() && mini.isVisible()) mini.hide();
+  // Mac: closing the window does not quit the app. A click on the Dock icon then needs a new window.
+  const fresh = !!store && (!win || win.isDestroyed());
+  if (fresh) createWindow();
+  if (!win || win.isDestroyed()) return;
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
-  if (view) win.webContents.send('agathos:navigate', view);
+  if (!view) return;
+  // A window that was just made has not loaded its page yet: wait, or the request is lost.
+  if (fresh) win.webContents.once('did-finish-load', () => { if (win && !win.isDestroyed()) win.webContents.send('agathos:navigate', view); });
+  else win.webContents.send('agathos:navigate', view);
 }
 
 // Windows gets the .ico with hand-made small sizes; elsewhere the PNG.
@@ -358,7 +371,7 @@ function wireIpc() {
   h('resume', (id) => engine.resumeAgent(String(id)));
   h('kill', async (id) => {
     const name = engine.agentName(String(id));
-    const r = await dialog.showMessageBox(win, { type: 'warning', buttons: [tt('btn.kill'), tt('cancel')], defaultId: 1, cancelId: 1, message: tt('confirm.kill', { name }) });
+    const r = await dialog.showMessageBox(parentWin(), { type: 'warning', buttons: [tt('btn.kill'), tt('cancel')], defaultId: 1, cancelId: 1, message: tt('confirm.kill', { name }) });
     return r.response === 0 ? engine.killAgent(String(id)) : { ok: false, cancelled: true };
   });
   h('block', (id, on) => engine.blockAgent(String(id), on !== false));
@@ -396,7 +409,7 @@ function wireIpc() {
   h('saveReport', async () => {
     const d = new Date();
     const name = `AgathOS-report-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.html`;
-    const r = await dialog.showSaveDialog(win, { defaultPath: path.join(app.getPath('documents'), name), filters: [{ name: 'HTML', extensions: ['html'] }] });
+    const r = await dialog.showSaveDialog(parentWin(), { defaultPath: path.join(app.getPath('documents'), name), filters: [{ name: 'HTML', extensions: ['html'] }] });
     if (r.canceled || !r.filePath) return { ok: false, cancelled: true };
     const snap = { ...engine.snapshot(), statusLine: statusText(engine.snapshot()) };
     const rtl = ['ar'].includes(uiLang);
@@ -415,7 +428,7 @@ function wireIpc() {
   h('guardInstall', async () => { if (process.platform !== 'win32') return { ok: false, unsupported: true }; const ok = await guard.install(__dirname.replace(/app\.asar$/, 'app.asar.unpacked')); engine.guardState.installed = guard.installed(); engine.changed(true); return { ok }; });
   h('guardUninstall', async () => { const ok = await guard.uninstall(); engine.guardState = { installed: guard.installed(), running: false, sysmon: false, elevated: false, seq: 0 }; engine.changed(true); return { ok }; });
   h('addFolder', async (kind) => {
-    const r = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
+    const r = await dialog.showOpenDialog(parentWin(), { properties: ['openDirectory'] });
     if (r.canceled || !r.filePaths[0]) return store.settings;
     const key = kind === 'models' ? 'modelDirs' : 'roots';
     const list = [...new Set([...store.settings[key], r.filePaths[0]])];
@@ -434,6 +447,7 @@ function wireIpc() {
 }
 
 app.whenReady().then(async () => {
+  if (!gotLock) return;          // the second copy only passes the word on and quits
   store = new Store(path.join(app.getPath('userData'), 'data'));
   uiLang = (store.state.ui && store.state.ui.lang) || ((app.getLocale() || 'en').slice(0, 2) in I18N ? app.getLocale().slice(0, 2) : 'en');
   engine = new Engine(store, {
@@ -450,7 +464,8 @@ app.whenReady().then(async () => {
   wireIpc();
   createWindow();
   buildTray();
-  await engine.start();
+  // If the first scan fails, the rest still has to start: the tray, the watchers and the settings.
+  try { await engine.start(); } catch (err) { errlog.record(path.join(app.getPath('userData'), 'data'), 'error', err); }
   applyOsSettings();
   buildTray();
   // First update check a minute after start, then once a day.

@@ -35,11 +35,15 @@ function cmpVer(a, b) {
   return 0;
 }
 
+// A manifest is written by the extension's author: any field can hold anything. Lists must be lists.
+const list = (v) => (Array.isArray(v) ? v : []);
+
 // "__MSG_appName__" means: look it up in _locales/<language>/messages.json.
 function localized(dir, manifest, value) {
   const m = /^__MSG_(.+)__$/.exec(String(value || ''));
   if (!m) return String(value || '');
-  for (const l of [manifest.default_locale, 'en', 'en_US', 'en_GB'].filter(Boolean)) {
+  // The language is a folder name: only plain names, never a path.
+  for (const l of [manifest.default_locale, 'en', 'en_US', 'en_GB'].filter((x) => typeof x === 'string' && /^[A-Za-z0-9_-]{1,20}$/.test(x))) {
     const j = readJson(path.join(dir, '_locales', l, 'messages.json'));
     if (!j) continue;
     const key = Object.keys(j).find((k) => k.toLowerCase() === m[1].toLowerCase());
@@ -50,13 +54,13 @@ function localized(dir, manifest, value) {
 
 // Looks at one manifest. Returns null when the extension has nothing to do with AI.
 function analyse(manifest, dir) {
-  const name = localized(dir, manifest, manifest.name) || '?';
+  const name = (localized(dir, manifest, manifest.name) || '?').slice(0, 80);
   const text = [name, localized(dir, manifest, manifest.short_name), localized(dir, manifest, manifest.description)].join(' ');
-  const perms = (manifest.permissions || []).concat(manifest.optional_permissions || []).filter((p) => typeof p === 'string');
+  const perms = list(manifest.permissions).concat(list(manifest.optional_permissions)).filter((p) => typeof p === 'string');
   const hosts = []
-    .concat(manifest.host_permissions || [], manifest.optional_host_permissions || [])
+    .concat(list(manifest.host_permissions), list(manifest.optional_host_permissions))
     .concat(perms.filter((p) => /[:*]/.test(p)))
-    .concat(...(manifest.content_scripts || []).map((c) => c.matches || []))
+    .concat(...list(manifest.content_scripts).map((c) => (c && typeof c === 'object' ? list(c.matches) : [])))
     .filter((h) => typeof h === 'string');
   const aiTheme = AI_WORDS.test(text);
   const chatSites = [...new Set(hosts.map((h) => (h.match(AI_CHAT_SITES) || [])[1]).filter(Boolean).map((s) => s.toLowerCase()))];

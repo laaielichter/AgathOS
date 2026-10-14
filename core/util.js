@@ -123,6 +123,21 @@ const expand = (p) => {
 
 const shortPath = (p) => (p && p.toLowerCase().startsWith(HOME.toLowerCase()) ? '~' + p.slice(HOME.length) : p);
 
+// Wraps a job for a timer: a new round does not start while the previous one is still running, so a slow
+// round (a busy PC, a hung helper) cannot pile up rounds behind it or handle the same events twice.
+// A round that has been running for `hungMs` counts as hung and is not waited for. Errors are swallowed.
+function exclusive(fn, { hungMs = 60000, now = Date.now } = {}) {
+  let startedAt = null;
+  let round = 0;
+  return () => {
+    if (startedAt !== null && now() - startedAt < hungMs) return false;
+    const mine = ++round;
+    startedAt = now();
+    Promise.resolve().then(fn).catch(() => {}).finally(() => { if (round === mine) startedAt = null; });
+    return true;
+  };
+}
+
 function execFileText(cmd, args, timeout = 6000) {
   return new Promise((resolve) => {
     execFile(cmd, args, { timeout, windowsHide: true, maxBuffer: 4 * 1024 * 1024 }, (err, stdout) => {
@@ -227,5 +242,5 @@ const psq = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 
 module.exports = {
   IS_WIN, IS_MAC, HOME, APPDATA, LOCALAPPDATA, sha256, exists, statSafe, readText, readHead, readJsonLoose,
-  stripJsonComments, walk, expand, grokHome, shortPath, execFileText, ps, psq, SKIP_DIRS,
+  stripJsonComments, walk, expand, grokHome, shortPath, exclusive, execFileText, ps, psq, SKIP_DIRS,
 };

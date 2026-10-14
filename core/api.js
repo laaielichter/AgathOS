@@ -10,6 +10,15 @@ const crypto = require('crypto');
 
 const PORT = 47612;
 
+// Compare the digests, not the texts: timingSafeEqual throws when the two byte lengths differ
+// (a header with accented letters has as many characters as the token but more bytes), and a throw
+// here would take the whole app down.
+const digest = (s) => crypto.createHash('sha256').update(String(s)).digest();
+function authOk(header, token) {
+  const given = String(header || '').replace(/^Bearer\s+/i, '');
+  return !!token && crypto.timingSafeEqual(digest(given), digest(token));
+}
+
 function start(engine, dir) {
   const file = path.join(dir, 'api-token.txt');
   let token;
@@ -22,15 +31,14 @@ function start(engine, dir) {
     if (!/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(addr)) return send(403, { error: 'local only' });
     // Browsers send an Origin header; local tools do not. Refuse web pages.
     if (req.headers.origin) return send(403, { error: 'no browsers' });
-    const given = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-    if (given.length !== token.length || !crypto.timingSafeEqual(Buffer.from(given), Buffer.from(token))) return send(401, { error: 'token' });
+    if (!authOk(req.headers.authorization, token)) return send(401, { error: 'token' });
     let body = '';
     req.on('data', (d) => { body += d; if (body.length > 65536) req.destroy(); });
     req.on('end', async () => {
       let j = {};
       try { j = body ? JSON.parse(body) : {}; } catch (_) { return send(400, { error: 'json' }); }
-      const url = new URL(req.url, 'http://127.0.0.1');
       try {
+        const url = new URL(req.url, 'http://127.0.0.1');
         if (req.method === 'GET' && url.pathname === '/v1/status') return send(200, engine.publicStatus());
         if (req.method === 'GET' && url.pathname === '/v1/agents') return send(200, engine.snapshot().agents);
         if (req.method === 'GET' && url.pathname === '/v1/events') {
@@ -51,4 +59,4 @@ function start(engine, dir) {
   return server;
 }
 
-module.exports = { start, PORT };
+module.exports = { start, authOk, PORT };

@@ -10,7 +10,7 @@ const os = require('os');
 const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const cp = require('child_process');
 
 const pkg = require('../package.json');
 const REPO = (pkg.agathos && pkg.agathos.updateRepo) || '';
@@ -24,18 +24,28 @@ function cmp(a, b) {
 }
 
 function request(url, { json = false, file = null, maxRedirects = 5, timeout = 20000 } = {}) {
-  return new Promise((resolve) => {
+  return new Promise((settle) => {
+    // Answer once. A connection that breaks half way never ends the stream, so the end of the
+    // stream alone is not enough: without the 'close' check below the answer would never come.
+    let answered = false;
+    const resolve = (v) => { if (!answered) { answered = true; settle(v); } };
     if (!/^https:\/\//.test(url)) { resolve(null); return; }
     const req = https.get(url, { headers: { 'User-Agent': `AgathOS/${CURRENT}`, Accept: json ? 'application/vnd.github+json' : 'application/octet-stream' }, timeout }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
         res.resume();
-        request(new URL(res.headers.location, url).toString(), { json, file, maxRedirects: maxRedirects - 1, timeout }).then(resolve);
+        let next = null;
+        try { next = new URL(res.headers.location, url).toString(); } catch (_) { /* not a web address */ }
+        if (!next) { resolve(null); return; }
+        request(next, { json, file, maxRedirects: maxRedirects - 1, timeout }).then(resolve);
         return;
       }
       if (res.statusCode !== 200) { res.resume(); resolve(null); return; }
+      let out = null;
+      res.on('error', () => resolve(null));
+      res.on('close', () => { if (!res.complete) { if (out) out.destroy(); resolve(null); } });
       if (file) {
         const hash = crypto.createHash('sha256');
-        const out = fs.createWriteStream(file);
+        out = fs.createWriteStream(file);
         res.on('data', (d) => hash.update(d));
         res.pipe(out);
         out.on('finish', () => resolve({ sha256: hash.digest('hex') }));
@@ -52,12 +62,17 @@ function request(url, { json = false, file = null, maxRedirects = 5, timeout = 2
   });
 }
 
+// A release tag becomes part of a file name, so only a plain version number is accepted.
+const SAFE_VERSION = /^\d+(\.\d+){0,3}([-+][0-9A-Za-z.]{1,30})?$/;
+
 async function check() {
   if (!REPO) return { status: 'unreachable', current: CURRENT, at: Date.now() };
   const rel = await request(`https://api.github.com/repos/${REPO}/releases/latest`, { json: true });
   if (!rel || !rel.tag_name) return { status: 'unreachable', current: CURRENT, at: Date.now() };
   const version = String(rel.tag_name).replace(/^v/, '');
-  const assets = (rel.assets || []).map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size, digest: a.digest || null }));
+  if (!SAFE_VERSION.test(version)) return { status: 'unreachable', current: CURRENT, at: Date.now() };
+  const assets = (Array.isArray(rel.assets) ? rel.assets : []).filter((a) => a && typeof a === 'object')
+    .map((a) => ({ name: String(a.name || ''), url: a.browser_download_url, size: a.size, digest: a.digest || null }));
   return { status: cmp(version, CURRENT) > 0 ? 'newer' : 'latest', current: CURRENT, version, page: rel.html_url, assets, at: Date.now() };
 }
 
@@ -71,10 +86,15 @@ async function install(info) {
   const file = path.join(os.tmpdir(), `AgathOS-Setup-${info.version}.exe`);
   const got = await request(asset.url, { file, timeout: 120000 });
   if (!got || got.sha256.toLowerCase() !== want[1].toLowerCase()) { try { fs.unlinkSync(file); } catch (_) {} return { ok: false, reason: 'checksum' }; }
-  try {
-    const child = spawn(file, ['/S', '--force-run'], { detached: true, stdio: 'ignore', windowsHide: true });
-    child.unref();
-  } catch (_) { return { ok: false, reason: 'start' }; }
+  // AgathOS only closes itself once the installer has really started. If it cannot start (a virus
+  // scanner blocks it, say), AgathOS keeps running and the update is reported as failed.
+  const started = await new Promise((done) => {
+    let child;
+    try { child = cp.spawn(file, ['/S', '--force-run'], { detached: true, stdio: 'ignore', windowsHide: true }); } catch (_) { done(false); return; }
+    child.once('error', () => done(false));
+    child.once('spawn', () => { try { child.unref(); } catch (_) { /* already gone */ } done(true); });
+  });
+  if (!started) { try { fs.unlinkSync(file); } catch (_) { /* nothing to remove */ } return { ok: false, reason: 'start' }; }
   return { ok: true };
 }
 

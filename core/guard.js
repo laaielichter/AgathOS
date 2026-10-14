@@ -25,6 +25,9 @@ function call(method, p, body, timeout = 8000) {
       headers: { 'X-AgathOS-Token': t, ...(data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {}) } }, (res) => {
       let d = '';
       res.setEncoding('utf8');
+      // A connection that breaks half way never gets to 'end': answer "nothing" instead of waiting for ever.
+      res.on('error', () => resolve(null));
+      res.on('close', () => { if (!res.complete) resolve(null); });
       res.on('data', (x) => { d += x; if (d.length > 20 * 1024 * 1024) req.destroy(); });
       res.on('end', () => { if (res.statusCode !== 200) return resolve(null); try { resolve(JSON.parse(d)); } catch (_) { resolve(null); } });
     });
