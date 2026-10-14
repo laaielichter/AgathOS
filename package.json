@@ -1,7 +1,7 @@
 {
   "name": "agathos-os",
   "productName": "AgathOS",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "The good daemon for your local AI agents. Finds rogue agents, poisoned MCP servers and hidden instructions on Windows and macOS.",
   "main": "main.js",
   "license": "MIT",
