@@ -24,7 +24,9 @@ const med = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 const same = (a, b) => String(a || '').toLowerCase().replace(/\\/g, '/') === String(b || '').toLowerCase().replace(/\\/g, '/');
 const listen = (server, host) => new Promise((resolve) => { server.once('error', () => resolve(false)); server.listen(0, host, () => resolve(true)); });
 
-async function liveOsTests({ ok: report, say = () => {} }) {
+async function liveOsTests({ ok: report, say: sayOut = () => {} }) {
+  const told = [];
+  const say = (s) => { told.push(String(s)); sayOut(s); };
   // A failed check also writes what it saw, as an annotation in GitHub Actions (the plain result only has the name).
   const ok = (cond, name, detail) => {
     report(cond, name);
@@ -92,7 +94,8 @@ async function liveOsTests({ ok: report, say = () => {} }) {
     ok(!!row && /^node(\.exe)?$/i.test(row.n), T + 'the list holds the name of the program', row && row.n);
     ok(!!row && row.t > startedAt - 15000 && row.t < Date.now() + 5000, T + 'the list holds the start time of the program (in milliseconds since 1970)', row && { t: row.t, startedAt });
     const me = (await P.listProcesses()).find((r) => r.p === process.pid);
-    ok(!!me && same(me.e, process.execPath) && /node/i.test(me.n), T + 'the program that runs the tests is in the list too, with its file', me);
+    // On a Mac the system only tells the file of a program that was started with its full path; "node" typed in a terminal gives no file.
+    ok(!!me && (IS_MAC || same(me.e, process.execPath)) && /node/i.test(me.n) && /run-tests|live-os/.test(me.c || ''), T + 'the program that runs the tests is in the list too, with its name and command line', me);
     try { child.kill(); } catch (_) { /* gone */ }
     const gone = await until(async () => !(await P.listProcesses()).some((r) => r.p === child.pid), 15000);
     ok(!!gone, T + 'a program that has ended leaves the list');
@@ -152,6 +155,8 @@ async function liveOsTests({ ok: report, say = () => {} }) {
     }
   } finally {
     for (const f of cleanup) { try { f(); } catch (_) { /* already closed */ } }
+    // What was measured and compared, as an annotation in GitHub Actions.
+    if (process.env.GITHUB_ACTIONS && told.length) console.log(`::notice title=Real system checks ${process.platform} ${process.arch}::${told.join('\n').slice(0, 5000).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')}`);
   }
 }
 
