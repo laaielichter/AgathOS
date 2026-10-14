@@ -41,15 +41,26 @@ function request(url, { json = false, file = null, maxRedirects = 5, timeout = 2
       }
       if (res.statusCode !== 200) { res.resume(); resolve(null); return; }
       let out = null;
-      res.on('error', () => resolve(null));
-      res.on('close', () => { if (!res.complete) { if (out) out.destroy(); resolve(null); } });
+      // A failed download is answered only when the file is closed again: the caller throws the file away at once, and a file that
+      // is still being opened (or is still open, on Windows) would otherwise stay behind.
+      const fail = () => {
+        if (!out || out.closed) { resolve(null); return; }
+        out.once('close', () => resolve(null));
+        out.destroy();
+      };
+      res.on('error', fail);
+      res.on('close', () => { if (!res.complete) fail(); });
       if (file) {
         const hash = crypto.createHash('sha256');
         out = fs.createWriteStream(file);
         res.on('data', (d) => hash.update(d));
         res.pipe(out);
-        out.on('finish', () => resolve({ sha256: hash.digest('hex') }));
-        out.on('error', () => resolve(null));
+        // The answer comes when the file is closed again, not when the last bytes are written: Windows does not start a program
+        // that is still open for writing.
+        let written = false;
+        out.on('finish', () => { written = true; });
+        out.on('close', () => { if (written) resolve({ sha256: hash.digest('hex') }); });
+        out.on('error', fail);
         return;
       }
       const chunks = [];

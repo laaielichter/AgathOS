@@ -734,6 +734,16 @@ const robustTests = async () => {
     cp.spawn = (...a) => { spawned.push(a); return fakeChild('spawn'); };
     const cutDl = await settle(up.install(info), 4000);
     ok(cutDl !== 'HUNG' && cutDl.ok === false && cutDl.reason === 'checksum' && spawned.length === 0 && !fs.existsSync(exe), 'update: a download that breaks half way is thrown away and nothing is started');
+    // A disk that is slow to open the file must not leave a file behind either: the answer comes when the file is closed again.
+    const realOpen = fs.open;
+    let slowCut = null;
+    try {
+      fs.open = (...a) => { setTimeout(() => realOpen.apply(fs, a), 60); };
+      pretend((u) => (u === asset ? { body: bytes.slice(0, 8), broken: true } : null));
+      slowCut = await settle(up.install(info), 4000);
+    } finally { fs.open = realOpen; }
+    await new Promise((r) => setTimeout(r, 200));
+    ok(slowCut !== 'HUNG' && slowCut.ok === false && slowCut.reason === 'checksum' && spawned.length === 0 && !fs.existsSync(exe), 'update: a download that breaks half way leaves no file behind, also when the disk is slow to open it');
     pretend((u) => (u === asset ? { body: 'something else' } : null));
     const wrong = await settle(up.install(info), 4000);
     ok(wrong.ok === false && wrong.reason === 'checksum' && spawned.length === 0 && !fs.existsSync(exe), 'update: a file with the wrong checksum is thrown away and nothing is started');
@@ -743,9 +753,15 @@ const robustTests = async () => {
     ok(blocked.ok === false && blocked.reason === 'start' && !fs.existsSync(exe), 'update: an installer that cannot start is reported, so AgathOS does not close for nothing');
     spawned = [];
     let child = null;
-    cp.spawn = (...a) => { spawned.push(a); child = fakeChild('spawn'); return child; };
-    const started = await settle(up.install(info), 4000);
+    let lastOut = null;
+    let closedAtStart = false;
+    const realWrite = fs.createWriteStream;
+    fs.createWriteStream = (...a) => { lastOut = realWrite.apply(fs, a); return lastOut; };
+    cp.spawn = (...a) => { spawned.push(a); closedAtStart = !!(lastOut && lastOut.closed); child = fakeChild('spawn'); return child; };
+    let started = null;
+    try { started = await settle(up.install(info), 4000); } finally { fs.createWriteStream = realWrite; }
     ok(started.ok === true && spawned.length === 1 && spawned[0][1].join(' ') === '/S --force-run' && child.unrefed === true, 'update: a good download is started silently and AgathOS lets go of it');
+    ok(closedAtStart, 'update: the installer is started only after its file is closed again (Windows does not start a file that is still open for writing)');
     try { fs.unlinkSync(exe); } catch (_) {}
   } finally {
     https.get = realGet;
