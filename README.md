@@ -2,7 +2,14 @@
 
 **The good daemon for your local AI agents.**
 
-![AgathOS](docs/screenshot.png)
+[![Tests](https://github.com/laaielichter/AgathOS/actions/workflows/tests.yml/badge.svg)](https://github.com/laaielichter/AgathOS/actions/workflows/tests.yml)
+
+**[Download the latest version](https://github.com/laaielichter/AgathOS/releases/latest)** for Windows (Intel/AMD and
+ARM) and macOS (Apple chip and Intel). See [Install](#install).
+
+![The AgathOS overview](docs/screenshot.png)
+
+*All screenshots in this README show demo data, not a real PC.*
 
 The ancient Greeks believed every home had an *Agathos Daimon*: a good spirit that
 quietly watched over the house and the people in it. In computing, a *daemon* is a
@@ -10,7 +17,8 @@ program that runs in the background. AgathOS is both: a free, open-source app fo
 that keeps watching the AI agents on your PC, warns you before they do damage, and gives
 you a real stop button.
 
-Nothing leaves your PC. No account, no cloud, no telemetry.
+Nothing leaves your PC. No account, no cloud, no telemetry. The one thing AgathOS asks the internet is whether a
+newer version is on GitHub: once a day, without any data about your PC, and one switch (Settings > Updates) turns it off.
 
 ## Why
 
@@ -50,6 +58,11 @@ words, predicts the next step from the actions it sees, and limits the damage.
 5. **Honesty check**: the agent's transcript (Claude Code, Codex, Grok Build) compared with what Windows saw. "All tests pass" after a failing test run, editing test files during a bug fix, risky commands that never appear in the conversation.
 6. **Optional local AI judge** through Ollama. It only sees a cleaned summary, answers in fixed JSON and can only *raise* a score.
 
+![The ID card of an agent](docs/agent-card.png)
+
+*The ID card of an agent: who started it and who signed it, what it is doing now, why the score is what it is, and the
+buttons to freeze it, stop it or cut it off from the internet.*
+
 **Self-learning, safely.** It learns only from clean sessions or sessions you approved, never while a session read untrusted content, a little at a time, with versions you can roll back. Hard rules are never learned.
 
 **Fix it.** After every scan AgathOS lists what it found and offers one button: *Fix all*.
@@ -61,7 +74,7 @@ what is going on and what to do. *In depth* shows the evidence (paths, commands,
 text, process tree, signer), how the attack works, the harmless and the harmful explanation,
 how sure AgathOS is, the matching MITRE ATT&CK / ATLAS technique and the steps to fix it.
 
-![Explain: analysis of a finding](docs/analysis.png)
+![Explain, in depth: a finding about a look-alike of an AI address](docs/analysis.png)
 
 | Finding | What "Fix it" does | Undo |
 |---|---|---|
@@ -95,6 +108,10 @@ AgathOS Guard on, every new program and every new address lookup of an agent sho
 without it, programs and connections are checked every few seconds. The *Guard* label at the top
 turns green when Guard is installed and running.
 
+![The Live page](docs/live.png)
+
+*The Live page: what happens on this PC right now, in plain words.*
+
 **Grok.** *Grok Build* (the `grok` command of xAI) is recognised on Windows and on a Mac, where the
 system shows the file behind the `grok` link instead of the name. AgathOS reads its settings and
 MCP servers (`config.toml`, also in a project's `.grok` folder), its hooks, its rules and skills,
@@ -105,6 +122,10 @@ cloud computer, so AgathOS only sees the app, its network traffic and the files 
 this computer, and says so on its card.
 
 **Stealth (extra look, off by default).** Settings > View > Theme offers a third look next to Dark and Light: an operations console in pure black for OLED screens, thin steel lines, one cyan accent, code type and small marks in the corners of the panels. A ring of ticks turns around the status ring while a scan runs; nothing else moves for show. The logo keeps its own gold, the pages and functions are the same, and the small window next to the clock follows. Dark and Light stay in the side bar, and once Stealth is on it shows there too, so the way back is one click. It brings no fonts of its own (it uses the code font your system has), loads nothing from the internet, keeps the letters of Arabic, Thai, Hindi, Bengali and the East Asian languages unspaced, and its colours are tested for contrast on every ground. The look is our own and uses no logo, font or code from anyone else.
+
+![The overview in the Stealth look](docs/stealth.png)
+
+*The overview in the Stealth look.*
 
 **Mini pop-up (Windows).** Click the AgathOS icon next to the clock and a small window opens
 right above it: the six watchers, the status, *Fix all*, *Scan now*, *Pause all agents*, the
@@ -146,6 +167,15 @@ run code, rules files or prompts with hidden instructions, and fake installers: 
 or similar named after a tool that is not installed with a file (Claude Code, OpenClaw, Gemini CLI,
 Codex CLI) is an alarm, a zip of it is a warning. Fake download pages for these tools spread
 password stealers this way. It only warns; it never opens or runs the file.
+
+**AI shield.** One page with four tabs, each a check of its own with its own switch in Settings: *Links* (where
+programs send their prompts and keys), *Boards* (places where agents take orders from or leave messages on), *Model X-ray*
+(what is inside the models you download) and *Copies* (anything that can copy an AI or the text that steers it). The four
+texts below tell what each one looks for.
+
+![The AI shield, on the Boards tab](docs/ai-shield.png)
+
+*The AI shield, on the Boards tab.*
 
 **AI shield (AI links).** Attacks on AI often start at the place where a program sends its prompts
 and its key. AgathOS reads the settings files and variables that hold such addresses (the global
@@ -227,6 +257,10 @@ is marked as data: hidden characters are removed, text is cut short and the sent
 repeated. The plugin carries the scanners with it and works alone; it cannot start a program or write a file (a test
 checks it). See [docs/agents.md](docs/agents.md) and [plugins/agathos](plugins/agathos).
 
+![Settings > Agent access](docs/agent-access.png)
+
+*Settings > Agent access: a key for each program, taken back in one click.*
+
 **Calm notifications.** No notification circus: by default only danger pops up (attention goes to
 the log and the tray dot), what happens at the same time comes as one notification, the same
 finding is not repeated within 6 hours, at most 3 per hour, and nothing pops up while the
@@ -246,26 +280,29 @@ tray menu. A new version shows as a banner and as a window with an *Update now* 
 the installed app downloads the new installer, checks its SHA-256 against the checksum GitHub
 publishes, and only then installs it and starts again. By default it does this by itself, but only
 at a quiet moment: no agent active, no scan running, the window not in use (otherwise it tries
-again 20 minutes later), and after a calm notification. Switch it off at Settings > Updates. On a
+again 20 minutes later), and after a calm notification. Two switches at Settings > Updates:
+*Check for a new version every day* and, on Windows, *Update by itself at a quiet moment*. On a
 Mac, and when "update by itself" is off, AgathOS shows one calm pop-up per new version, and the
-button opens the download page.
-
-**Mini pop-up (Windows).** Click the AgathOS icon next to the clock and a small window opens
-right above it: the six watchers, the status, *Fix all*, *Scan now*, *Pause all agents*, the
-live scanner switch and the agents running now. Double-click the icon for the full window,
-right-click for the menu.
+button opens the download page. With the daily check switched off AgathOS does not go to the
+internet at all, until you press *Check now*.
 
 **Advanced or simple.** The advanced view (default) shows every score, process and
-prediction. The simple view keeps four pages and plain words.
+prediction, on eleven pages. The simple view keeps six pages (Overview, Agents, AI shield,
+Check text, Log, Settings) and plain words.
 
 **Welcome screen.** The first start asks for your language, the view, the live scanner,
-starting with Windows, deep protection (AgathOS Guard) and auto-fix.
+starting with Windows (on a Mac: at login), deep protection (AgathOS Guard, Windows only) and
+auto-fix. Closing it keeps the safe defaults; *Settings > View > Run setup again* opens it again.
 
 **Also:** a tamper-evident log (hash chain), notifications, tray icon, start with Windows, 20 languages (the top 10 world languages English, 中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский and Bahasa Indonesia, plus 日本語, 한국어, Deutsch, Nederlands, Italiano, Türkçe, Polski, Tiếng Việt, Українська and ไทย; Arabic right-to-left), dark and light mode (plus the extra Stealth look), and a local API on `127.0.0.1:47612` for hooks, AI programs and add-ons.
 
 ## Install
 
-**Installer.** Run `AgathOS-Setup-<version>.exe`. Pick a language, choose the folder, and
+Every [release](https://github.com/laaielichter/AgathOS/releases/latest) has the installers attached:
+`AgathOS-Setup-<version>.exe` (Windows, Intel/AMD), `AgathOS-Windows-ARM64-Setup-<version>.exe` (Windows on ARM),
+`AgathOS-<version>-arm64.dmg` (Mac, Apple chip) and `AgathOS-<version>-x64.dmg` (Mac, Intel).
+
+**Installer.** Download and run `AgathOS-Setup-<version>.exe`. Pick a language, choose the folder, and
 AgathOS lands on your desktop and in the Start menu, then starts with the welcome screen.
 No admin rights needed. The installer is not code-signed yet, so Windows SmartScreen may say
 "Windows protected your PC": click *More info* and *Run anyway*.
@@ -289,9 +326,10 @@ whether AgathOS can read your Documents, Desktop and Downloads folders; that is 
 instruction files, MCP settings and keys. From source: `npm install` and `npm start`.
 Build the disk images yourself on a Mac with `npm run dist:mac`.
 
-> **Mac testers wanted.** The Mac version is built and its tests run automatically on macOS,
-> but nobody has clicked through it on a real Mac yet. If something does not work or looks
-> wrong, please open an issue with a screenshot and your macOS version.
+> **Mac testers wanted.** The Mac version is built on macOS, its tests run there, and the finished Apple-chip app is
+> started and tried out on a Mac of GitHub (it has to find eight planted bad files; the Intel build is built there
+> but not started). But nobody has clicked through it on a real Mac yet. If something does not work or looks wrong,
+> please open an issue with a screenshot and your macOS version.
 
 After the first scan AgathOS keeps watching from the system tray.
 
@@ -385,7 +423,17 @@ All 20 languages are complete. Native speakers: corrections are very welcome, th
 ## Tests
 
 `node test/run-tests.js` runs the scanners, the intent engine, the honesty check, the
-log chain and the fix/undo steps on any OS.
+log chain, the fix/undo steps, Model X-ray, Copy Guard, the plugin and the MCP server, and checks that
+every language has every text. It is plain Node: nothing to install, any OS. On Windows and a Mac it also asks the
+real system for programs and connections (`test/live-os.js`).
+
+`node test/smoke.js <built app>` starts the finished app with a throw-away home folder that holds eight planted bad
+files (hidden text, a worm-like install script, a malicious MCP server, a look-alike AI address, a message board, a
+poisoned model file and more) and checks that the app finds them. GitHub Actions runs the tests on Windows (Intel/AMD
+and ARM), macOS and Linux for every change, and runs this smoke test on the finished Windows apps (Intel/AMD and ARM) and
+on the finished Mac app for the Apple chip (see Actions).
+`node test/lan-scan-sim.js` tries the worm watch safely, and `node test/bench-os.js` shows how long the watchers take
+on your system.
 
 ## Security
 
