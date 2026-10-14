@@ -342,6 +342,12 @@
     "live.chartAria": "최근 몇 분 동안 초당 활동",
     "live.perMin": "숫자는 최근 1분을 보여 줍니다.",
     "card.cloudNote": "주로 자체 클라우드 컴퓨터에서 작업합니다. AgathOS는 이 컴퓨터에서 일어나는 일(앱, 네트워크 트래픽, 여기서 건드리는 파일)만 볼 수 있습니다.",
+
+    "tray.update": "업데이트 확인…",
+    "upd.popupSelf": "AgathOS가 새 버전을 내려받아 파일을 확인한 뒤 스스로 다시 시작합니다. 설정과 로그는 그대로 유지됩니다.",
+    "upd.popupPage": "브라우저에서 다운로드 페이지가 열립니다. 그곳에서 새 버전을 내려받아 현재 버전 위에 설치하세요.",
+    "set.updatesAutoDesc": "매일 네덜란드 시간 23:00에 확인합니다. 그때 컴퓨터가 꺼져 있었다면 켜지는 즉시 확인합니다.",
+    "upd.notice": "AgathOS {v}을(를) 사용할 수 있습니다. 클릭하여 업데이트하세요.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ko, d);

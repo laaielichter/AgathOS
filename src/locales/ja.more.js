@@ -342,6 +342,12 @@
     "live.chartAria": "直近数分間の1秒ごとのアクティビティ",
     "live.perMin": "数字は直近1分間の合計です。",
     "card.cloudNote": "主に専用のクラウド上のコンピューターで作業します。AgathOS が見られるのは、このコンピューターで起きること（アプリ本体、通信、ここで触れるファイル）だけです。",
+
+    "tray.update": "アップデートを確認…",
+    "upd.popupSelf": "AgathOS は新しいバージョンをダウンロードし、ファイルを検証して、自動的に再起動します。設定とログはそのまま残ります。",
+    "upd.popupPage": "ブラウザでダウンロードページが開きます。そこから新しいバージョンをダウンロードし、このバージョンの上にインストールしてください。",
+    "set.updatesAutoDesc": "毎日オランダ時間の 23:00 に確認します。そのときコンピューターの電源が切れていた場合は、電源が入った直後に確認します。",
+    "upd.notice": "AgathOS {v} が利用可能です。クリックして更新します。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.ja, d);

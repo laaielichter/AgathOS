@@ -342,6 +342,12 @@
     "live.chartAria": "最近几分钟内每秒的活动",
     "live.perMin": "数字显示的是最近一分钟。",
     "card.cloudNote": "它主要在自己的云端电脑上工作。AgathOS 只能看到这台电脑上发生的事：这个程序、它的网络流量，以及它在本机接触的文件。",
+
+    "tray.update": "检查更新…",
+    "upd.popupSelf": "AgathOS 会下载新版本、校验文件并自动重启。你的设置和日志会保持不变。",
+    "upd.popupPage": "下载页面将在浏览器中打开。请在那里下载新版本，并覆盖安装到当前版本上。",
+    "set.updatesAutoDesc": "每天荷兰时间 23:00 检查。如果当时电脑已关机，则在开机后立即检查。",
+    "upd.notice": "AgathOS {v} 现已可用。点击更新。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);

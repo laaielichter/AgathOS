@@ -401,6 +401,12 @@
     "live.chartAria": "Son birkaç dakikada saniye başına etkinlik",
     "live.perMin": "Sayılar son dakikayı gösterir.",
     "card.cloudNote": "Çoğunlukla kendi bulut bilgisayarında çalışır. AgathOS yalnızca bu bilgisayarda olanları görür: uygulamayı, ağ trafiğini ve burada dokunduğu dosyaları.",
+
+    "tray.update": "Güncellemeleri denetle…",
+    "upd.popupSelf": "AgathOS yeni sürümü indirir, dosyayı doğrular ve kendini yeniden başlatır. Ayarlarınız ve günlüğünüz olduğu gibi kalır.",
+    "upd.popupPage": "İndirme sayfası tarayıcınızda açılır. Yeni sürümü oradan indirip bunun üzerine kurun.",
+    "set.updatesAutoDesc": "Her gün Hollanda saatiyle 23:00’te. O sırada bilgisayar kapalıysa, açılır açılmaz.",
+    "upd.notice": "AgathOS {v} hazır. Güncellemek için tıklayın.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.tr, d);

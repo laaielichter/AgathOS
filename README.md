@@ -155,11 +155,16 @@ comes through. Windows Focus and macOS Focus are respected as well.
 **Safety report.** One HTML page with all findings, agents, fixes and the last 24 hours, to
 keep or share (Log > Save report).
 
-**Updates.** AgathOS checks GitHub Releases once a day. On Windows the installed app downloads
-the new installer, checks its SHA-256 against the checksum GitHub publishes, and only then
-installs it and starts again. By default it does this by itself, but only at a quiet moment: no
-agent active, no scan running, the window not in use (otherwise it tries again 20 minutes later),
-and after a calm notification. Switch it off at Settings > Updates. On a Mac it opens the download page.
+**Updates.** AgathOS checks GitHub Releases once a day, at 23:00 Dutch time (whatever time zone
+the computer uses). If the computer was off or asleep then, it checks right after it is on again.
+You can also check at any moment: Settings > Updates > *Check now*, or *Check for updates…* in the
+tray menu. A new version shows as a banner and as a window with an *Update now* button. On Windows
+the installed app downloads the new installer, checks its SHA-256 against the checksum GitHub
+publishes, and only then installs it and starts again. By default it does this by itself, but only
+at a quiet moment: no agent active, no scan running, the window not in use (otherwise it tries
+again 20 minutes later), and after a calm notification. Switch it off at Settings > Updates. On a
+Mac, and when "update by itself" is off, AgathOS shows one calm pop-up per new version, and the
+button opens the download page.
 
 **Mini pop-up (Windows).** Click the AgathOS icon next to the clock and a small window opens
 right above it: the six watchers, the status, *Fix all*, *Scan now*, *Pause all agents*, the

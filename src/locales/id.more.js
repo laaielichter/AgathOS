@@ -342,6 +342,12 @@
     "live.chartAria": "Aktivitas per detik selama beberapa menit terakhir",
     "live.perMin": "Angka menunjukkan satu menit terakhir.",
     "card.cloudNote": "Bekerja terutama di komputer cloud miliknya sendiri. AgathOS hanya melihat apa yang terjadi di komputer ini: programnya, lalu lintas jaringannya, dan file yang disentuhnya di sini.",
+
+    "tray.update": "Periksa pembaruan…",
+    "upd.popupSelf": "AgathOS mengunduh versi baru, memeriksa filenya, lalu memulai ulang sendiri. Pengaturan dan log Anda tetap utuh.",
+    "upd.popupPage": "Halaman unduhan akan terbuka di browser Anda. Unduh versi baru di sana dan pasang di atas versi ini.",
+    "set.updatesAutoDesc": "Setiap hari pukul 23:00 waktu Belanda. Jika komputer sedang mati saat itu, segera setelah dinyalakan.",
+    "upd.notice": "AgathOS {v} tersedia. Klik untuk memperbarui.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.id, d);

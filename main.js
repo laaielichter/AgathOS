@@ -1,7 +1,7 @@
 // AgathOS - main process.
 // Window, system tray, notifications, the pause hotkey and the bridge to the engine.
 // Security first: no Node in the page, strict isolation, only whitelisted IPC calls.
-const { app, BrowserWindow, shell, ipcMain, Tray, Menu, Notification, nativeImage, globalShortcut, dialog, screen, clipboard } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, Tray, Menu, Notification, nativeImage, globalShortcut, dialog, screen, clipboard, powerMonitor } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { Store } = require('./core/store');
@@ -10,6 +10,8 @@ const api = require('./core/api');
 const guard = require('./core/guard');
 const judge = require('./core/judge');
 const updater = require('./core/update');
+const schedule = require('./core/schedule');
+const trayMenu = require('./core/traymenu');
 const report = require('./core/report');
 const { checkText } = require('./core/textscan');
 const { Notifier } = require('./core/notifier');
@@ -66,7 +68,7 @@ function createWindow() {
   const hidden = process.argv.includes('--hidden') || (IS_MAC && (() => { try { return !!app.getLoginItemSettings().wasOpenedAtLogin; } catch (_) { return false; } })());
   win.once('ready-to-show', () => { if (!hidden) win.show(); });
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
-  win.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://')) shell.openExternal(url); return { action: 'deny' }; });
+  win.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith('https://')) shell.openExternal(url).catch(() => {}); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.on('close', (e) => {
     if (!quitting && store.settings.closeToTray && store.settings.realtime) { e.preventDefault(); win.hide(); }
@@ -184,26 +186,25 @@ function buildTray() {
   }
   tray.setImage(img);
   tray.setToolTip(engine ? `AgathOS · ${statusText(engine.lastSnap)}`.slice(0, 120) : 'AgathOS');
-  tray.setContextMenu(Menu.buildFromTemplate([
-    { label: tt('tray.open'), click: () => showWindow() },
-    { label: tt('tray.scan'), click: () => engine.fullScan('tray') },
-    { label: tt('tray.check'), click: () => showWindow('check') },
-    { label: tt('tray.live'), type: 'checkbox', checked: !!(store && store.settings.realtime), click: (item) => setLive(item.checked) },
-    { type: 'separator' },
-    engine && engine.pausedAll
-      ? { label: tt('tray.resume'), click: () => engine.resumeAll() }
-      : { label: tt('tray.pause'), click: () => engine.pauseAll('tray') },
-    { type: 'separator' },
-    snoozed()
-      ? { label: tt('tray.snoozeOff'), click: () => snooze(0) }
-      : { label: tt('tray.snooze'), submenu: [
-        { label: tt('set.snooze1h'), click: () => snooze(3600 * 1000) },
-        { label: tt('set.snoozeTomorrow'), click: () => snooze(untilTomorrow()) },
-      ] },
-    ...(updateInfo && updateInfo.status === 'newer' ? [{ label: tt('upd.available', { v: updateInfo.version }), click: () => installUpdate() }] : []),
-    { type: 'separator' },
-    { label: tt('tray.quit'), click: () => { quitting = true; app.quit(); } },
-  ]));
+  tray.setContextMenu(Menu.buildFromTemplate(trayMenu.template(tt, {
+    live: !!(store && store.settings.realtime),
+    paused: !!(engine && engine.pausedAll),
+    snoozed: snoozed(),
+    update: updateInfo,
+  }, {
+    open: () => showWindow(),
+    scan: () => engine.fullScan('tray'),
+    checkText: () => showWindow('check'),
+    setLive: (on) => setLive(on),
+    resume: () => engine.resumeAll(),
+    pause: () => engine.pauseAll('tray'),
+    snoozeOff: () => snooze(0),
+    snooze1h: () => snooze(3600 * 1000),
+    snoozeTomorrow: () => snooze(untilTomorrow()),
+    showUpdate: () => showWindow('updatepopup'),
+    checkUpdate: () => showWindow('updatecheck'),
+    quit: () => { quitting = true; app.quit(); },
+  })));
 }
 
 // The live scanner switch (window, tray and API all end up here).
@@ -221,7 +222,7 @@ function eventText(e) {
 }
 
 // Calm notifications: core/notifier.js decides what pops up, bundles bursts and keeps a limit.
-const viewOf = (e) => (e.watcher === 'gate' ? 'mcp' : e.watcher === 'traps' || e.watcher === 'keys' ? 'files' : e.watcher === 'net' ? 'network' : 'agents');
+const viewOf = (e) => (e.key === 'upd.event' ? 'updatepopup' : e.watcher === 'gate' ? 'mcp' : e.watcher === 'traps' || e.watcher === 'keys' ? 'files' : e.watcher === 'net' ? 'network' : 'agents');
 function showNotification(events, { sound, overflow }) {
   if (!Notification.isSupported() || !events.length) return;
   const first = events[0];
@@ -264,17 +265,58 @@ function applyOsSettings() {
 }
 
 // ---------- updates from GitHub Releases ----------
+// Looks at GitHub. Answers what GitHub said (a manual check wants to hear "unreachable"), but a failed
+// look never wipes out an update that was already found.
 async function checkUpdate(manual = false) {
   if (!manual && !store.settings.updates) return updateInfo;
   const before = updateInfo && updateInfo.version;
-  updateInfo = await updater.check();
+  const fresh = await updater.check();
+  fresh.self = updater.canSelfInstall(fresh, process.platform, app.isPackaged);
+  updateInfo = updater.keepKnown(updateInfo, fresh);
   if (engine) { engine.update = updateInfo; engine.changed(true); }
   if (updateInfo.status === 'newer' && updateInfo.version !== before && !manual) {
     engine.event({ key: 'upd.event', sev: 'watch', watcher: 'gate', params: { v: updateInfo.version } });
   }
   buildTray();
-  if (!manual) scheduleAutoUpdate(0);
-  return updateInfo;
+  if (!manual) {
+    announceUpdate(updateInfo);
+    scheduleAutoUpdate(0);
+  }
+  return fresh;
+}
+
+// One calm pop-up per new version, for the cases where AgathOS does not install it by itself
+// (a Mac, "update by itself" switched off, or running from source). Clicking it opens the window with the update button.
+function announceUpdate(info) {
+  if (!store || !info || info.status !== 'newer' || store.state.updateAnnounced === info.version) return;
+  if (updater.autoDecision({ platform: process.platform, packaged: app.isPackaged, autoUpdate: store.settings.autoUpdate, info, failedVersion: autoFailed, calm: true }) === 'go') return;
+  if (store.settings.notify === 'log' || snoozed() || !Notification.isSupported()) return;
+  store.state.updateAnnounced = info.version;
+  store.saveState();
+  if (win && !win.isDestroyed() && win.isVisible() && win.isFocused()) return;      // the banner in the window is already in front of the user
+  const n = new Notification({ title: tt('notif.title'), body: tt('upd.notice', { v: info.version }), icon: path.join(__dirname, 'src', 'icon.png'), silent: true });
+  n.on('click', () => showWindow('updatepopup'));
+  n.on('failed', () => { try { if (IS_MAC && app.dock) app.dock.bounce('informational'); } catch (_) { /* no Dock */ } });
+  n.show();
+}
+
+// Once a day at 23:00 Dutch time, and as soon as possible after a 23:00 the computer missed (core/schedule.js).
+// A look that could not reach GitHub is tried again half an hour later.
+let dailyCheck = null;
+function startUpdateClock() {
+  dailyCheck = new schedule.DailyCheck({
+    enabled: () => !!(store && store.settings.updates),
+    served: () => store.state.updateSlot,
+    setServed: (slot) => { store.state.updateSlot = slot; store.saveState(); },
+    run: async () => {
+      const r = await checkUpdate(false);
+      return !!r && r.status !== 'unreachable';
+    },
+  });
+  const tick = () => { dailyCheck.tick().catch(() => {}); };
+  setTimeout(tick, 60 * 1000);                    // a minute after the start, not in the busy first seconds
+  setInterval(tick, 60 * 1000);
+  try { powerMonitor.on('resume', () => setTimeout(tick, 15 * 1000)); } catch (_) { /* no power events here */ }
 }
 
 // Updating by itself (Windows, installed app): only at a quiet moment, after a calm notice,
@@ -337,8 +379,11 @@ async function installUpdateNow() {
     if (r.ok) { quitting = true; setTimeout(() => app.quit(), 500); return { ok: true }; }
     if (r.reason !== 'page') return { ok: false, reason: r.reason };
   }
-  if (updateInfo.page && /^https:\/\/github\.com\//.test(updateInfo.page)) shell.openExternal(updateInfo.page);
-  return { ok: true, page: true };
+  if (updateInfo.page && /^https:\/\/github\.com\//.test(updateInfo.page)) {
+    // No browser to open (or the system refuses): say so, instead of an error nobody catches.
+    try { await shell.openExternal(updateInfo.page); return { ok: true, page: true }; } catch (_) { /* reported below */ }
+  }
+  return { ok: false, reason: 'page' };
 }
 
 // ---------- live view: a light push once a second, only while the window shows it ----------
@@ -473,9 +518,7 @@ app.whenReady().then(async () => {
   try { await engine.start(); } catch (err) { errlog.record(path.join(app.getPath('userData'), 'data'), 'error', err); }
   applyOsSettings();
   buildTray();
-  // First update check a minute after start, then once a day.
-  setTimeout(() => checkUpdate().catch(() => {}), 60 * 1000);
-  setInterval(() => checkUpdate().catch(() => {}), 24 * 3600 * 1000);
+  startUpdateClock();
 });
 
 app.on('before-quit', () => { quitting = true; });

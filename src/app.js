@@ -124,11 +124,18 @@
     $('main').scrollTop = 0;
     render();
   }
-  if (A.onNavigate) A.onNavigate((v) => {
+  // A request that arrives while the window is still starting (a new window made by the tray) waits until it is ready.
+  let ready = false;
+  let pendingNav = null;
+  function navigate(v) {
+    // From the tray: "Check for updates" asks GitHub now; a pop-up or a tray line shows what the last check found.
+    if (v === 'updatecheck') { checkNow(); return; }
+    if (v === 'updatepopup') { showKnownUpdate(); return; }
     // From the mini pop-up: "Fix all" opens the overview with the fix dialog.
     if (v === 'fix') { show('overview'); if (snap) openFix(planOf().some((x) => x.cat !== 'manual' && x.action !== 'off') ? 'all' : 'choose'); return; }
     show(v);
-  });
+  }
+  if (A.onNavigate) A.onNavigate((v) => { if (ready) navigate(v); else pendingNav = v; });
 
   // ---------- chrome ----------
   function renderChrome() {
@@ -977,13 +984,9 @@
         setRow(t('set.judge'), sw(s.judge.enabled, () => save({ judge: { enabled: !s.judge.enabled } })), t('set.judgeDesc')),
         s.judge.enabled ? setRow(t('set.judgeModel'), judgeSel) : null),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.updates') }),
-        setRow(t('set.version', { v: (snap.update && snap.update.current) || A.version || '' }), btn(t('set.updatesNow'), async (e) => {
-          e.target.textContent = t('upd.checking');
-          const u = await A.checkUpdate();
-          e.target.textContent = t('set.updatesNow');
-          modal(t('set.updates'), !u || u.status === 'unreachable' ? t('upd.unreachable') : u.status === 'newer' ? t('upd.available', { v: u.version }) : t('upd.latest', { v: u.current }));
-        }), snap.update && snap.update.status === 'newer' ? t('upd.available', { v: snap.update.version }) : null),
-        setRow(t('set.updatesAuto'), sw(s.updates !== false, () => save({ updates: s.updates === false }))),
+        setRow(t('set.version', { v: (snap.update && snap.update.current) || A.version || '' }), btn(t('set.updatesNow'), () => checkNow()),
+          snap.update && snap.update.status === 'newer' ? t('upd.available', { v: snap.update.version }) : null),
+        setRow(t('set.updatesAuto'), sw(s.updates !== false, () => save({ updates: s.updates === false })), t('set.updatesAutoDesc')),
         isMac() ? null : setRow(t('set.autoUpdate'), sw(s.autoUpdate !== false, () => save({ autoUpdate: s.autoUpdate === false })), t('set.autoUpdateDesc'))),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.app') }),
         setRow(startupLabel(), sw(s.startWithWindows, () => save({ startWithWindows: !s.startWithWindows }))),
@@ -1029,8 +1032,57 @@
     if (!u || u.status !== 'newer' || updHidden) { b.hidden = true; return; }
     b.hidden = false;
     fill(b, h('span', { class: 'upd-dot' }), h('span', { text: t('upd.available', { v: u.version }) }),
-      h('button', { class: 'btn-small fix', type: 'button', text: isMac() ? t('upd.open') : t('upd.install'), onclick: async () => { toast(t('upd.downloading', { v: u.version })); const r = await A.installUpdate(); if (r && r.ok === false) modal(t('set.updates'), t('upd.failed')); } }),
+      h('button', { class: 'btn-small fix', type: 'button', text: u.self ? t('upd.install') : t('upd.open'), onclick: () => installNow(u) }),
       h('button', { class: 'btn-small', type: 'button', text: t('upd.later'), onclick: () => { updHidden = true; renderUpdate(); } }));
+  }
+
+  // ---------- update window: what a check found, with the button to put it on ----------
+  // st: { checking } | { u } (the answer of a check) | { u, installing } | { u, failed }
+  let updToken = 0;                       // a window the user closed must not pop up again when the answer arrives late
+  $('updDlg').addEventListener('close', () => { updToken++; });
+  function updateDialog(st) {
+    const u = st.u;
+    const newer = !!(u && u.status === 'newer');
+    $('updTitle').textContent = newer ? t('upd.available', { v: u.version }) : t('set.updates');
+    $('updBody').textContent = st.checking ? t('upd.checking')
+      : st.installing ? t('upd.downloading', { v: u.version })
+      : st.failed ? t('upd.failed')
+      : newer ? (u.self ? t('upd.popupSelf') : t('upd.popupPage'))
+      : !u || u.status === 'unreachable' ? t('upd.unreachable')
+      : t('upd.latest', { v: u.current });
+    $('updWait').hidden = !(st.checking || st.installing);
+    const later = h('button', { class: 'btn-ghost', type: 'button', text: newer && !st.failed ? t('upd.later') : t('ok'), onclick: () => $('updDlg').close() });
+    const go = newer && !st.failed ? h('button', { class: 'btn-primary', type: 'button', text: u.self ? t('upd.install') : t('upd.open'), onclick: () => installNow(u) }) : null;
+    fill($('updActions'), st.checking || st.installing ? null : [later, go]);
+    if (!$('updDlg').open) $('updDlg').showModal();
+    if (go) go.focus();
+  }
+  async function installNow(u) {
+    updToken++;
+    updateDialog({ u, installing: true });
+    let r = null;
+    try { r = await A.installUpdate(); } catch (_) { r = { ok: false }; }
+    if (r && r.reason === 'busy') return;                  // a download is already running
+    if (r && r.ok === false) { updateDialog({ u, failed: true }); return; }
+    if (r && r.page) $('updDlg').close();                  // the download page opened in the browser
+    // Otherwise (Windows) the installer has started and AgathOS closes itself in a moment.
+  }
+  // The button in Settings and the tray line "Check for updates".
+  async function checkNow() {
+    const mine = ++updToken;
+    updateDialog({ checking: true });
+    let u = null;
+    try { u = await A.checkUpdate(); } catch (_) { /* shown as "could not check" */ }
+    if (mine !== updToken) return;
+    updateDialog({ u });
+  }
+  // A notification or the tray line "AgathOS x is available": show what the last check found.
+  async function showKnownUpdate() {
+    let u = snap && snap.update;
+    if (!u || u.status !== 'newer') { try { u = ((await A.uiState()) || {}).update; } catch (_) { u = null; } }
+    if (!u || u.status !== 'newer') { checkNow(); return; }
+    updToken++;
+    updateDialog({ u });
   }
   $('reportBtn').addEventListener('click', async () => { const r = await A.saveReport(); if (r && r.ok) toast(t('report.saved')); });
 
@@ -1286,5 +1338,9 @@
     if (s && s.ready) { snap = s; render(); }
     if (!welcomed) openWelcome();
   }
-  init();
+  // Whatever happened while starting, from here on requests from the tray are carried out.
+  init().catch(() => {}).then(() => {
+    ready = true;
+    if (pendingNav) { const v = pendingNav; pendingNav = null; navigate(v); }
+  });
 })();

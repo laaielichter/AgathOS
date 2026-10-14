@@ -779,6 +779,150 @@ const robustTests = async () => {
 };
 
 // ---------- engine smoke test ----------
+// ---------- the update flow: the 23:00 clock, the tray menu, what the window may offer ----------
+const updateTests = async () => {
+  const cp = require('child_process');
+  const S = require('../core/schedule');
+  const up = require('../core/update');
+  const TM = require('../core/traymenu');
+  const at = (iso) => Date.parse(iso);
+  const iso = (ms) => new Date(ms).toISOString();
+
+  // --- 23:00 Dutch time, in summer time and in winter time ---
+  const slots = (now) => `${iso(S.lastSlot(at(now)))} ${iso(S.nextSlot(at(now)))}`;
+  ok(slots('2026-10-14T10:00:00Z') === '2026-10-13T21:00:00.000Z 2026-10-14T21:00:00.000Z', 'update clock: in summer time 23:00 is 21:00 UTC');
+  ok(slots('2026-01-15T12:00:00Z') === '2026-01-14T22:00:00.000Z 2026-01-15T22:00:00.000Z', 'update clock: in winter time 23:00 is 22:00 UTC');
+  ok(slots('2026-10-14T21:00:00Z') === '2026-10-14T21:00:00.000Z 2026-10-15T21:00:00.000Z' && slots('2026-10-14T20:59:59.999Z') === '2026-10-13T21:00:00.000Z 2026-10-14T21:00:00.000Z', 'update clock: exactly 23:00 counts, a moment before does not');
+  ok(slots('2026-03-29T12:00:00Z') === '2026-03-28T22:00:00.000Z 2026-03-29T21:00:00.000Z', 'update clock: the day the clocks go forward');
+  ok(slots('2026-10-25T12:00:00Z') === '2026-10-24T21:00:00.000Z 2026-10-25T22:00:00.000Z', 'update clock: the day the clocks go back');
+  ok(slots('2027-01-01T00:30:00Z') === '2026-12-31T22:00:00.000Z 2027-01-01T22:00:00.000Z' && slots('2026-03-01T05:00:00Z') === '2026-02-28T22:00:00.000Z 2026-03-01T22:00:00.000Z', 'update clock: over the turn of a month and a year');
+  {
+    // Every few minutes of a whole year: the last and the next are really 23:00 Dutch time, 23 to 25 hours apart.
+    let good = true;
+    for (let t = at('2026-01-01T00:00:00Z'); t < at('2027-01-01T00:00:00Z') && good; t += 7 * 60 * 1000 + 13000) {
+      const l = S.lastSlot(t);
+      const x = S.nextSlot(t);
+      const pl = S.parts(l);
+      const px = S.parts(x);
+      good = l <= t && t < x && pl.hour === 23 && pl.minute === 0 && px.hour === 23 && px.minute === 0 && x - l >= 23 * 3600e3 && x - l <= 25 * 3600e3;
+    }
+    ok(good, 'update clock: a whole year of moments always lands on 23:00 Dutch time');
+  }
+  {
+    // The time zone of the computer changes nothing.
+    const code = "const S=require('./core/schedule');const t=Date.parse('2026-10-14T10:00:00Z');process.stdout.write(S.lastSlot(t)+','+S.nextSlot(t))";
+    const want = `${S.lastSlot(at('2026-10-14T10:00:00Z'))},${S.nextSlot(at('2026-10-14T10:00:00Z'))}`;
+    const outs = ['Pacific/Auckland', 'America/Los_Angeles', 'Asia/Kolkata'].map((tz) => cp.execFileSync(process.execPath, ['-e', code], { cwd: path.join(__dirname, '..'), env: { ...process.env, TZ: tz } }).toString());
+    ok(outs.every((o) => o === want), 'update clock: the same answer in New Zealand, California and India');
+  }
+
+  // --- once a day, with a pretend clock ---
+  {
+    let now = at('2026-10-14T10:00:00Z');
+    let served = S.lastSlot(now);                 // last night's check is done
+    let runs = 0;
+    let reach = true;
+    let enabled = true;
+    const dc = new S.DailyCheck({ enabled: () => enabled, served: () => served, setServed: (v) => { served = v; }, run: async () => { runs++; return reach; }, now: () => now });
+    await dc.tick();
+    ok(runs === 0, 'daily check: nothing in the morning when last night was done');
+    now = at('2026-10-14T20:59:30Z'); await dc.tick();
+    ok(runs === 0, 'daily check: not half a minute before 23:00');
+    now = at('2026-10-14T21:00:10Z'); await dc.tick();
+    ok(runs === 1 && served === at('2026-10-14T21:00:00Z'), 'daily check: it runs at 23:00 Dutch time and remembers that');
+    now = at('2026-10-14T21:01:10Z'); await dc.tick(); now = at('2026-10-15T05:00:00Z'); await dc.tick();
+    ok(runs === 1, 'daily check: once a day, not again the same night or the next morning');
+    reach = false; now = at('2026-10-15T21:00:05Z'); await dc.tick();
+    ok(runs === 2 && served === at('2026-10-14T21:00:00Z'), 'daily check: a look that could not reach GitHub does not count');
+    now = at('2026-10-15T21:05:00Z'); await dc.tick();
+    ok(runs === 2, 'daily check: it waits half an hour before it tries again');
+    reach = true; now = at('2026-10-15T21:31:00Z'); await dc.tick();
+    ok(runs === 3 && served === at('2026-10-15T21:00:00Z'), 'daily check: the second try works and the day is done');
+    enabled = false; now = at('2026-10-16T22:00:00Z'); await dc.tick();
+    ok(runs === 3, 'daily check: nothing while update checks are switched off');
+    enabled = true; await dc.tick();
+    ok(runs === 4, 'daily check: switched on again, the missed 23:00 is done at once');
+    served = at('2026-10-10T21:00:00Z'); now = at('2026-10-14T08:00:00Z'); await dc.tick();
+    ok(runs === 5 && served === at('2026-10-13T21:00:00Z'), 'daily check: a computer that was off at 23:00 checks right after it starts, once');
+    served = at('2036-01-01T00:00:00Z'); now = at('2026-10-14T09:00:00Z'); await dc.tick();
+    ok(runs === 6, 'daily check: a clock that was set wrong once is not waited for');
+    let release;
+    const slow = new S.DailyCheck({ enabled: () => true, served: () => 0, setServed() {}, run: () => new Promise((r) => { release = r; }), now: () => now });
+    const first = slow.tick();
+    const second = await slow.tick();
+    release(true); await first;
+    ok(second === false, 'daily check: one look at a time');
+    const broken = new S.DailyCheck({ enabled: () => true, served: () => 0, setServed() {}, run: async () => { throw new Error('boom'); }, now: () => now });
+    ok((await broken.tick()) === true && (await broken.tick()) === false, 'daily check: an error in the look is caught and tried again later');
+  }
+
+  // --- what the window may offer ---
+  {
+    const newer = { status: 'newer', current: '0.9.0', version: '0.10.0', assets: [{ name: 'AgathOS-Setup-0.10.0.exe', digest: 'sha256:' + 'a'.repeat(64) }] };
+    ok(up.canSelfInstall(newer, 'win32', true) === true, 'update: the installed Windows app can install by itself');
+    ok(up.canSelfInstall(newer, 'darwin', true) === false && up.canSelfInstall(newer, 'win32', false) === false, 'update: a Mac, or Windows from source, opens the download page');
+    ok(up.canSelfInstall({ ...newer, assets: [{ name: 'AgathOS-Setup-0.10.0.exe' }] }, 'win32', true) === false, 'update: no published checksum, no install by itself');
+    ok(up.canSelfInstall({ ...newer, status: 'latest' }, 'win32', true) === false, 'update: nothing to install when this is the newest version');
+    ok(up.autoDecision({ platform: 'win32', packaged: true, autoUpdate: true, info: newer, calm: true }) === 'go' && up.autoDecision({ platform: 'win32', packaged: true, autoUpdate: true, info: { ...newer, assets: [] }, calm: true }) === 'skip', 'update: the automatic decision still follows the same rules');
+    const gone = { status: 'unreachable', current: '0.9.0' };
+    ok(up.keepKnown(newer, gone) === newer, 'update: a failed look keeps the update that was found');
+    ok(up.keepKnown(newer, { status: 'latest', current: '0.9.0' }).status === 'latest', 'update: a real answer replaces the old one');
+    ok(up.keepKnown(null, gone) === gone && up.keepKnown({ ...newer, current: '0.8.0' }, gone) === gone, 'update: nothing known stays unreachable, and an update from before our own update is dropped');
+  }
+
+  // --- the tray menu ---
+  {
+    const tt = (k, p = {}) => (p.v ? `${k}:${p.v}` : k);
+    const calls = [];
+    const act = new Proxy({}, { get: (_t, name) => (...a) => calls.push([name, ...a]) });
+    const flat = (list) => list.flatMap((i) => (i.submenu ? [i, ...flat(i.submenu)] : [i]));
+    const byId = (m, id) => flat(m).find((i) => i.id === id);
+    const plain = { live: true, paused: false, snoozed: false, update: null };
+    const menu = TM.template(tt, plain, act);
+    ok(byId(menu, 'update') && byId(menu, 'update').label === 'tray.update', 'tray: there is a line "Check for updates"');
+    byId(menu, 'update').click();
+    ok(calls.pop()[0] === 'checkUpdate', 'tray: that line asks for a check');
+    ok(!byId(menu, 'updateFound'), 'tray: no "available" line when nothing was found');
+    const found = TM.template(tt, { ...plain, update: { status: 'newer', version: '0.10.0' } }, act);
+    ok(byId(found, 'updateFound') && byId(found, 'updateFound').label === 'upd.available:0.10.0', 'tray: a found update is named in the menu');
+    byId(found, 'updateFound').click();
+    ok(calls.pop()[0] === 'showUpdate', 'tray: that line shows the update window; it never installs on one click');
+    ok(!byId(TM.template(tt, { ...plain, update: { status: 'latest', version: '0.9.0' } }, act), 'updateFound'), 'tray: no "available" line for the newest version');
+    ok(byId(menu, 'pause') && !byId(menu, 'resume') && byId(TM.template(tt, { ...plain, paused: true }, act), 'resume'), 'tray: pause becomes resume');
+    ok(byId(menu, 'snooze') && byId(TM.template(tt, { ...plain, snoozed: true }, act), 'snoozeOff') && byId(menu, 'snooze1h'), 'tray: notifications can be paused and turned on again');
+    byId(menu, 'live').click({ checked: false });
+    ok(calls.pop().join() === 'setLive,false' && byId(menu, 'live').checked === true, 'tray: the live scanner switch reports its new state');
+    ok(menu.every((i) => i.type === 'separator' || i.label), 'tray: every line has a text');
+    ok(menu[menu.length - 1].id === 'quit' && menu.filter((i) => i.type === 'separator').length >= 3, 'tray: Quit is last');
+  }
+
+  // --- the state file ---
+  {
+    const dir = fs.mkdtempSync(path.join(tmp, 'state-'));
+    fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ updateSlot: 'tomorrow', updateAnnounced: 12345 }));
+    const st = new Store(dir).state;
+    ok(st.updateSlot === 0 && st.updateAnnounced === '', 'state: a damaged update stamp is reset');
+    fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ updateSlot: 1760000000000, updateAnnounced: '0.10.0' }));
+    const st2 = new Store(dir).state;
+    ok(st2.updateSlot === 1760000000000 && st2.updateAnnounced === '0.10.0', 'state: a good update stamp is kept');
+  }
+
+  // --- the window and the main program agree on the words they use ---
+  {
+    const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+    const html = read('src/index.html');
+    const appJs = read('src/app.js');
+    const mainJs = read('main.js');
+    ok(['updDlg', 'updTitle', 'updBody', 'updWait', 'updActions'].every((id) => html.includes(`id="${id}"`) && appJs.includes(`'${id}'`)), 'window: the update window exists in the page and in the code');
+    const sent = new Set([...mainJs.matchAll(/showWindow\('([a-z]+)'\)/g)].map((m) => m[1]));
+    for (const m of mainJs.matchAll(/'(updatepopup)'/g)) sent.add(m[1]);
+    const views = new Set(/const VIEWS = \[([^\]]*)\]/.exec(appJs)[1].match(/'([a-z]+)'/g).map((x) => x.replace(/'/g, '')));
+    const special = new Set([...appJs.matchAll(/v === '([a-z]+)'/g)].map((m) => m[1]));
+    ok(sent.has('updatecheck') && sent.has('updatepopup') && [...sent].every((v) => views.has(v) || special.has(v)), 'window: every page the main program asks for is one the window knows');
+    ok(/if \(!ready\)|else pendingNav = v/.test(appJs) && appJs.includes('pendingNav'), 'window: a request that comes while the window starts is kept, not lost');
+  }
+};
+
 (async () => {
   const { Engine } = require('../core/engine');
   const est = new Store(path.join(tmp, 'store4'));
@@ -883,6 +1027,7 @@ const robustTests = async () => {
   await supplyTests();
   await backupTests();
   await robustTests();
+  await updateTests();
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);
   fs.rmSync(tmp, { recursive: true, force: true });

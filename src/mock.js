@@ -88,7 +88,9 @@
   ];
   snap.remedies = [];
   snap.dismissed = [];
-  snap.update = /update/.test(location.hash) ? { status: 'newer', current: '0.5.0', version: '0.5.1' } : null;
+  // #update shows a new version (the Mac demo opens the download page instead of installing); #updatefail also makes the installing fail.
+  const demoNewer = { status: 'newer', current: '0.5.0', version: '0.5.1', self: snap.platform !== 'darwin' };
+  snap.update = /update/.test(location.hash) ? demoNewer : null;
   for (const st of snap.fixPlan) st.tkey = st.id.replace(/^(hidden|inject|manual):(flag:)?/, (m0, kind, flag) => (flag ? 'agent:' : kind === 'manual' || kind === 'hidden' || kind === 'inject' ? 'file:' : ''));
   let fixSnap = { ...snap.settings.fix };
   const fixBefore = () => fixSnap;
@@ -178,7 +180,8 @@
       return Promise.resolve({ sev, reasons, decoded, secrets: keys.map((k) => ({ kind: 'Anthropic', masked: k.slice(0, 6) + '…' + k.slice(-3) })), length: [...text].length, removed: [...text].length - [...clean].length, clean });
     },
     copyText: () => ok(), snooze: (w) => { snap.snoozeUntil = w === 'off' ? 0 : Date.now() + 3600000; emit(); return Promise.resolve(snap.snoozeUntil); },
-    saveReport: () => ok(), checkUpdate: () => Promise.resolve({ status: 'latest', current: '0.5.0', version: '0.5.0' }), installUpdate: () => ok(),
+    saveReport: () => ok(), checkUpdate: () => Promise.resolve(/update/.test(location.hash) ? demoNewer : { status: 'latest', current: '0.5.0', version: '0.5.0' }),
+    installUpdate: () => (/updatefail/.test(location.hash) ? Promise.resolve({ ok: false, reason: 'checksum' }) : Promise.resolve(snap.platform === 'darwin' ? { ok: true, page: true } : { ok: true })),
     fixDismiss: (key) => { const st = snap.fixPlan.find((x) => x.tkey === key || x.id === key); if (st) { snap.dismissed.push({ key, name: st.name, at: Date.now(), sev: st.sev }); snap.fixPlan = snap.fixPlan.filter((x) => x.tkey !== key); } emit(); return ok(); },
     fixRestore: (key) => { snap.dismissed = snap.dismissed.filter((d) => d.key !== key); emit(); return ok(); },
   };

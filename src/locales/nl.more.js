@@ -343,6 +343,12 @@
     "live.chartAria": "Activiteit per seconde over de afgelopen minuten",
     "live.perMin": "De cijfers tonen de afgelopen minuut.",
     "card.cloudNote": "Werkt vooral op een eigen cloud-computer. AgathOS ziet alleen wat er op deze computer gebeurt: het programma, het netwerkverkeer en de bestanden die het hier aanraakt.",
+
+    "tray.update": "Controleer op updates…",
+    "upd.popupSelf": "AgathOS downloadt de nieuwe versie, controleert het bestand en start zichzelf opnieuw. Je instellingen en logboek blijven zoals ze zijn.",
+    "upd.popupPage": "De downloadpagina opent in je browser. Download daar de nieuwe versie en installeer die over deze heen.",
+    "set.updatesAutoDesc": "Elke dag om 23:00 Nederlandse tijd. Stond de computer toen uit? Dan meteen als hij weer aan staat.",
+    "upd.notice": "AgathOS {v} is beschikbaar. Klik om bij te werken.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.nl, d);
