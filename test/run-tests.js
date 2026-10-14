@@ -346,6 +346,11 @@ const backupTests = async () => {
     'graphics: software drawing is asked for before the browser is ready');
   ok(!/win\.webContents\.send\('agathos:update'/.test(mainText.replace(/if \(seen\(win\)\) \{ winStale = false; win\.webContents\.send\('agathos:update', snap\); \}/, '')),
     'power: the state is only pushed to a window that is on screen');
+  // A window that was sent to the tray before its page was ready must not jump back on screen at "ready to show".
+  ok(/w\.once\('ready-to-show', \(\) => \{ if \(!w\.isDestroyed\(\) && !sentAway\) w\.show\(\); \}\)/.test(mainText)
+    && /w\.on\('hide', \(\) => \{ sentAway = true;/.test(mainText) && /w\.on\('show', \(\) => \{ sentAway = false;/.test(mainText)
+    && /e\.preventDefault\(\); sentAway = true; w\.hide\(\);/.test(mainText),
+  'window: one that was sent to the tray before it was ready stays there, and one that is shown again may be shown');
 }
 
 // ---------- Worm watch part 2: packages and workflows ----------
