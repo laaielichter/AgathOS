@@ -98,6 +98,16 @@ read every website you open, and it shows wider rights such as tabs, history and
 change in rights after an update is reported again. It cannot see what an extension really does.
 You decide in the browser: AgathOS only shows the way.
 
+**Package and workflow check (worm watch, part 2).** Worms such as Shai-Hulud spread through npm
+packages: an install script steals tokens and publishes the worm into your own packages. AgathOS
+reads only text in the project folders it watches (package.json, install scripts and the files they
+start, GitHub workflows, and the first level of node_modules) and warns about known worm leftovers
+(setup_bun.js, bun_environment.js, truffleSecrets.json, shai-hulud workflows), install scripts that
+download and run code or reach for tokens and keys, hidden code, a script that publishes packages,
+and workflows that dump all secrets or post to a catch-all address such as webhook.site. Nothing is
+run and nothing is changed. It cannot prove that a package is safe, and you can dismiss every
+finding or switch the check off in Settings.
+
 **Backup check.** An agent that deletes a folder is only a disaster when there is no second
 copy. AgathOS looks for a sign of a copy of each folder it watches (not Downloads): the folder
 lies inside a OneDrive, Dropbox, Google Drive or iCloud folder, every Git project in it has a

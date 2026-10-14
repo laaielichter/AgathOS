@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS = {
   portCheck: true,
   wormWatch: true,            // warn when a program sweeps the home network (worm behaviour)
   backupCheck: true,          // warn when work folders show no sign of a second copy
+  pkgCheck: true,             // look for package and workflow worms (install scripts, GitHub workflows) in your projects
   hotkey: true,               // Ctrl+Alt+Shift+P pauses all agents
   judge: { enabled: false, model: 'qwen2.5:7b' },
   learning: true,

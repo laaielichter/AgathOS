@@ -70,6 +70,7 @@ function targetKey(t) {
   if (t.type === 'auto') return `auto:${t.id}`;
   if (t.type === 'ext') return `ext:${t.id}`;
   if (t.type === 'backup') return `backup:${t.id}`;
+  if (t.type === 'pkg') return `pkg:${t.id}`;
   return null;
 }
 function isDismissed(state, key, reasons) {
@@ -136,6 +137,11 @@ function plan(engine, fix, minSev = 'watch') {
     if (b.state === 'calm') continue;
     add({ id: `manual:backup:${b.id}`, cat: 'manual', sev: b.state, name: b.names, where: '', reasons: b.reasons.filter((r) => r.sev !== 'calm'), target: { type: 'backup', id: b.id } });
   }
+  // Install scripts and workflows that look like a worm: nothing is deleted for you, you decide.
+  for (const p of inv.packages || []) {
+    if (p.state === 'calm') continue;
+    add({ id: `manual:pkg:${p.id}`, cat: 'manual', sev: p.state, name: p.name, where: U.shortPath(p.path), reasons: p.reasons, target: { type: 'pkg', id: p.id } });
+  }
   // Browser extensions: AgathOS cannot remove them for you; you decide in the browser.
   for (const x of inv.extensions || []) {
     if (x.state === 'calm') continue;
@@ -167,6 +173,7 @@ function itemReasons(engine, key, agents) {
   if (kind === 'model') { const m = inv.models.find((x) => U.sha256(x.path).slice(0, 16) === id); return m ? m.reasons : []; }
   if (kind === 'auto') { const a = inv.autostarts.find((x) => x.id === id); return a ? a.reasons : []; }
   if (kind === 'ext') { const x = (inv.extensions || []).find((e) => e.id === id); return x ? x.reasons : []; }
+  if (kind === 'pkg') { const p = (inv.packages || []).find((e) => e.id === id); return p ? p.reasons : []; }
   if (kind === 'backup') { const b = (inv.backups || []).find((e) => e.id === id); return b ? b.reasons : []; }
   return [];
 }
