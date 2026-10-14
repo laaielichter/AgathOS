@@ -48,7 +48,10 @@
 :root:lang(ko) { --serif: "Malgun Gothic", "Noto Sans KR", sans-serif; --sans: "Malgun Gothic", "Segoe UI Variable Text", "Noto Sans KR", sans-serif; }
 :root:lang(hi), :root:lang(bn) { --serif: "Nirmala UI", "Noto Sans Devanagari", "Noto Sans Bengali", sans-serif; --sans: "Nirmala UI", "Segoe UI Variable Text", "Noto Sans Devanagari", "Noto Sans Bengali", sans-serif; }
 :root:lang(ar) { --serif: "Segoe UI Variable Display", "Segoe UI", "Noto Sans Arabic", sans-serif; --sans: "Segoe UI Variable Text", "Segoe UI", "Noto Sans Arabic", sans-serif; }
+:root:lang(th) { --serif: "Leelawadee UI", "Thonburi", "Sukhumvit Set", "Noto Sans Thai", Tahoma, sans-serif; --sans: "Leelawadee UI", "Segoe UI Variable Text", "Thonburi", "Sukhumvit Set", "Noto Sans Thai", Tahoma, sans-serif; }
 :root:lang(zh) .status-line, :root:lang(ja) .status-line, :root:lang(ko) .status-line, :root:lang(hi) .status-line, :root:lang(bn) .status-line, :root:lang(ar) .status-line { font-weight: 400; letter-spacing: 0; line-height: 1.25; }
+:root:lang(th) .status-line { font-weight: 400; letter-spacing: 0; line-height: 1.4; }
+:root:lang(vi) .status-line { line-height: 1.28; }
 .lang-select { width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; color: var(--text); cursor: pointer; }
 /* Right-to-left (Arabic). Grid and flex follow the direction by themselves; these few do not. */
 [dir="rtl"] .nav-item, [dir="rtl"] .panic, [dir="rtl"] .live-card { text-align: right; }
@@ -101,7 +104,7 @@ button, input, select { font: inherit; color: inherit; }
 .panic.is-paused .panic-dot { background: var(--ice); }
 .prefs { display: grid; gap: 8px; }
 .seg { display: flex; gap: 2px; padding: 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
-.seg-btn { flex: 1; background: none; border: 0; padding: 4px 8px; border-radius: 5px; color: var(--dim); font-size: 12px; cursor: pointer; }
+.seg-btn { flex: 1 1 auto; white-space: nowrap; background: none; border: 0; padding: 4px 8px; border-radius: 5px; color: var(--dim); font-size: 12px; cursor: pointer; }
 .seg-btn:hover { color: var(--text); }
 .seg-btn.is-active { color: var(--text); background: var(--raised); }
 
@@ -312,8 +315,13 @@ button, input, select { font: inherit; color: inherit; }
   .ring-wrap { width: 220px; height: 220px; }
   .status-line { font-size: 34px; }
   .grid { grid-template-columns: 1fr; }
-  .row { grid-template-columns: 14px 1fr 80px; }
-  .row-why { grid-column: 2 / -1; }
+  /* A list row has four parts: dot, name, reasons with buttons, state. Narrow: the state moves up
+     next to the name and the reasons take the full width below. */
+  .row { grid-template-columns: 14px minmax(0, 1fr) auto; row-gap: 8px; }
+  .row > :nth-child(1) { grid-column: 1; grid-row: 1; }
+  .row > :nth-child(2) { grid-column: 2; grid-row: 1; }
+  .row > .state-text { grid-column: 3; grid-row: 1; }
+  .row > :nth-child(3) { grid-column: 2 / -1; grid-row: 2; }
   .card-head, .card-body { grid-template-columns: 1fr; }
 }
 

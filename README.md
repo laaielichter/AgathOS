@@ -172,7 +172,7 @@ prediction. The simple view keeps four pages and plain words.
 **Welcome screen.** The first start asks for your language, the view, the live scanner,
 starting with Windows, deep protection (AgathOS Guard) and auto-fix.
 
-**Also:** a tamper-evident log (hash chain), notifications, tray icon, start with Windows, 14 languages (the top 10 world languages English, 中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский and Bahasa Indonesia, plus 日本語, 한국어, Deutsch and Nederlands; Arabic right-to-left), dark and light mode, and a local API on `127.0.0.1:47612` for hooks and future add-ons.
+**Also:** a tamper-evident log (hash chain), notifications, tray icon, start with Windows, 20 languages (the top 10 world languages English, 中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский and Bahasa Indonesia, plus 日本語, 한국어, Deutsch, Nederlands, Italiano, Türkçe, Polski, Tiếng Việt, Українська and ไทย; Arabic right-to-left), dark and light mode, and a local API on `127.0.0.1:47612` for hooks and future add-ons.
 
 ## Install
 
@@ -245,7 +245,7 @@ Browsers are refused.
 
 ## Translations
 
-All 14 languages are complete. Native speakers: corrections are very welcome, the texts live in
+All 20 languages are complete. Native speakers: corrections are very welcome, the texts live in
 `src/i18n.js` and `src/locales/` (`<code>.js` and `<code>.more.js`).
 
 ## Tests
