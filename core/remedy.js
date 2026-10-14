@@ -68,6 +68,7 @@ function targetKey(t) {
   if (t.type === 'file') return `file:${t.id}`;
   if (t.type === 'model') return `model:${U.sha256(String(t.path)).slice(0, 16)}`;
   if (t.type === 'auto') return `auto:${t.id}`;
+  if (t.type === 'ext') return `ext:${t.id}`;
   return null;
 }
 function isDismissed(state, key, reasons) {
@@ -129,6 +130,11 @@ function plan(engine, fix, minSev = 'watch') {
     const id = U.sha256(m.path).slice(0, 16);
     add({ id: `model:${id}`, cat: 'model', sev: m.state, name: path.basename(m.path), where: U.shortPath(m.path), reasons: m.reasons, target: { type: 'model', path: m.path } });
   }
+  // Browser extensions: AgathOS cannot remove them for you; you decide in the browser.
+  for (const x of inv.extensions || []) {
+    if (x.state === 'calm') continue;
+    add({ id: `manual:ext:${x.id}`, cat: 'manual', sev: x.state, name: `${x.name} (${x.browser})`, where: U.shortPath(x.path), reasons: x.reasons, target: { type: 'ext', id: x.id } });
+  }
   for (const a of inv.autostarts) {
     if (a.state === 'calm' || engine.store.state.ignored[a.id]) continue;
     if (a.kind === 'task' || a.kind === 'launchd') add({ id: `auto:${a.id}`, cat: 'auto', sev: a.state, name: a.name, where: a.command.slice(0, 160), reasons: a.reasons, target: { type: 'auto', id: a.id, name: a.name, taskPath: a.where } });
@@ -154,6 +160,7 @@ function itemReasons(engine, key, agents) {
   if (kind === 'file') { const f = [...inv.files, ...inv.configs].find((x) => x.id === id); return f ? f.reasons : []; }
   if (kind === 'model') { const m = inv.models.find((x) => U.sha256(x.path).slice(0, 16) === id); return m ? m.reasons : []; }
   if (kind === 'auto') { const a = inv.autostarts.find((x) => x.id === id); return a ? a.reasons : []; }
+  if (kind === 'ext') { const x = (inv.extensions || []).find((e) => e.id === id); return x ? x.reasons : []; }
   return [];
 }
 

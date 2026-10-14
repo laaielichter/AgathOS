@@ -106,7 +106,7 @@
     const s = snap;
     const cnt = (list) => (list || []).filter((x) => x.state !== 'calm');
     const b = {
-      agents: cnt(s && s.agents), mcp: cnt(s && s.mcp), files: cnt(s && [...s.files, ...s.autostarts]), models: cnt(s && s.models), network: cnt(s && s.ports),
+      agents: cnt(s && s.agents), mcp: cnt(s && s.mcp), files: cnt(s && [...s.files, ...s.autostarts, ...(s.extensions || [])]), models: cnt(s && s.models), network: cnt(s && s.ports),
     };
     const shown = mode === 'simple' ? SIMPLE_VIEWS : VIEWS;
     fill($('nav'), shown.map((v) => {
@@ -377,6 +377,7 @@
     model: ['model.pickleDanger', 'model.pickle', 'model.pickleUnknown', 'model.unreadable', 'model.flagged'],
     port: ['port.open'],
     worm: ['worm.lanSweep', 'worm.portScan'],
+    ext: ['ext.aiTheme', 'ext.aiChats', 'ext.allSites', 'ext.reads', 'ext.flagged'],
     destroy: ['proc.destructive', 'mass.delete'],
     persist: ['proc.persistence', 'auto.hiddenScript', 'auto.tempPath', 'auto.scriptRuntime', 'auto.added'],
     cred: ['proc.credential', 'proc.sensitive'],
@@ -399,10 +400,10 @@
   // How sure AgathOS is per kind of finding, and the matching public technique IDs
   // (MITRE ATT&CK for classic attacks, MITRE ATLAS for attacks on AI systems).
   const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', tamper: 'high',
-    inject: 'medium', worm: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
+    inject: 'medium', worm: 'medium', ext: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
     chain: 'low', odd: 'low', generic: 'low' };
   const MITRE = { hidden: 'AML.T0051.001 · T1027', inject: 'AML.T0051.001', secret: 'T1552.001', mcpBad: 'T1195.002 · AML.T0053', supply: 'T1195.002 · T1195.001',
-    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', model: 'AML.T0010.003 · T1204.002', port: 'T1133', worm: 'T1046 · T1210 · T1570',
+    remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', model: 'AML.T0010.003 · T1204.002', port: 'T1133', worm: 'T1046 · T1210 · T1570', ext: 'T1176',
     destroy: 'T1485', persist: 'T1053.005 · T1543.001 · T1547.001', cred: 'T1555 · T1552', secOff: 'T1562.001 · T1562.004', exfil: 'AML.T0057 · T1567 · T1041',
     chain: 'AML.T0051 · T1059', tamper: 'T1070' };
   let anLevel = null;     // 'simple' | 'deep'; follows the view until you pick a tab
@@ -426,6 +427,9 @@
     } else if (kind === 'port') {
       const p = snap.ports.find((x) => String(x.port) === id);
       if (p) { add(t('ev.address'), `${p.addr}:${p.port}`); add(t('ev.process'), `${p.process || '?'} · PID ${p.pid}`); }
+    } else if (kind === 'ext') {
+      const x = (snap.extensions || []).find((e) => e.id === id);
+      if (x) { add(t('ev.app'), `${x.browser} · ${x.profile}`); add(t('ev.version'), x.version); add(t('ev.file'), x.path); }
     } else if (kind === 'auto') {
       const a = snap.autostarts.find((x) => x.id === id);
       if (a) { add(t('ev.command'), a.command); add(t('ev.where'), a.where); }
@@ -774,7 +778,7 @@
     const all = snap ? snap.files : [];
     const groups = {
       instruction: all.filter((f) => f.kind === 'instruction'), skill: all.filter((f) => f.kind === 'skill'),
-      config: all.filter((f) => f.kind === 'config'), env: all.filter((f) => f.kind === 'env'), auto: snap ? snap.autostarts : [],
+      config: all.filter((f) => f.kind === 'config'), env: all.filter((f) => f.kind === 'env'), auto: snap ? snap.autostarts : [], ext: snap ? (snap.extensions || []) : [],
     };
     fill($('fileTabs'), Object.entries(groups).map(([k, list]) => {
       const bad = list.filter((x) => x.state !== 'calm');
@@ -785,6 +789,14 @@
       rowList($('fileRows'), groups.auto, {
         name: (a) => a.name, where: (a) => a.command.slice(0, 200), step: (a) => stepBy([`auto:${a.id}`, `manual:${a.id}`]), key: (a) => `auto:${a.id}`,
         actions: (a) => (a.state !== 'calm' ? [btn(t('btn.ignore'), () => run(A.trust({ type: 'auto', id: a.id })))] : []),
+      });
+      return;
+    }
+    if (fileTab === 'ext') {
+      rowList($('fileRows'), groups.ext, {
+        empty: t('ext.empty'),
+        name: (x) => `${x.name} · ${x.browser}`, where: (x) => `v${x.version} · ${x.short || x.path}`, step: (x) => stepBy([`manual:ext:${x.id}`]), key: (x) => `ext:${x.id}`,
+        actions: (x) => [btn(t('btn.open'), () => A.reveal(x.path)), x.state !== 'calm' ? btn(t('btn.how'), () => modal(t('btn.how'), t('fix.ext'))) : null],
       });
       return;
     }

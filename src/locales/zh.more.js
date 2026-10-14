@@ -258,6 +258,20 @@
     "an.worm.risk": "蠕虫一旦找到薄弱的设备，就能接管它并从那里扩散到其他设备和其他家庭。智能电视、摄像头和路由器无法运行杀毒软件，所以很少发现问题。",
     "an.worm.todo": "这不是你自己启动的网络工具？请暂停或停止该程序，查清它的来源；如果不确定，请让这台电脑断开网络。",
     "an.worm.deep": "AgathOS 每三秒读取一次每个进程的打开和半打开的 TCP 连接（Windows 上用 Get-NetTCPConnection，macOS 上用 lsof，配合 AgathOS Guard 时用 Sysmon 事件 3）。它统计一分钟内私有地址上不同的设备和端口。20 台设备或同一设备的 15 个端口算作一次扫描。已知的网络工具只会收到警告，而不是警报。",
+    "tab.ext": "浏览器扩展",
+    "ext.empty": "在 Chrome、Edge 或 Brave 中没有发现 AI 扩展。",
+    "ev.version": "版本",
+    "ext.aiTheme": "自称是 AI 助手",
+    "ext.aiChats": "可以访问 AI 聊天网站（{sites}）",
+    "ext.allSites": "可以读取并修改你打开的每个网站",
+    "ext.reads": "还可以使用：{perms}",
+    "ext.flagged": "浏览器扩展 {name}（{browser}）与 AI 有关，并且可以读取你打开的每个网站。请确认你仍然信任它。",
+    "fix.ext": "打开浏览器的扩展页面（在 Chrome 中，在地址栏输入 chrome://extensions），找到这个扩展。如果你不认识它或不再使用它，请删除。如果要保留，请先查清是谁做的，并看一下评价。",
+    "an.ext.simple": "与 AI 有关的浏览器扩展可以读取并修改你打开的每个网站。",
+    "an.ext.maybe": "许多 AI 助手需要这个权限才能工作，比如总结网页或在文本框里写字。来自知名开发者的可信扩展没有问题。",
+    "an.ext.risk": "2026 年，有两个自称 AI 助手的扩展（共约 90 万用户）把 ChatGPT 和 DeepSeek 的对话以及所有打开的标签页复制到了服务器。能读取每个页面的扩展，也能读取你的聊天、邮件和银行页面。",
+    "an.ext.todo": "不认识这个扩展，或者不再使用它？请在浏览器中删除它。如果要保留，请查清是谁做的，并看一下评价。",
+    "an.ext.deep": "AgathOS 只读取 Chrome、Edge 和 Brave（所有用户配置）中每个扩展的 manifest.json，其他什么都不读。它列出与 AI 有关或可以访问 AI 聊天网站的扩展。当扩展可以读取所有网站（<all_urls> 或类似 https://*/* 的模式）时，会作为注意事项。它还会显示更广的权限，如 tabs、history、cookies、webRequest 和 clipboardRead。它看不到扩展实际做了什么，只能看到它被允许做什么。更新后权限发生变化会再次提醒。",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.zh, d);

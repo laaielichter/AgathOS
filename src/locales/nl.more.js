@@ -259,6 +259,20 @@
     "an.worm.risk": "Een worm die een zwak apparaat vindt, kan het overnemen en zich van daaruit verspreiden, naar andere apparaten en andere huizen. Slimme tv's, camera's en routers hebben geen virusscanner, dus ze merken het zelden.",
     "an.worm.todo": "Heb je zelf geen netwerktool gestart? Pauzeer of stop het programma, kijk waar het vandaan komt, en haal deze computer van het netwerk als je twijfelt.",
     "an.worm.deep": "AgathOS leest elke drie seconden de open en halfopen TCP-verbindingen per proces (Get-NetTCPConnection op Windows, lsof op macOS, Sysmon-event 3 met AgathOS Guard). Het telt verschillende apparaten en poorten op privéadressen binnen één minuut. 20 apparaten, of 15 poorten op één apparaat, telt als een scan. Bekende netwerktools krijgen een waarschuwing in plaats van een alarm.",
+    "tab.ext": "Browserextensies",
+    "ext.empty": "Geen AI-extensies gevonden in Chrome, Edge of Brave.",
+    "ev.version": "Versie",
+    "ext.aiTheme": "Doet zich voor als AI-hulp",
+    "ext.aiChats": "Heeft toegang tot AI-chatsites ({sites})",
+    "ext.allSites": "Mag elke website lezen en aanpassen die je opent",
+    "ext.reads": "Mag ook gebruiken: {perms}",
+    "ext.flagged": "Browserextensie {name} ({browser}) gaat over AI en mag elke website lezen die je opent. Controleer of je haar nog vertrouwt.",
+    "fix.ext": "Open de extensiepagina van je browser (in Chrome typ je chrome://extensions in de adresbalk) en zoek deze extensie. Ken je haar niet of gebruik je haar niet meer, verwijder haar dan. Hou je haar, kijk dan eerst wie haar gemaakt heeft en lees de beoordelingen.",
+    "an.ext.simple": "Een browserextensie die over AI gaat, mag elke website lezen en aanpassen die je opent.",
+    "an.ext.maybe": "Veel AI-hulpjes hebben dit nodig om te werken, bijvoorbeeld om een pagina samen te vatten of in een tekstvak te schrijven. Een betrouwbare extensie van een bekende maker is prima.",
+    "an.ext.risk": "In 2026 kopieerden twee extensies die zich voordeden als AI-hulp, met samen zo'n 900.000 gebruikers, ChatGPT- en DeepSeek-gesprekken en alle open tabbladen naar een server. Een extensie die elke pagina kan lezen, kan ook je gesprekken, je mail en je bankpagina's lezen.",
+    "an.ext.todo": "Ken je deze extensie niet, of gebruik je haar niet meer? Verwijder haar in je browser. Hou je haar, kijk dan wie haar gemaakt heeft en bekijk de beoordelingen.",
+    "an.ext.deep": "AgathOS leest het manifest.json van elke extensie in Chrome, Edge en Brave (alle profielen) en verder niets. Het toont extensies die over AI gaan of bij AI-chatsites kunnen. Het telt als aandachtspunt als de extensie alle websites mag lezen (<all_urls> of een patroon zoals https://*/*). Het toont ook bredere rechten zoals tabs, history, cookies, webRequest en clipboardRead. Het ziet niet wat de extensie echt doet, alleen wat ze mag doen. Een verandering in rechten na een update wordt opnieuw gemeld.",
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = d;
   else Object.assign(root.I18N.nl, d);

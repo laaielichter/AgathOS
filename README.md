@@ -90,6 +90,14 @@ right above it: the six watchers, the status, *Fix all*, *Scan now*, *Pause all 
 live scanner switch and the agents running now. Double-click for the full window, right-click
 for the menu. The icon itself shows a coloured dot for attention, danger or paused.
 
+**AI browser extensions.** In 2026 two Chrome extensions posing as AI helpers (about 900,000
+users) copied chats and open tabs to a server. AgathOS reads the `manifest.json` of the
+extensions in Chrome, Edge and Brave (all profiles, nothing is run) and lists those that are
+about AI or may reach AI chat sites (Files > Browser extensions). It is attention when one may
+read every website you open, and it shows wider rights such as tabs, history and cookies. A
+change in rights after an update is reported again. It cannot see what an extension really does.
+You decide in the browser: AgathOS only shows the way.
+
 **Check text.** Paste a prompt, README, rules file or web text before an agent reads it.
 AgathOS shows hidden characters (and decodes them), attack text and keys, and copies a clean
 version for you.
