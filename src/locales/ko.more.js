@@ -425,8 +425,8 @@
     "guard.evOff": "AgathOS Guard를 껐습니다",
     "guard.evOn": "AgathOS Guard를 켰습니다",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr는 작전 상황실 스타일의 추가 디자인입니다. OLED 화면을 위한 순수한 검은색, 가는 선, 청록색 강조, 코드용 글꼴을 씁니다. 로고와 모든 기능은 그대로입니다.",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth는 작전 상황실 스타일의 추가 디자인입니다. OLED 화면을 위한 순수한 검은색, 가는 선, 청록색 강조, 코드용 글꼴을 씁니다. 로고와 모든 기능은 그대로입니다.",
 
     "ai.tab.boards": "게시판",
     "board.sub": "에이전트는 채팅 채널, 공개 텍스트 페이지, AI 에이전트 네트워크 같은 곳에서 명령을 받고 메시지를 남길 수 있습니다. 거기에 글을 쓸 수 있는 사람은 에이전트를 조종할 수 있습니다. 여기서는 내 파일과 설정에서 발견된 그런 장소를 모두 볼 수 있으며, 한 번도 열어 보지 않은 파일도 포함됩니다.",

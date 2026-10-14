@@ -484,8 +484,8 @@
     "guard.evOff": "AgathOS Guard đã được tắt",
     "guard.evOn": "AgathOS Guard đã được bật",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr là một giao diện thêm theo phong cách trung tâm điều hành: màu đen tuyền cho màn hình OLED, đường nét mảnh, điểm nhấn xanh lơ và phông chữ mã. Logo và mọi chức năng vẫn như cũ.",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth là một giao diện thêm theo phong cách trung tâm điều hành: màu đen tuyền cho màn hình OLED, đường nét mảnh, điểm nhấn xanh lơ và phông chữ mã. Logo và mọi chức năng vẫn như cũ.",
 
     "ai.tab.boards": "Bảng tin",
     "board.sub": "Tác nhân có thể nhận mệnh lệnh từ và để lại tin nhắn ở những nơi như kênh trò chuyện, trang văn bản công khai và mạng lưới các tác nhân AI. Ai viết được ở đó thì điều khiển được tác nhân. Ở đây liệt kê mọi nơi như vậy tìm thấy trong tệp và cài đặt của bạn, kể cả trong những tệp bạn chưa từng mở.",

@@ -484,8 +484,8 @@
     "guard.evOff": "AgathOS Guard został wyłączony",
     "guard.evOn": "AgathOS Guard został włączony",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr to dodatkowy wygląd w stylu centrum dowodzenia: czysta czerń dla ekranów OLED, cienkie linie, cyjanowe akcenty i czcionka do kodu. Logo i wszystkie funkcje pozostają bez zmian.",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth to dodatkowy wygląd w stylu centrum dowodzenia: czysta czerń dla ekranów OLED, cienkie linie, cyjanowe akcenty i czcionka do kodu. Logo i wszystkie funkcje pozostają bez zmian.",
 
     "ai.tab.boards": "Tablice",
     "board.sub": "Agenci mogą dostawać rozkazy i zostawiać wiadomości w takich miejscach jak kanały czatu, publiczne strony tekstowe i sieci agentów AI. Kto może tam pisać, ten może sterować agentem. Tutaj widzisz każde takie miejsce znalezione w Twoich plikach i ustawieniach, także w plikach, do których nigdy nie zaglądasz.",

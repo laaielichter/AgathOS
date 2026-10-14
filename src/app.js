@@ -10,7 +10,7 @@
   let snap = null;
   let lang = 'en';
   let theme = 'dark';
-  const THEME_IDS = ['dark', 'light', 'palantyr'];   // same list as core/themes.js; Palantyr is chosen in Settings
+  const THEME_IDS = ['dark', 'light', 'stealth'];   // same list as core/themes.js; Stealth is chosen in Settings
   let view = 'overview';
   let fileTab = 'instruction';
   let introDone = false;
@@ -168,9 +168,9 @@
     $('panicBtn').classList.toggle('is-paused', !!paused);
     $('panicLabel').textContent = paused ? t('resumeAll') : t('panic');
     $('panicBtn').title = paused ? '' : t('panic.hold');
-    // The side bar offers Dark and Light; Palantyr shows up there once it is on, so the way back is one click.
+    // The side bar offers Dark and Light; Stealth shows up there once it is on, so the way back is one click.
     $('themeSeg').setAttribute('aria-label', t('set.theme'));
-    fill($('themeSeg'), (theme === 'palantyr' ? THEME_IDS : ['dark', 'light']).map((th) => h('button', { class: `seg-btn${th === theme ? ' is-active' : ''}`, type: 'button', text: t('theme.' + th), onclick: () => setUi({ theme: th }) })));
+    fill($('themeSeg'), (theme === 'stealth' ? THEME_IDS : ['dark', 'light']).map((th) => h('button', { class: `seg-btn${th === theme ? ' is-active' : ''}`, type: 'button', text: t('theme.' + th), onclick: () => setUi({ theme: th }) })));
     const sel = $('langSel');
     if (sel.options.length !== window.LANGS.length) {
       fill(sel, window.LANGS.filter((l) => window.I18N[l.code]).map((l) => h('option', { value: l.code, lang: l.code, text: l.label })));

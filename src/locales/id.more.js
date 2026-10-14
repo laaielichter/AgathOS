@@ -425,8 +425,8 @@
     "guard.evOff": "AgathOS Guard dimatikan",
     "guard.evOn": "AgathOS Guard dinyalakan",
 
-    "theme.palantyr": "Palantyr",
-    "set.themeDesc": "Palantyr adalah tampilan tambahan bergaya pusat komando: hitam pekat untuk layar OLED, garis tipis, aksen sian, dan huruf kode. Logo dan semua fungsi tetap sama.",
+    "theme.stealth": "Stealth",
+    "set.themeDesc": "Stealth adalah tampilan tambahan bergaya pusat komando: hitam pekat untuk layar OLED, garis tipis, aksen sian, dan huruf kode. Logo dan semua fungsi tetap sama.",
 
     "ai.tab.boards": "Papan",
     "board.sub": "Agen dapat menerima perintah dari, dan meninggalkan pesan di, tempat seperti kanal obrolan, halaman teks publik, dan jaringan agen AI. Siapa pun yang bisa menulis di sana bisa mengarahkan agen. Di sini tertera setiap tempat semacam itu yang ditemukan di berkas dan pengaturan Anda, termasuk di berkas yang tidak pernah Anda buka.",
