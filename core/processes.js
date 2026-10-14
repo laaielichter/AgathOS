@@ -7,6 +7,7 @@ const U = require('./util');
 const C = require('./catalog');
 const { classifyCommand, dangerousFlags, sensitivePath } = require('./classify');
 const mac = require('./mac');
+const native = require('./winnative');
 
 // The catalog uses Windows program names (claude.exe). On a Mac the same program is "claude".
 const norm = (n) => { const s = String(n || '').toLowerCase(); return U.IS_WIN || /\.exe$/.test(s) ? s : s + '.exe'; };
@@ -39,6 +40,16 @@ function identify(p) {
   return C.AGENTS.find((a) => a.match(n, c, e)) || null;
 }
 
+// The list of programs on this system: { p, pp, n, c, e, t } for each. Windows is asked directly, which takes a few milliseconds;
+// the PowerShell command for WMI is the way back when that cannot be used.
+async function listProcesses() {
+  if (U.IS_MAC) return mac.listProcesses();
+  if (!U.IS_WIN) return [];
+  const direct = await native.processes();
+  if (direct) return direct;
+  return U.ps.json(PS_LIST, 20000);
+}
+
 class ProcessWatch {
   constructor({ onAction, onAgentStart, onAgentStop, onAlert, onClone }) {
     this.procs = new Map();       // pid -> proc
@@ -55,7 +66,7 @@ class ProcessWatch {
   }
 
   async poll() {
-    const rows = U.IS_MAC ? await mac.listProcesses() : await U.ps.json(PS_LIST, 20000);
+    const rows = await listProcesses();
     if (!rows.length) return false;
     const now = new Map(rows.map((r) => [r.p, r]));
     const added = [];
@@ -189,4 +200,4 @@ class ProcessWatch {
   }
 }
 
-module.exports = { ProcessWatch, identify, PS_LIST };
+module.exports = { ProcessWatch, identify, listProcesses, PS_LIST };

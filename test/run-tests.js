@@ -1645,6 +1645,8 @@ const themeTests = () => {
   await require('./xray-tests')({ ok, tmp, eng });
   await require('./copy-tests')({ ok, tmp, eng });
   await require('./plugin-tests')({ ok, tmp, eng });
+  await require('./native-tests')({ ok });
+  await require('./live-os')({ ok, say: console.log });
   themeTests();
   eng.stop();
   console.log(`\nRESULT ${fail ? 'FAIL' : 'PASS'}: ${pass} passed, ${fail} failed`);

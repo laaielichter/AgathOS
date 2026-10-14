@@ -24,10 +24,12 @@ class PowerShell {
     this.busy = false;
     this.buf = '';
     this.current = null;
+    this.generation = 0;       // counts the PowerShell processes that were started: a script that put something into one has to do it again after a restart
   }
 
   start() {
     if (!IS_WIN || this.proc) return;
+    this.generation++;
     this.proc = spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', '-'], {
       windowsHide: true,
       stdio: ['pipe', 'pipe', 'pipe'],
