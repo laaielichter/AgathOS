@@ -7,7 +7,7 @@ const path = require('path');
 const { Store } = require('./core/store');
 const { Engine } = require('./core/engine');
 const api = require('./core/api');
-const { AgentAccess } = require('./core/agentaccess');
+const { AgentAccess, MAX_TOKENS } = require('./core/agentaccess');
 const guard = require('./core/guard');
 const judge = require('./core/judge');
 const updater = require('./core/update');
@@ -257,6 +257,12 @@ function access() {
     if (!agentAccess.audit.ok) engine.event({ key: 'api.auditTampered', sev: 'alarm', watcher: 'gate', params: {} });
   }
   return agentAccess;
+}
+
+// Where the MCP server of the plugin is on this PC. In the installed app it sits next to the program, outside the archive:
+// a program that runs it with Node cannot read inside app.asar.
+function pluginServerFile() {
+  return path.join(__dirname, 'plugins', 'agathos', 'server.js').replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
 }
 
 function applyOsSettings() {
@@ -510,7 +516,7 @@ function wireIpc() {
   h('liveWatch', (on, since) => { setLiveWatching(on === true, Number(since) || 0); return true; });
   h('reveal', (p) => { if (typeof p === 'string' && path.isAbsolute(p)) shell.showItemInFolder(p); return true; });
   // Keys of AI programs: made and taken back here, by a person; a key is shown once.
-  h('agentTokens', () => ({ keys: access().list(), max: 20, port: api.PORT, dir: store.dir, ownerFile: path.join(store.dir, 'api-token.txt') }));
+  h('agentTokens', () => ({ keys: access().list(), max: MAX_TOKENS, port: api.PORT, ownerFile: path.join(store.dir, 'api-token.txt'), serverFile: pluginServerFile() }));
   h('agentTokenCreate', (name, scopes) => access().create(String(name || ''), Array.isArray(scopes) ? scopes.map(String) : undefined));
   h('agentTokenRevoke', (id) => access().revoke(String(id)));
   h('agentAudit', (n) => access().audit.tail(Number(n) || 40).map(({ ts, who, name, method, path: p, status, info, n: count }) => ({ ts, who, name, method, path: p, status, info, n: count })));

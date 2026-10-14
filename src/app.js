@@ -21,6 +21,8 @@
   let lastBeat = 0;
   const seenEvents = new Set();
   let firstEvents = true;
+  // Settings > Agent access. A new key is kept here, and nowhere else, until the person says they copied it or leaves the page.
+  const agentUi = { data: null, audit: [], at: 0, busy: false, again: false, making: false, fresh: null, name: '', logOpen: false };
 
   // ---------- text ----------
   const dict = () => window.I18N[lang] || window.I18N.en;
@@ -121,6 +123,7 @@
   function show(v) {
     if (!VIEWS.includes(v)) return;
     if (mode === 'simple' && !SIMPLE_VIEWS.includes(v)) v = 'overview';
+    if (v !== 'settings') agentUi.fresh = null;       // a new key is shown once: not again when the person comes back
     view = v;
     document.querySelectorAll('.view').forEach((n) => n.classList.toggle('is-active', n.id === `view-${v}`));
     $('main').scrollTop = 0;
@@ -1203,6 +1206,7 @@
     const body = $('settingsBody');
     if (body.contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName)) return;
     const s = snap.settings;
+    loadAgents();
     if (judgeModels === null && A.judgeModels) { judgeModels = []; A.judgeModels().then((m) => { judgeModels = m || []; renderSettings(); }); }
     const levelSeg = h('div', { class: 'seg' }, ['strict', 'balanced', 'relaxed'].map((l) => h('button', { class: `seg-btn${s.level === l ? ' is-active' : ''}`, type: 'button', text: t('set.level.' + l), onclick: () => save({ level: l }) })));
     const notifySel = h('select', { onchange: (e) => save({ notify: e.target.value }) }, ['log', 'notify', 'ask'].map((n) => h('option', { value: n, selected: s.notify === n, text: t('set.notify.' + n) })));
@@ -1259,6 +1263,7 @@
         setRow(t('set.dlGuard'), sw(s.downloadGuard !== false, () => save({ downloadGuard: s.downloadGuard === false })), t('set.dlGuardDesc')),
         setRow(t('set.hotkey'), sw(s.hotkey, () => save({ hotkey: !s.hotkey })), null, 'adv'),
         isMac() ? setRow(t('guard.title'), h('span'), t('mac.guard')) : setRow(t('guard.title'), guardBtn, t('guard.desc'))),
+      agentSection(s),
       h('section', { class: 'set-group' }, h('h2', { text: t('set.watching') }),
         setRow(t('set.realtime'), sw(s.realtime, () => save({ realtime: !s.realtime }))),
         setRow(t('set.poll'), num(s.pollSeconds, 2, 60, 'pollSeconds', t('set.seconds')), null, 'adv'),
@@ -1278,9 +1283,122 @@
         setRow(startupLabel(), sw(s.startWithWindows, () => save({ startWithWindows: !s.startWithWindows }))),
         setRow(t('set.tray'), sw(s.closeToTray, () => save({ closeToTray: !s.closeToTray }))),
         setRow(t('set.logDays'), num(s.logDays, 1, 365, 'logDays', t('set.days')), null, 'adv'),
-        setRow(t('set.api'), sw(s.api, () => save({ api: !s.api })), `127.0.0.1:${snap.apiPort}`, 'adv'),
         setRow(t('report.save'), btn(t('report.save'), async () => { const r = await A.saveReport(); if (r && r.ok) toast(t('report.saved')); }), t('report.desc')),
         setRow(t('set.verify'), btn(t('set.verify'), async () => { const r = await A.verifyLog(); modal(t('set.verify'), r.ok ? t('set.verifyOk', { n: r.lines }) : t('set.verifyBad', { n: r.line })); }), null, 'adv')));
+  }
+
+  // ---------- settings: access for AI programs ----------
+  // The keys, the file of the owner key, the MCP server and the log of requests come from the engine (core/agentaccess.js) and are kept
+  // for a few seconds. The text of a key is shown once, when it is made, and never asked for again: the engine only keeps a hash of it.
+  async function loadAgents(force) {
+    if (!A.agentTokens) return;
+    if (agentUi.busy) { if (force) agentUi.again = true; return; }
+    if (!force && Date.now() - agentUi.at < 15000) return;
+    agentUi.busy = true;
+    try {
+      const [data, audit] = await Promise.all([A.agentTokens(), A.agentAudit ? A.agentAudit(40) : []]);
+      if (data && Array.isArray(data.keys)) agentUi.data = data;
+      agentUi.audit = Array.isArray(audit) ? audit : [];
+    } catch (_) { /* the screen keeps what it has */ }
+    agentUi.at = Date.now();
+    agentUi.busy = false;
+    if (agentUi.again) { agentUi.again = false; await loadAgents(true); return; }
+    if (view === 'settings') renderSettings();
+  }
+  function whenText(ts) {
+    const d = new Date(ts);
+    if (d.toDateString() === new Date().toDateString()) return clock(ts);
+    let day;
+    try { day = d.toLocaleDateString(lang, { day: 'numeric', month: 'short' }); } catch (_) { day = d.toLocaleDateString(); }
+    return `${day} ${clock(ts)}`;
+  }
+  const flat = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
+  async function copyOut(text) { if (A.copyText && await A.copyText(text)) toast(t('agent.copied')); }
+  // What an AI program wants in its MCP settings. The key is put in by hand, or comes from the box of a new key.
+  const KEY_HINT = 'PASTE_THE_KEY_HERE';
+  function mcpSettings(token, file) {
+    return JSON.stringify({ mcpServers: { agathos: { command: 'node', args: [file || 'plugins/agathos/server.js'], env: { AGATHOS_TOKEN: token } } } }, null, 2);
+  }
+  async function makeKey() {
+    if (agentUi.making) return;
+    const name = agentUi.name.trim();
+    if (!name) { toast(t('agent.nameNeeded')); return; }
+    agentUi.making = true;
+    let r = null;
+    try { r = await A.agentTokenCreate(name); } catch (_) { r = null; }
+    agentUi.making = false;
+    if (r && r.ok && r.token) { agentUi.fresh = { id: r.id, name: r.name, token: r.token }; agentUi.name = ''; }
+    else toast(r && r.error === 'limit' ? t('agent.limit', { n: (agentUi.data && agentUi.data.max) || 20 }) : r && r.error === 'name' ? t('agent.nameNeeded') : t('agent.failed'));
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();   // the page redraws only when no field has the focus
+    renderSettings();
+    loadAgents(true);
+  }
+  async function revokeKey(k) {
+    let done = false;
+    try { done = await A.agentTokenRevoke(k.id); } catch (_) { done = false; }
+    if (agentUi.fresh && agentUi.fresh.id === k.id) agentUi.fresh = null;
+    if (done) toast(t('agent.revoked'));
+    loadAgents(true);
+  }
+  function keyRow(k) {
+    const used = k.lastUsed ? t('agent.lastUsed', { when: whenText(k.lastUsed) }) : t('agent.never');
+    return setRow(k.name, btn(t('agent.revoke'), () => revokeKey(k), 'danger'), `${used} · ${t('agent.calls', { n: k.calls })}`);
+  }
+  // The new key, once: the text, two copy buttons, and "I have copied it" which makes it go away.
+  function freshBox(f) {
+    const d = agentUi.data;
+    return h('div', { class: 'agent-fresh', role: 'group', 'aria-label': t('agent.fresh', { name: f.name }) },
+      h('div', { class: 'agent-fresh-title', text: t('agent.fresh', { name: f.name }) }),
+      h('div', { class: 'code', text: f.token }),
+      h('p', { text: t('agent.freshNote') }),
+      h('div', { class: 'agent-actions' },
+        btn(t('agent.copyKey'), () => copyOut(f.token), 'fix'),
+        btn(t('agent.copyMcp'), () => copyOut(mcpSettings(f.token, d && d.serverFile))),
+        btn(t('agent.gotIt'), () => { agentUi.fresh = null; renderSettings(); })));
+  }
+  function mcpRow(d) {
+    return h('div', { class: 'set' },
+      h('div', { class: 'set-label' }, h('span', { text: t('agent.mcp') }), h('small', { text: t('agent.mcpDesc') })),
+      h('div', { class: 'set-control' }, btn(t('agent.copyMcp'), () => copyOut(mcpSettings(KEY_HINT, d.serverFile)))),
+      d.serverFile ? h('div', { class: 'code agent-path', text: d.serverFile }) : null);
+  }
+  // One line of the log of requests. Everything in it was written by AgathOS, but a program chose the path and the name of a tool.
+  function requestLine(r) {
+    const when = clock(Number(r.ts) || 0);
+    if (r.who === 'window') {
+      const name = flat(r.name, 40);
+      return `${when}  ${r.path === 'revoked' ? t('api.tokenRevoked', { name }) : t('api.tokenAdded', { name })}`;
+    }
+    const tail = [flat(r.info, 80), Number(r.n) > 1 ? `×${Number(r.n)}` : ''].filter(Boolean).join(' · ');
+    return `${when}  ${flat(r.name, 40) || '?'}  ${flat(r.method, 8)} ${flat(r.path, 60)}  ${Number(r.status) || 0}${tail ? `  ${tail}` : ''}`;
+  }
+  function requestLog() {
+    const list = (agentUi.audit || []).slice().reverse();
+    return h('details', { class: 'agent-log', open: agentUi.logOpen, ontoggle: (e) => { agentUi.logOpen = e.target.open; } },
+      h('summary', { text: t('agent.log') }),
+      h('p', { class: 'set-note', text: t('agent.logNote') }),
+      list.length
+        ? h('ul', { class: 'folders agent-reqs' }, list.map((r) => h('li', { class: Number(r.status) >= 400 ? 'bad' : '', dir: 'auto', text: requestLine(r) })))
+        : h('p', { class: 'set-note', text: t('agent.logEmpty') }));
+  }
+  function agentSection(s) {
+    const d = agentUi.data;
+    const nameInput = h('input', {
+      type: 'text', maxlength: '40', value: agentUi.name, placeholder: t('agent.nameHint'), 'aria-label': t('agent.newKey'),
+      oninput: (e) => { agentUi.name = e.target.value; },
+      onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); makeKey(); } },
+    });
+    return h('section', { class: 'set-group adv', id: 'setAgents' },
+      h('h2', { text: t('agent.title') }),
+      h('p', { class: 'set-note', text: t('agent.desc') }),
+      setRow(t('agent.api'), sw(s.api, () => save({ api: !s.api })), `127.0.0.1:${snap.apiPort}`),
+      s.api ? null : h('p', { class: 'set-note', text: t('agent.apiOff') }),
+      setRow(t('agent.newKey'), h('div', { class: 'agent-new' }, nameInput, btn(t('agent.make'), () => makeKey(), 'fix'))),
+      agentUi.fresh ? freshBox(agentUi.fresh) : null,
+      d ? (d.keys.length ? d.keys.map(keyRow) : h('p', { class: 'set-note agent-none', text: t('agent.none') })) : null,
+      d && d.ownerFile ? setRow(t('agent.owner'), btn(t('agent.showFile'), () => A.reveal(d.ownerFile)), t('agent.ownerDesc')) : null,
+      d ? mcpRow(d) : null,
+      requestLog());
   }
 
   // ---------- check text: paste anything before an agent reads it ----------

@@ -221,7 +221,8 @@ text safe to read?*, *is this file?*, *may I do this step?* and, with the app ru
 The program only reads and asks. It never decides: no key, not even the owner key, can pause, resume, approve, release or
 change anything, so what an AI program hears from AgathOS is advice that it can follow or ignore, and a program that
 ignores it cannot switch AgathOS off. Each program gets its own key from Settings > Agent access (shown once, kept as a
-hash, taken back in one click), every request is written to a log that cannot be changed unnoticed, and what comes back
+hash, taken back in one click; the same screen copies the MCP settings, shows where the MCP server is and lists the latest
+requests), every request is written to a log that cannot be changed unnoticed, and what comes back
 is marked as data: hidden characters are removed, text is cut short and the sentence that gave a finding away is never
 repeated. The plugin carries the scanners with it and works alone; it cannot start a program or write a file (a test
 checks it). See [docs/agents.md](docs/agents.md) and [plugins/agathos](plugins/agathos).

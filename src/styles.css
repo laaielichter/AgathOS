@@ -526,3 +526,20 @@ dialog.modal { position: fixed; }
 [dir="rtl"] .upd-wait::after { animation-name: upd-wait-rtl; }
 @keyframes upd-wait-rtl { from { transform: translateX(100%); } to { transform: translateX(-290%); } }
 @media (prefers-reduced-motion: reduce) { .upd-wait::after { animation: none; width: 100%; opacity: .45; } }
+
+/* ---------- settings: access for AI programs ---------- */
+.agent-new { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.agent-new input[type="text"] { width: 340px; max-width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 5px 8px; color: var(--text); }
+.agent-fresh { display: grid; gap: 8px; margin: 4px 0 14px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--line)); border-radius: var(--r-md); background: color-mix(in srgb, var(--gold) 7%, var(--panel)); }
+.agent-fresh-title { font-weight: 600; }
+.agent-fresh p { margin: 0; color: var(--dim); font-size: 13px; max-width: 70ch; }
+.agent-fresh .code { max-height: none; font-size: 13px; user-select: all; }
+.agent-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.agent-path { grid-column: 1 / -1; max-height: none; }
+.agent-none { padding: 10px 0; border-top: 1px solid var(--line); }
+.agent-log { border-top: 1px solid var(--line); padding: 12px 0; }
+.agent-log summary { cursor: pointer; font-weight: 500; }
+.agent-log .set-note { margin-top: 6px; }
+.agent-reqs { margin-top: 8px; }
+.agent-reqs li { justify-content: flex-start; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.agent-reqs li.bad { color: var(--watch); }

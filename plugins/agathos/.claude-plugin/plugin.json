@@ -1,10 +1,18 @@
 {
   "name": "agathos",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Ask AgathOS before you trust something: check text and files for hidden instructions, orders to copy an AI and install traps, and ask whether a step is safe. Only reads and asks; it cannot decide anything for you.",
-  "author": { "name": "AgathOS contributors" },
+  "author": {
+    "name": "AgathOS contributors"
+  },
   "homepage": "https://github.com/laaielichter/AgathOS",
   "repository": "https://github.com/laaielichter/AgathOS",
   "license": "MIT",
-  "keywords": ["security", "ai-agents", "prompt-injection", "mcp", "hidden-instructions"]
+  "keywords": [
+    "security",
+    "ai-agents",
+    "prompt-injection",
+    "mcp",
+    "hidden-instructions"
+  ]
 }
