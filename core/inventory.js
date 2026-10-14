@@ -8,6 +8,7 @@ const C = require('./catalog');
 const { scanText, findSecrets } = require('./textscan');
 const links = require('./links');
 const boards = require('./boards');
+const copies = require('./copies');
 
 // ---------- MCP configs ----------
 function tomlVal(v) {
@@ -283,6 +284,8 @@ function scanFiles(roots, store) {
   const linkFiles = [];
   const boardFiles = [];       // message boards named in instruction files, skills and variable files: [{ file, app, kind, hits }]
   const boardOn = !(store.settings && store.settings.boardCheck === false);
+  const copyFiles = [];        // orders to copy and long blocks of text in instruction files and skills (Copy Guard): see copies.fileHits
+  const copyOn = !(store.settings && store.settings.copyGuard === false);
   const seenPaths = new Set();
   const check = (file, kind, boardKind) => {
     if (seenPaths.has(file.toLowerCase())) return;
@@ -294,6 +297,12 @@ function scanFiles(roots, store) {
         const hits = boards.extract(text, { kind: boardKind || (kind === 'env' ? 'env' : 'instruction') });
         if (hits.length) boardFiles.push({ file, app: boards.appOf(file, projectName(file)), kind: boardKind || (kind === 'env' ? 'env' : 'instruction'), hits });
       } catch (_) { /* a file that cannot be searched gives no boards */ }
+    }
+    if (copyOn && kind !== 'env' && boardKind !== 'code' && boardKind !== 'config') {
+      try {
+        const h = copies.fileHits(file, text, { kind: kind === 'skill' ? 'skill' : 'instruction', app: boards.appOf(file, projectName(file)) });
+        if (h) copyFiles.push(h);
+      } catch (_) { /* a file that cannot be searched gives no hits */ }
     }
     const res = scanText(text);
     const reasons = kind === 'env' ? res.reasons.filter((r) => r.key === 'file.secret') : res.reasons;
@@ -339,7 +348,7 @@ function scanFiles(roots, store) {
     if (!U.exists(d)) continue;
     for (const f of U.walk(d, { maxDepth: 5, maxFiles: 5000, filter: (full, n) => /\.(md|mdc|txt|sh|ps1|py|js|ts|json|ya?ml)$/i.test(n) })) check(f, 'skill', boards.kindOf(f, true));
   }
-  return { files, configs, projectMcp, linkFiles, boardFiles };
+  return { files, configs, projectMcp, linkFiles, boardFiles, copyFiles };
 }
 
 function scanGlobalConfigs() {

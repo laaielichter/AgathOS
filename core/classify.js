@@ -24,6 +24,15 @@ function dangerousFlags(cmd) {
   return C.DANGEROUS_FLAGS.filter((f) => c.includes(f));
 }
 
+// The text values of a tool call (paths and names), flattened and cut: what a copy tool is told to copy and where to.
+function textsOf(v, depth = 0, out = []) {
+  if (out.join('').length > 4000 || depth > 3) return out;
+  if (typeof v === 'string') out.push(v);
+  else if (Array.isArray(v)) for (const x of v.slice(0, 20)) textsOf(x, depth + 1, out);
+  else if (v && typeof v === 'object') for (const x of Object.values(v).slice(0, 20)) textsOf(x, depth + 1, out);
+  return out;
+}
+
 // A tool call from an agent transcript (Claude Code style names, plus MCP tools).
 function classifyTool(name, input, cwd) {
   const n = String(name || '');
@@ -45,6 +54,12 @@ function classifyTool(name, input, cwd) {
   }
   if (n === 'Glob' || n === 'Grep' || /list_dir|search_files|find_files|directory_tree/i.test(n)) {
     return sensitivePath(JSON.stringify(i)) ? 'READ_SENSITIVE' : 'READ_FILE';
+  }
+  // A tool that copies or moves things: a model, or the home folder of an agent, is a copy of AI itself.
+  if (/(^|[_.\s-])(copy|cp|move|mv|clone|duplicate|backup|archive|zip|rsync)([_.\s-]|$)/i.test(n)) {
+    const text = textsOf(i).join('\n').slice(0, 4000);
+    if (C.AGENT_HOME_RE.test(text)) return 'SELF_COPY';
+    if (C.MODEL_REF_RE.test(text)) return 'COPY_MODEL';
   }
   if (/delete|remove|rm_|unlink/i.test(n)) return 'DELETE_MANY';
   return 'EXEC_SHELL';

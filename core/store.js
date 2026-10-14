@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS = {
   linkCheck: true,            // AI links: check where every program sends its prompts (addresses, tunnels, look-alike names, agents that start agents)
   boardCheck: true,           // message boards: look for places where agents read orders or hand over data (chat bots, webhooks, paste sites, open channels, agent networks)
   xrayCheck: true,            // model X-ray: look inside model files (chat templates, tables, code that comes with a model), not only at the format
+  copyGuard: true,            // Copy Guard: orders to copy AI, the same text spreading through your folders, models and agents in places where copies leave the PC, programs that start copies of themselves
   hotkey: true,               // Ctrl+Alt+Shift+P pauses all agents
   judge: { enabled: false, model: 'qwen2.5:7b' },
   learning: true,
@@ -80,7 +81,9 @@ class Store {
     s.baselineVersions = s.baselineVersions || [];
     s.seen = s.seen || {};             // inventory fingerprints from the last scan
     s.chains = s.chains || {};         // 'from>to' -> { from, to, first, last, n }: an agent that started another agent
-  s.boardLive = s.boardLive || {};   // 'agent>board' -> { agent, host, bid, first, last, n }: a program that contacted a message board while Guard watched
+    s.boardLive = s.boardLive || {};   // 'agent>board' -> { agent, host, bid, first, last, n }: a program that contacted a message board while Guard watched
+    s.copyBase = s.copyBase && typeof s.copyBase === 'object' && s.copyBase.n && typeof s.copyBase.n === 'object' ? s.copyBase : { at: 0, n: {} };   // Copy Guard: in how many places each long text stood at the last full look
+    s.cloneLog = Array.isArray(s.cloneLog) ? s.cloneLog.filter((c) => c && typeof c === 'object').slice(-50) : [];   // Copy Guard: agents that started copies of themselves
     s.guardOff = s.guardOff === true;  // Guard is installed but you switched it off (it stays off after a restart)
     s.firstRun = s.firstRun !== false;
     s.updateSlot = Number.isFinite(s.updateSlot) ? s.updateSlot : 0;                      // the last 23:00 (Dutch time) that got its update check

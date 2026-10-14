@@ -72,6 +72,7 @@ function targetKey(t) {
   if (t.type === 'backup') return `backup:${t.id}`;
   if (t.type === 'pkg') return `pkg:${t.id}`;
   if (t.type === 'link') return `link:${t.id}`;
+  if (t.type === 'copy') return `copy:${t.id}`;
   return null;
 }
 function isDismissed(state, key, reasons) {
@@ -149,6 +150,12 @@ function plan(engine, fix, minSev = 'watch') {
     add({ id: `manual:link:${l.id}`, cat: 'manual', sev: l.state, name: l.kind === 'board' ? `${l.name} · ${l.label}` : `${l.app} → ${l.label}`, where: l.file && l.file !== 'Environment' ? U.shortPath(l.file) : (l.file || ''),
       reasons: l.reasons.filter((r) => r.sev !== 'calm'), target: { type: 'link', id: l.id } });
   }
+  // Copy Guard: an order to copy, a text that spreads, a model in a place where copies leave the PC. Nothing is deleted for you: you look, then fix it or approve it.
+  for (const c of inv.copies || []) {
+    if (c.state === 'calm') continue;
+    const where = c.ctype === 'spread' ? `${U.shortPath(c.files && c.files[0] || '')}${c.n > 1 ? ` (+${c.n - 1})` : ''}` : c.file ? U.shortPath(c.file) : '';
+    add({ id: `manual:copy:${c.id}`, cat: 'manual', sev: c.state, name: c.name, where, reasons: c.reasons.filter((r) => r.sev !== 'calm'), target: { type: 'copy', id: c.id } });
+  }
   // Browser extensions: AgathOS cannot remove them for you; you decide in the browser.
   for (const x of inv.extensions || []) {
     if (x.state === 'calm') continue;
@@ -183,6 +190,7 @@ function itemReasons(engine, key, agents) {
   if (kind === 'pkg') { const p = (inv.packages || []).find((e) => e.id === id); return p ? p.reasons : []; }
   if (kind === 'backup') { const b = (inv.backups || []).find((e) => e.id === id); return b ? b.reasons : []; }
   if (kind === 'link') { const l = (inv.links || []).find((e) => e.id === id); return l ? l.reasons : []; }
+  if (kind === 'copy') { const c = (inv.copies || []).find((e) => e.id === id); return c ? c.reasons : []; }
   return [];
 }
 

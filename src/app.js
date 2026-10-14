@@ -405,6 +405,9 @@
     xrayCode: ['xray.escape', 'xray.prog', 'xray.script', 'xray.llamafile', 'xray.keras.lambda', 'xray.onnx.path', 'xray.npy.object', 'xray.code.danger', 'xray.code.net', 'xray.code.present', 'xray.code.remote'],
     xrayText: ['xray.hidden', 'xray.hiddenTags', 'xray.orders', 'xray.metaHidden', 'xray.metaOrders', 'xray.url', 'xray.blob', 'xray.big'],
     xrayShape: ['xray.bad.table', 'xray.bad.short', 'xray.bad.trailing', 'xray.st.layout', 'xray.st.json'],
+    copyText: ['copy.r.self', 'copy.r.weights', 'copy.r.spread', 'copy.r.evade', 'copy.r.block', 'copy.r.blockGrew', 'copy.added.directive', 'copy.changed.directive', 'copy.added.spread', 'copy.changed.spread'],
+    copyPlace: ['copy.r.web', 'copy.r.cloud', 'copy.r.public', 'copy.r.removable', 'copy.r.same', 'copy.r.agentDir', 'copy.added.place', 'copy.changed.place'],
+    copyClone: ['copy.r.burst', 'copy.r.selfSpawn', 'copy.burst'],
     port: ['port.open'],
     worm: ['worm.lanSweep', 'worm.portScan'],
     ext: ['ext.aiTheme', 'ext.aiChats', 'ext.allSites', 'ext.reads', 'ext.flagged'],
@@ -431,13 +434,13 @@
 
   // How sure AgathOS is per kind of finding, and the matching public technique IDs
   // (MITRE ATT&CK for classic attacks, MITRE ATLAS for attacks on AI systems).
-  const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', linkBad: 'high', tamper: 'high', boardBad: 'high', xrayCode: 'high',
-    xrayText: 'medium', xrayShape: 'medium', linkOdd: 'medium', linkAgent: 'medium', boardOrders: 'medium', boardOdd: 'medium', inject: 'medium', worm: 'medium', ext: 'medium', pkg: 'medium', backup: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
+  const CONF = { mcpBad: 'high', hidden: 'high', model: 'high', port: 'high', secret: 'high', approve: 'high', baseUrl: 'high', linkBad: 'high', tamper: 'high', boardBad: 'high', xrayCode: 'high', copyPlace: 'high',
+    xrayText: 'medium', copyText: 'medium', copyClone: 'medium', xrayShape: 'medium', linkOdd: 'medium', linkAgent: 'medium', boardOrders: 'medium', boardOdd: 'medium', inject: 'medium', worm: 'medium', ext: 'medium', pkg: 'medium', backup: 'medium', hijack: 'medium', persist: 'medium', cred: 'medium', exfil: 'medium', destroy: 'medium', secOff: 'medium', honesty: 'medium', supply: 'medium', remote: 'medium',
     chain: 'low', odd: 'low', generic: 'low' };
   const MITRE = { hidden: 'AML.T0051.001 · T1027', inject: 'AML.T0051.001', secret: 'T1552.001', mcpBad: 'T1195.002 · AML.T0053', supply: 'T1195.002 · T1195.001',
     remote: 'AML.T0053 · AML.T0051', hijack: 'AML.T0053 · T1546', approve: 'T1562.001', baseUrl: 'T1557', linkBad: 'T1557 · T1583.001 · T1090', linkOdd: 'T1090 · T1071.001', linkAgent: 'AML.T0053 · T1059', boardBad: 'T1102.002 · T1090.003 · T1027', boardOrders: 'T1102.001 · T1102.003 · AML.T0051.001', boardOdd: 'T1102.002 · T1567.004', model: 'AML.T0010.003 · T1204.002', xrayCode: 'AML.T0010.003 · T1204.002 · T1059', xrayText: 'AML.T0010.003 · AML.T0051', xrayShape: 'AML.T0010.003 · T1203', port: 'T1133', worm: 'T1046 · T1210 · T1570', ext: 'T1176', pkg: 'T1195.002 · T1059 · T1552.001', backup: 'T1485 · M1053',
     destroy: 'T1485', persist: 'T1053.005 · T1543.001 · T1547.001', cred: 'T1555 · T1552', secOff: 'T1562.001 · T1562.004', exfil: 'AML.T0057 · T1567 · T1041',
-    chain: 'AML.T0051 · T1059', tamper: 'T1070' };
+    chain: 'AML.T0051 · T1059', tamper: 'T1070', copyText: 'AML.T0051.001 · T1570', copyPlace: 'AML.T0035 · T1537 · T1567.002' };
   let anLevel = null;     // 'simple' | 'deep'; follows the view until you pick a tab
 
   // Evidence rows for the item behind a fix step (or an inventory item).
@@ -470,6 +473,14 @@
       } else if (l) {
         add(t('ev.app'), l.app); add(t('ev.address'), l.url || l.host); add(t('ev.setting'), l.via === 'env' ? t('link.env', { name: l.key }) : l.key);
         add(t('ev.file'), l.file && l.file !== 'Environment' ? l.file : '');
+      }
+    } else if (kind === 'copy') {
+      const c = (snap.copies || []).find((e) => e.id === id);
+      if (c) {
+        add(t('ev.app'), c.app);
+        add(t('ev.file'), c.ctype === 'spread' ? (c.shorts || []).join('\n') : (c.short || c.file));
+        if (c.ctype === 'place') { add(t('ev.where'), c.where); if (c.size) add(t('ev.size'), `${(c.size / 1048576).toFixed(1)} MB`); add(t('ev.inside'), c.same); }
+        if (c.ctype === 'clone') add(t('ev.process'), c.name);
       }
     } else if (kind === 'backup') {
       const b = (snap.backups || []).find((e) => e.id === id);
@@ -505,7 +516,9 @@
   function analyse(item, step) {
     const all = item.reasons || [];
     const reasons = all.filter((r) => r.sev !== 'calm').length ? all.filter((r) => r.sev !== 'calm') : all;
-    const cats = [...new Set(reasons.map((r) => KEY_CAT[r.key] || 'generic'))].slice(0, 3);
+    const cats = [...new Set(reasons.map((r) => KEY_CAT[r.key] || 'generic'))];
+    if (cats.length > 1 && cats.includes('generic')) cats.splice(cats.indexOf('generic'), 1);
+    cats.splice(3);
     if (!cats.length) cats.push('generic');
     const sev = item.sev || worst(reasons.map((r) => r.sev));
     const act = step ? stepAction(step) : null;
@@ -542,7 +555,7 @@
       ...body,
       h('div', { class: 'sheet-foot' },
         item.trust ? h('button', { class: 'btn-small fix', type: 'button', text: t('btn.approve'),
-          onclick: async () => { $('anDlg').close(); const r = await A.trust(item.trust); if (r !== false) toast(approvedText((snap.links || []).find((x) => x.id === item.trust.id))); } }) : null,
+          onclick: async () => { $('anDlg').close(); const r = await A.trust(item.trust); if (r !== false) toast(item.trust.type === 'copy' ? t('copy.approved') : approvedText((snap.links || []).find((x) => x.id === item.trust.id))); } }) : null,
         key && A.fixDismiss ? h('button', { class: 'btn-ghost', type: 'button', text: t('fix.dismiss'), title: t('fix.dismissHint'),
           onclick: async () => { $('anDlg').close(); const r = await A.fixDismiss(key); if (r && r.ok) { toast(t('fix.dismissed', { name: item.name || '' })); dropRow(key); } } }) : null,
         h('span', { class: 'grow' }),
@@ -588,13 +601,17 @@
       const l = (snap.links || []).find((x) => x.id === tg.id);
       if (l) { name = l.kind === 'board' ? `${l.name} · ${l.label}` : `${l.app} → ${l.label}`; where = l.short || l.file || ''; reasons = []; merge(l.reasons); if (l.approvable && !l.approved && l.state !== 'calm') trust = tg; }
       step = stepBy([`manual:link:${tg.id}`]);
+    } else if (tg.type === 'copy') {
+      const c = (snap.copies || []).find((x) => x.id === tg.id);
+      if (c) { name = c.name; where = c.short || (c.shorts && c.shorts[0]) || c.app || ''; reasons = []; merge(c.reasons); if (c.approvable && !c.approved && c.state !== 'calm') trust = tg; }
+      step = stepBy([`manual:copy:${tg.id}`]);
     }
     if (!step && e.agentId) {
       const a = snap.agents.find((x) => x.id === e.agentId);
       if (a) { where = a.name; merge(a.reasons); }
       step = stepBy([`agent:${e.agentId}`, `manual:flag:${e.agentId}`]);
     }
-    const key = (step && step.tkey) || (tg.type === 'mcp' || tg.type === 'file' || tg.type === 'auto' || tg.type === 'link' ? `${tg.type}:${tg.id}` : tg.type === 'port' ? `port:${tg.port}` : e.agentId ? `agent:${e.agentId}` : null);
+    const key = (step && step.tkey) || (tg.type === 'mcp' || tg.type === 'file' || tg.type === 'auto' || tg.type === 'link' || tg.type === 'copy' ? `${tg.type}:${tg.id}` : tg.type === 'port' ? `port:${tg.port}` : e.agentId ? `agent:${e.agentId}` : null);
     analyse({ name, where, sev: e.sev, reasons, key, trust }, step);
   }
 
@@ -826,6 +843,7 @@
     { id: 'links', has: () => !!(snap && snap.links), items: () => linkRows().filter((l) => !l.dupOf) },
     { id: 'boards', has: () => !!(snap && snap.links && snap.settings && snap.settings.boardCheck !== false), items: () => boardRows().filter((b) => !b.dupOf) },
     { id: 'xray', has: () => !!(snap && snap.models), items: () => snap.models },
+    { id: 'copies', has: () => !!(snap && snap.copies && snap.settings && snap.settings.copyGuard !== false), items: () => snap.copies },
   ];
   const aiItems = () => AI_TABS.filter((x) => x.has()).flatMap((x) => x.items());
   function renderAi() {
@@ -840,6 +858,7 @@
     if (aiTab === 'links') renderLinks();
     else if (aiTab === 'boards') renderBoards();
     else if (aiTab === 'xray') renderXray();
+    else if (aiTab === 'copies') renderCopies();
   }
 
   const linkName = (l) => (l.kind === 'mcp' ? `${l.app} → ${t('link.kind.mcp')} · ${l.label}` : l.kind === 'server' ? `${l.app} · ${l.label}` : `${l.app} → ${l.label}`);
@@ -994,6 +1013,42 @@
         bad.length ? h('span', { class: 'chip bad', text: t('link.sum.bad', { n: bad.length }) }) : null]) : null,
       ul,
       h('p', { class: 'set-note', text: t('xray.limit') }));
+  }
+
+  // ---------- Copy Guard: orders to copy, texts that spread, models where copies leave the PC, agents that copy themselves ----------
+  const copyName = (c) => (c.ctype === 'spread' ? `“${c.name}”` : c.name);
+  function copyWhere(c) {
+    const bits = [t('copy.t.' + (c.ctype === 'place' ? (c.what === 'agent' ? 'agent' : 'model') : c.ctype))];
+    if (c.ctype === 'directive') { if (c.app) bits.push(c.app); if (c.short) bits.push(c.short); }
+    else if (c.ctype === 'spread') { bits.push(t('copy.where.spread', { n: c.n, folders: c.folders })); if (c.shorts && c.shorts[0]) bits.push(c.shorts[0]); }
+    else if (c.ctype === 'place') { if (c.where) bits.push(c.where); if (c.size) bits.push(`${(c.size / 1048576).toFixed(c.size > 1e9 ? 0 : 1)} MB`); if (c.short) bits.push(c.short); }
+    else bits.push(t('copy.where.clone', { n: c.n, s: c.seconds }));
+    return bits.join(' · ');
+  }
+  function renderCopies() {
+    const all = snap && snap.copies ? snap.copies : [];
+    const count = (f) => all.filter(f).length;
+    const sums = [['orders', count((c) => c.ctype === 'directive')], ['spread', count((c) => c.ctype === 'spread')], ['places', count((c) => c.ctype === 'place')], ['clones', count((c) => c.ctype === 'clone' && c.state !== 'calm')]].filter(([, n]) => n);
+    const bad = all.filter((c) => c.state === 'alarm').length;
+    const ul = h('ul', { class: 'rows' });
+    rowList(ul, all, {
+      empty: t('copy.empty'),
+      name: copyName, where: copyWhere,
+      step: (c) => stepBy([`manual:copy:${c.id}`]), key: (c) => `copy:${c.id}`,
+      trust: (c) => (c.approvable && !c.approved && c.state !== 'calm' ? { type: 'copy', id: c.id } : null),
+      actions: (c) => [
+        c.approvable && !c.approved && c.state !== 'calm' ? btn(t('btn.approve'), () => run(A.trust({ type: 'copy', id: c.id }), t('copy.approved')), 'fix') : null,
+        c.approved ? h('span', { class: 'chip', text: t('mcp.approved') }) : null,
+        c.file || (c.files && c.files[0]) ? btn(t('btn.open'), () => A.reveal(c.file || c.files[0])) : null,
+        c.state !== 'calm' ? btn(t('btn.how'), () => modal(t('btn.how'), t('fix.copy'))) : null,
+      ],
+    });
+    fill($('aiBody'),
+      h('p', { class: 'set-note', text: t('copy.sub') }),
+      sums.length || bad ? h('div', { class: 'link-sum' }, [...sums.map(([k, n]) => h('span', { class: 'chip', text: t('copy.sum.' + k, { n }) })),
+        bad ? h('span', { class: 'chip bad', text: t('link.sum.bad', { n: bad }) }) : null]) : null,
+      ul,
+      h('p', { class: 'set-note', text: t('copy.limit') }));
   }
 
   function renderMcp() {
@@ -1198,6 +1253,7 @@
         setRow(t('set.linkCheck'), sw(s.linkCheck !== false, () => save({ linkCheck: s.linkCheck === false })), t('set.linkCheckDesc')),
         setRow(t('set.boardCheck'), sw(s.boardCheck !== false, () => save({ boardCheck: s.boardCheck === false })), t('set.boardCheckDesc')),
         setRow(t('set.xrayCheck'), sw(s.xrayCheck !== false, () => save({ xrayCheck: s.xrayCheck === false })), t('set.xrayCheckDesc')),
+        setRow(t('set.copyGuard'), sw(s.copyGuard !== false, () => save({ copyGuard: s.copyGuard === false })), t('set.copyGuardDesc')),
         setRow(t('set.backupCheck'), sw(s.backupCheck !== false, () => save({ backupCheck: s.backupCheck === false })), t('set.backupCheckDesc')),
         setRow(t('set.wormWatch'), sw(s.wormWatch !== false, () => save({ wormWatch: s.wormWatch === false })), t('set.wormWatchDesc')),
         setRow(t('set.dlGuard'), sw(s.downloadGuard !== false, () => save({ downloadGuard: s.downloadGuard === false })), t('set.dlGuardDesc')),

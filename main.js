@@ -430,8 +430,10 @@ function wireIpc() {
   h('fixDismiss', (key) => engine.fixDismiss(String(key)));
   h('fixRestore', (key) => engine.fixRestore(String(key)));
   h('settings', (patch) => {
+    const was = store.settings.copyGuard !== false;
     const s = store.updateSettings(patch || {});
     engine.applySchedule();
+    if (patch && 'copyGuard' in patch && (s.copyGuard !== false) !== was) engine.copySwitched();
     applyOsSettings();
     engine.changed(true);
     if (patch && 'autoUpdate' in patch && updateInfo && updateInfo.status === 'newer') scheduleAutoUpdate(5000);

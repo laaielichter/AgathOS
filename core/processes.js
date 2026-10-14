@@ -40,7 +40,7 @@ function identify(p) {
 }
 
 class ProcessWatch {
-  constructor({ onAction, onAgentStart, onAgentStop, onAlert }) {
+  constructor({ onAction, onAgentStart, onAgentStop, onAlert, onClone }) {
     this.procs = new Map();       // pid -> proc
     this.agentOf = new Map();     // pid -> agent root pid
     this.roots = new Map();       // root pid -> { agent, proc, flags, started }
@@ -49,6 +49,7 @@ class ProcessWatch {
     this.onAgentStart = onAgentStart;
     this.onAgentStop = onAgentStop;
     this.onAlert = onAlert;
+    this.onClone = onClone;        // an agent that starts another copy of itself (Copy Guard)
     this.lastPoll = 0;
     this.lastAdded = 0;           // new programs seen by the last poll (for the live chart)
   }
@@ -96,9 +97,11 @@ class ProcessWatch {
     if (agent && agent.root) {
       const flags = dangerousFlags(p.c);
       const info = { agent, proc: p, flags, started: p.t || Date.now(), parent, spawnedBy: this.spawnerOf(p, agent) };
+      const ofSelf = this.first ? null : this.sameAgentAncestor(p, agent);
       this.roots.set(p.p, info);
       this.agentOf.set(p.p, p.p);
       this.onAgentStart && this.onAgentStart(info, this.first);
+      if (ofSelf && this.onClone) this.onClone({ agentId: agent.id, agentName: agent.name, pid: p.p, parentPid: ofSelf.proc.p, ts: p.t || Date.now() });
       // Desktop apps are started by the system (Start menu, Dock, updater): the "odd launcher" check is for command line agents.
       if (agent.kind !== 'desktop' && (!this.first || flags.length)) this.checkLauncher(info);
       return;
@@ -133,6 +136,18 @@ class ProcessWatch {
       const rp = this.agentOf.get(cur.p);
       const r = rp !== undefined ? this.roots.get(rp) : null;
       if (r) return r.agent.id !== agent.id ? { agentId: r.agent.id, pid: r.proc.p } : null;
+      cur = this.parentOf(cur);
+    }
+    return null;
+  }
+
+  // The root of the same agent in whose process tree this program was started (an agent that starts a copy of itself), or null.
+  sameAgentAncestor(p, agent) {
+    let cur = this.parentOf(p);
+    for (let hops = 0; cur && hops < 12; hops++) {
+      const rp = this.agentOf.get(cur.p);
+      const r = rp !== undefined ? this.roots.get(rp) : null;
+      if (r) return r.agent.id === agent.id ? r : null;
       cur = this.parentOf(cur);
     }
     return null;
