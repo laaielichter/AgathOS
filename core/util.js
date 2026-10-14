@@ -105,11 +105,18 @@ function walk(root, { maxDepth = 4, maxFiles = 20000, filter = () => true, skipD
   return out;
 }
 
+// Grok Build keeps its settings, sessions, skills and plugins in GROK_HOME, or in ~/.grok when that is not set.
+const grokHome = () => {
+  const v = process.env.GROK_HOME;
+  return v && path.isAbsolute(v) ? v.replace(/[\\/]+$/, '') : path.join(HOME, '.grok');
+};
+
 const expand = (p) => {
   const out = p.replace(/^~(?=$|[\\/])/, HOME)
     .replace(/%USERPROFILE%/gi, HOME)
     .replace(/%APPDATA%/gi, APPDATA)
-    .replace(/%LOCALAPPDATA%/gi, LOCALAPPDATA);
+    .replace(/%LOCALAPPDATA%/gi, LOCALAPPDATA)
+    .replace(/%GROK_HOME%/gi, () => grokHome());
   // Catalog paths use Windows separators; tests on other systems need '/'.
   return IS_WIN ? out : out.replace(/\\/g, '/');
 };
@@ -220,5 +227,5 @@ const psq = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 
 module.exports = {
   IS_WIN, IS_MAC, HOME, APPDATA, LOCALAPPDATA, sha256, exists, statSafe, readText, readHead, readJsonLoose,
-  stripJsonComments, walk, expand, shortPath, execFileText, ps, psq, SKIP_DIRS,
+  stripJsonComments, walk, expand, grokHome, shortPath, execFileText, ps, psq, SKIP_DIRS,
 };

@@ -18,8 +18,10 @@ const IOC_FILES = new Set(['setup_bun.js', 'bun_environment.js', 'trufflesecrets
 const IOC_WORKFLOW = /^shai-hulud.*\.ya?ml$/i;
 const SKIP = new Set(['.git', 'venv', '.venv', '__pycache__', 'dist', 'build', 'target', 'AppData', 'Library', '.cache', '.npm', 'node_modules']);
 
-const FETCH_RUN = /\b(curl|wget|iwr|irm|invoke-webrequest|invoke-restmethod)\b[^\n|;&]*\|\s*(sh|bash|zsh|node|python3?|iex|invoke-expression)\b|\b(iex|invoke-expression)\b[^\n]*\b(iwr|irm|downloadstring|webclient)|powershell[^\n]*-enc(odedcommand)?\b|\bnode\s+-e\b[^\n]*https?:|\b(mshta|bitsadmin)\b|certutil[^\n]*-urlcache/i;
-const SECRET_REF = /trufflehog|gitleaks|\.npmrc|\.ssh[\\/]|\.aws[\\/]|\.git-credentials|\bid_(rsa|ed25519)\b|\b(NPM|GITHUB|GH)_TOKEN\b/i;
+const FETCH_RUN = /\b(curl|wget|iwr|irm|invoke-webrequest|invoke-restmethod)\b[^\n|;&]*\|\s*(sudo\s+)?(sh|bash|zsh|node|python3?|iex|invoke-expression)\b|\b(iex|invoke-expression)\b[^\n]*\b(iwr|irm|downloadstring|webclient)|powershell[^\n]*-enc(odedcommand)?\b|\bnode\s+-e\b[^\n]*https?:|\b(mshta|bitsadmin)\b|certutil[^\n]*-urlcache/i;
+// Reaching for key files is danger; a mention of a token name alone is only attention (many projects set up .npmrc on purpose).
+const SECRET_STRONG = /trufflehog|gitleaks|\.ssh[\\/]|\.aws[\\/]|\.git-credentials|\bid_(rsa|ed25519)\b/i;
+const SECRET_WEAK = /\.npmrc|\b(NPM|GITHUB|GH)_TOKEN\b/i;
 const HIDDEN = /base64\s+(-d|--decode)|\batob\(|Buffer\.from\([^)]*base64|\beval\(|new Function\(/i;
 const CATCHALL = /webhook\.site|requestbin|pipedream\.net|interact\.sh|oast\.(fun|live|pro|site)|ngrok(-free)?\.(io|app|dev)|burpcollaborator/i;
 // Words inside a script file that, together, make it a token thief or a self-spreader.
@@ -38,9 +40,10 @@ function analyseScript(name, cmd, dir) {
   const reasons = [];
   const text = String(cmd || '');
   if (FETCH_RUN.test(text)) reasons.push({ key: 'pkg.fetchRun', params: { script: name }, sev: 'alarm' });
-  if (SECRET_REF.test(text)) reasons.push({ key: 'pkg.stealer', params: { script: name }, sev: 'alarm' });
+  if (SECRET_STRONG.test(text)) reasons.push({ key: 'pkg.stealer', params: { script: name }, sev: 'alarm' });
+  else if (SECRET_WEAK.test(text)) reasons.push({ key: 'pkg.stealer', params: { script: name }, sev: 'watch' });
   if (HIDDEN.test(text)) reasons.push({ key: 'pkg.obfuscated', params: { script: name }, sev: 'watch' });
-  const m = /^\s*(?:node|bash|sh)\s+(?:\.[\\/])?([\w@./\\-]+\.(?:js|cjs|mjs|sh))\s*$/i.exec(text);
+  const m = /^\s*(?:node|bash|sh)\s+(?:\.[\\/])?([\w@./\\-]+\.(?:js|cjs|mjs|sh))(?:\s+[^|;&]*)?$/i.exec(text);
   if (m && !m[1].includes('..')) {
     const body = U.readText(path.join(dir, m[1]), 400 * 1024) || '';
     const tokens = BODY_TOKENS.test(body);
@@ -96,7 +99,10 @@ function findProjects(roots, maxDepth = 3, maxDirs = 3000, maxProjects = 60) {
   return out;
 }
 
-function scanProject(dir, budget) {
+// Lets the app breathe now and then, so a big node_modules does not freeze the window.
+const breathe = () => new Promise((r) => setImmediate(r));
+
+async function scanProject(dir, budget) {
   const found = [];
   // The project's own package.json.
   const own = path.join(dir, 'package.json');
@@ -127,6 +133,7 @@ function scanProject(dir, budget) {
     const pkgDirs = e.name.startsWith('@') ? listDir(path.join(nm, e.name)).filter((x) => x.isDirectory()).map((x) => path.join(nm, e.name, x.name)) : [path.join(nm, e.name)];
     for (const pd of pkgDirs) {
       if (budget.left-- <= 0) break;
+      if (budget.left % 40 === 0) await breathe();
       const file = path.join(pd, 'package.json');
       const pm = safeJson(file);
       const reasons = pm ? analysePackage(pm, pd) : [];
@@ -138,12 +145,12 @@ function scanProject(dir, budget) {
 }
 
 // roots: the project folders AgathOS watches. Returns only what is worth a look.
-function scan(roots, { maxPackages = 1500 } = {}) {
+async function scan(roots, { maxPackages = 1500 } = {}) {
   const budget = { left: maxPackages };
   const out = [];
   const seen = new Set();
   for (const p of findProjects(roots || [])) {
-    for (const it of scanProject(p, budget)) if (!seen.has(it.id)) { seen.add(it.id); out.push(it); }
+    for (const it of await scanProject(p, budget)) if (!seen.has(it.id)) { seen.add(it.id); out.push(it); }
   }
   const RANK = { alarm: 2, watch: 1, calm: 0 };
   return out.sort((a, b) => RANK[b.state] - RANK[a.state] || a.name.localeCompare(b.name)).slice(0, 100);

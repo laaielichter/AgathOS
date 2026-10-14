@@ -11,6 +11,7 @@ const models = require('./models');
 const extensions = require('./extensions');
 const backup = require('./backup');
 const supply = require('./supply');
+const { Telemetry } = require('./telemetry');
 const pause = require('./pause');
 const judge = require('./judge');
 const guard = require('./guard');
@@ -54,17 +55,22 @@ class Engine {
     this.startedAt = Date.now();
     this.updateTimer = null;
     this.blocked = new Map();       // program path -> true (firewall rules we set)
+    this.tel = new Telemetry();     // live numbers and log lines for the dashboard (memory only)
+    this.liveWatching = false;      // the window shows the live view: look a bit more often
+    this.lastNetPoll = 0;
+    this.connSeen = new Set();      // connections already shown in the live log
+    this.connInit = false;          // the first network poll only learns what is there already
 
     this.intent = new IntentEngine(store, { onAlert: (a) => this.event(a) });
     this.procs = new ProcessWatch({
-      onAction: (a) => { this.intent.addAction(a); this.maybeJudge(a.agentId); this.changed(); },
+      onAction: (a) => { this.intent.addAction(a); this.liveAction(a); this.maybeJudge(a.agentId); this.changed(); },
       onAgentStart: (info, initial) => this.agentStarted(info, initial),
       onAgentStop: (info) => this.agentStopped(info),
       onAlert: (a) => { this.event(a); if (a.agentId) this.intent.addSignal(a.agentId, { key: a.key, params: a.params, sev: a.sev, points: a.sev === 'alarm' ? 45 : 25 }); },
     });
     this.transcripts = new Transcripts({
       startedAt: this.startedAt,
-      onAction: (a) => { this.intent.addAction(a); if (!a.historic) this.maybeJudge(a.agentId); },
+      onAction: (a) => { this.intent.addAction(a); this.liveAction(a); if (!a.historic) this.maybeJudge(a.agentId); },
     });
     this.worm = new LanScanWatch({ onAlert: (a) => this.wormAlert(a) });
     this.downloads = new DownloadGuard({ onFinding: (f) => this.downloadFinding(f) });
@@ -73,6 +79,7 @@ class Engine {
       onConfigChange: (f) => this.configChanged(f),
       onInstructionChange: (f) => this.instructionChanged(f),
       onMassDelete: (d) => this.massDelete(d),
+      onActivity: (dir, deleted) => this.tel.file(U.shortPath(dir), deleted),
     });
   }
 
@@ -111,12 +118,15 @@ class Engine {
   applySchedule() {
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
+    this.timers.push(setInterval(() => this.tel.sample(), 1000));       // the live chart: one sample per second
     const s = this.store.settings;
     this.files.threshold = s.massDeleteThreshold;
     if (s.realtime) {
       const every = (ms, fn) => { const t = setInterval(() => fn().catch(() => {}), ms); this.timers.push(t); fn().catch(() => {}); };
       every(Math.max(2, s.pollSeconds) * 1000, () => this.pollProcesses());
       every(15000, () => this.pollNetwork());
+      // While the live view is open the network is checked more often, so new connections show up quickly.
+      every(5000, async () => { if (this.liveWatching && Date.now() - this.lastNetPoll > 4000) await this.pollNetwork(); });
       every(8000, async () => { this.transcripts.poll(); });
       every(60000, async () => { this.intent.tick(); this.intent.honestyCheck(this.transcripts.recent()); this.changed(); });
       every(2500, () => this.pollGuard());
@@ -146,7 +156,7 @@ class Engine {
         this.inventory.mcp = inv.scanMcp(this.store, files.projectMcp);
         this.inventory.configs = [...inv.scanGlobalConfigs(), ...files.configs, ...(await inv.envBaseUrls())];
         try { this.inventory.extensions = extensions.scan(); } catch (_) { this.inventory.extensions = []; }
-        try { this.inventory.packages = this.store.settings.pkgCheck !== false ? supply.scan(this.store.settings.roots) : []; } catch (_) { this.inventory.packages = []; }
+        try { this.inventory.packages = this.store.settings.pkgCheck !== false ? await supply.scan(this.store.settings.roots) : []; } catch (_) { this.inventory.packages = []; }
         try { this.inventory.backups = this.store.settings.backupCheck !== false ? await backup.check(this.store.settings) : []; } catch (_) { this.inventory.backups = []; }
       }],
       ['traps', async () => { this.inventory.files = this._files ? this._files.files : []; }],
@@ -160,6 +170,7 @@ class Engine {
       ['files', async () => { this.inventory.models = models.scanModelDirs(this.store.settings.modelDirs); }],
     ];
     this.scanning = { reason, watcher: steps[0][0], done: 0, total: steps.length };
+    this.tel.note('scan', 'live.scanStart', { reason });
     this.changed(true);
     for (const [w, fn] of steps) {
       this.scanning.watcher = w;
@@ -220,10 +231,22 @@ class Engine {
   // ---------- live loops ----------
   async pollProcesses() {
     await this.procs.poll();
+    this.tel.gauge('procs', this.procs.procs.size);
+    this.tel.gauge('agents', this.procs.runningAgents().length);
+    this.tel.count('spawns', this.procs.lastAdded || 0);
     this.changed();
   }
 
+  // A step of an agent for the live log: what it did, in the words of the audit log.
+  liveAction(a) {
+    if (!a || a.historic || !a.agentId) return;
+    this.tel.count('actions');
+    const risk = C.ACTIONS[a.action] ? C.ACTIONS[a.action].sev : 0;
+    this.tel.note('act', 'live.act', { agent: this.agentName(a.agentId), action: a.action, detail: String(a.detail || '').replace(/\s+/g, ' ').trim().slice(0, 160) }, risk >= 0.8 ? 'alarm' : risk >= 0.3 ? 'watch' : 'calm');
+  }
+
   async pollNetwork(force) {
+    this.lastNetPoll = Date.now();
     const g = this.guardState.running;
     const conns = g ? (await guard.connections()).map((r) => ({ la: r.la, lp: r.lp, ra: r.ra, rp: r.rp, state: r.s, pid: r.p, n: r.n })) : await net.connections();
     if (!conns.length && !force) return;
@@ -239,6 +262,29 @@ class Engine {
       if (!force) for (const p of this.inventory.ports) if (p.exposed && !before.get(p.port)) {
         this.event({ key: 'port.open', sev: 'alarm', watcher: 'net', params: { product: p.product, addr: p.addr, port: p.port }, target: { type: 'port', port: p.port } });
       }
+    }
+    // Live view: new outside connections are counted for every program, but only listed for agents
+    // (what you browse is none of AgathOS's business).
+    const external = conns.filter((c) => c.state === 'Established' && !net.isLoopback(c.ra) && !net.isAny(c.ra));
+    this.tel.gauge('open', external.length);
+    {
+      const seen = new Set();
+      let fresh = 0;
+      let listed = 0;
+      for (const c of external) {
+        const k = `${c.pid}|${c.ra}|${c.rp}`;
+        seen.add(k);
+        if (!this.connInit || this.connSeen.has(k)) continue;
+        fresh++;
+        if (this.procs.agentOf.get(c.pid) !== undefined && listed < 6) {
+          listed++;
+          const dom = (this.pidDomains.get(c.pid) || []).slice(-1)[0];
+          this.tel.note('net', 'live.conn', { name: name(c.pid) || String(c.pid), host: dom || c.ra, port: c.rp });
+        }
+      }
+      this.connSeen = seen;
+      this.connInit = true;
+      this.tel.count('conns', fresh);
     }
     // Outgoing connections of agent child processes = possible exit channel.
     for (const c of conns) {
@@ -275,8 +321,12 @@ class Engine {
   }
 
   async pollGuard() {
-    if (!this.guardState.installed && !guard.installed()) return;
-    this.guardState.installed = true;
+    // The token file is the sign that Guard is installed; if it is gone (Guard was removed) the state follows.
+    this.guardState.installed = guard.installed();
+    if (!this.guardState.installed) {
+      if (this.guardState.running) { this.guardState.running = false; this.changed(); }
+      return;
+    }
     const st = await guard.status();
     this.guardState.running = !!st;
     if (!st) { this.changed(); return; }
@@ -310,6 +360,7 @@ class Engine {
       const dm = this.domains.get(info.agent.id) || new Map();
       this.domains.set(info.agent.id, dm);
       const isNew = !dm.has(e.name);
+      if (isNew) this.tel.note('net', 'live.dns', { name: path.basename(String(e.image || '')) || String(e.pid), host: String(e.name).toLowerCase() });
       dm.set(String(e.name).toLowerCase(), e.ts || Date.now());
       if (isNew && root !== e.pid && !AI_API.test(e.name)) {
         this.intent.addAction({ agentId: info.agent.id, action: 'NET_NEW', source: 'dns', detail: `${path.basename(String(e.image || '')) || e.pid} → ${e.name}`, pid: e.pid });
@@ -604,6 +655,8 @@ class Engine {
     const full = this.store.append({ key: e.key, sev: e.sev || 'calm', watcher: e.watcher || 'proc', params: e.params || {}, agentId: e.agentId || null, pid: e.pid || null, target: e.target || null });
     // Whether it pops up is decided by the notifier (level, repeats, bundling, limit, quiet hours).
     if (!quiet && full.sev !== 'calm') this.notify(full);
+    this.tel.alert(full.sev);
+    this.tel.note('event', full.key, full.params, full.sev);
     if (full.sev === 'alarm') this.autoFix();
     this.changed();
     return full;
@@ -618,6 +671,20 @@ class Engine {
     if (!exe || this.signatures.has(exe)) return;
     this.signatures.set(exe, null);
     inv.signature(exe).then((s) => { this.signatures.set(exe, s); this.changed(); });
+  }
+
+  // Live numbers and log lines for the dashboard. `since` is the last log line the window has seen.
+  liveView(since = 0) {
+    return {
+      ...this.tel.view(since),
+      guard: { installed: !!this.guardState.installed, running: !!this.guardState.running, sysmon: !!this.guardState.sysmon },
+      scanning: this.scanning ? { watcher: this.scanning.watcher, done: this.scanning.done, total: this.scanning.total } : null,
+      pausedAll: !!this.pausedAll, realtime: this.store.settings.realtime !== false, heartbeat: this.procs.lastPoll,
+    };
+  }
+
+  setLiveWatching(on) {
+    this.liveWatching = !!on;
   }
 
   changed(now = false) {
@@ -645,7 +712,7 @@ class Engine {
       const reasons = [...(inst ? inst.reasons : []), ...v.reasons];
       const state = worst([v.state, ...reasons.map((r) => r.sev)]);
       out.push({
-        id, name: cat.name, kind: cat.kind, version: inst ? inst.version : null, dirs: inst ? inst.dirs.map(U.shortPath) : [],
+        id, name: cat.name, kind: cat.kind, cloud: !!cat.cloud, version: inst ? inst.version : null, dirs: inst ? inst.dirs.map(U.shortPath) : [],
         running: runs, state, score: v.score, labels: v.labels, prediction: v.prediction, reasons: reasons.slice(0, 8),
         actions: v.actions, learned: v.learned, task: sess ? (sess.lastTask || sess.task) : '',
         domains: [...(this.domains.get(id) || new Map()).keys()].slice(-12), paused: this.paused.has(id),

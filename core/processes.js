@@ -19,6 +19,19 @@ const PS_LIST = `Get-CimInstance Win32_Process | ForEach-Object {
 const QUIET = /^(conhost|rg|git|node|bash|sh|zsh|cmd|powershell|pwsh|where|which|tasklist|whoami|hostname|uname|sw_vers|sysctl|ps)\.exe$/i;
 const QUIET_GIT = /git(\.exe)?["']?\s+(status|rev-parse|log|diff|show|branch|config|ls-files|remote|symbolic-ref|describe)\b/i;
 
+// Where a program lives: the .app bundle on a Mac, otherwise the folder of the program (lower case, with a closing slash).
+function appDir(exe) {
+  const e = String(exe || '').toLowerCase();
+  const m = /^(.*?\.app)[\\/]/.exec(e);
+  if (m) return m[1] + '/';
+  const i = Math.max(e.lastIndexOf('\\'), e.lastIndexOf('/'));
+  return i > 0 ? e.slice(0, i + 1) : '';
+}
+const insideApp = (rootProc, p) => {
+  const dir = appDir(rootProc && rootProc.e);
+  return !!dir && String(p.e || '').toLowerCase().startsWith(dir);
+};
+
 function identify(p) {
   const n = norm(p.n);
   const c = String(p.c || '').toLowerCase();
@@ -37,6 +50,7 @@ class ProcessWatch {
     this.onAgentStop = onAgentStop;
     this.onAlert = onAlert;
     this.lastPoll = 0;
+    this.lastAdded = 0;           // new programs seen by the last poll (for the live chart)
   }
 
   async poll() {
@@ -58,6 +72,7 @@ class ProcessWatch {
     // Parents first, so children can find their agent.
     added.sort((a, b) => (a.t || 0) - (b.t || 0));
     for (const p of added) this.handleNew(p);
+    this.lastAdded = this.first ? 0 : added.length;
     this.first = false;
     this.lastPoll = Date.now();
     return true;
@@ -72,13 +87,20 @@ class ProcessWatch {
   handleNew(p) {
     const agent = identify(p);
     const parent = this.parentOf(p);
+    // A program that starts more copies of itself (an Electron app and its helpers, Grok and its agent process) is one agent.
+    if (agent && agent.helpers && parent) {
+      const rp = this.agentOf.get(parent.p);
+      const main = rp !== undefined ? this.roots.get(rp) : null;
+      if (main && main.agent.id === agent.id) { this.agentOf.set(p.p, rp); return; }
+    }
     if (agent && agent.root) {
       const flags = dangerousFlags(p.c);
       const info = { agent, proc: p, flags, started: p.t || Date.now(), parent };
       this.roots.set(p.p, info);
       this.agentOf.set(p.p, p.p);
       this.onAgentStart && this.onAgentStart(info, this.first);
-      if (!this.first || flags.length) this.checkLauncher(info);
+      // Desktop apps are started by the system (Start menu, Dock, updater): the "odd launcher" check is for command line agents.
+      if (agent.kind !== 'desktop' && (!this.first || flags.length)) this.checkLauncher(info);
       return;
     }
     if (agent) { // IDE, desktop app or model server: track but do not treat children as agent actions
@@ -90,6 +112,9 @@ class ProcessWatch {
     if (rootPid === undefined) return;
     this.agentOf.set(p.p, rootPid);
     if (this.first) return;                       // existing children at startup: not "new" actions
+    // The agent's own helper programs (renderers of an app, tools inside its folder) say nothing about intent.
+    const main = this.roots.get(rootPid);
+    if (main && main.agent.helpers && insideApp(main.proc, p)) return;
     const name = norm(p.n);
     const cmd = String(p.c || p.n || '');
     if (QUIET.test(name) && (QUIET_GIT.test(cmd) || !/\s/.test(cmd.trim()) || /^"?[^"]*(rg|conhost)(\.exe)?"?\s/i.test(cmd))) return;

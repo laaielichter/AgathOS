@@ -269,14 +269,19 @@ function scheduleAutoUpdate(ms) {
   clearTimeout(autoTimer);
   autoTimer = setTimeout(() => autoUpdateTick().catch(() => {}), ms);
 }
+let autoBusy = false;        // one self-update at a time (a settings change must not start a second download)
 async function autoUpdateTick() {
-  if (!engine || !store) return;
+  if (!engine || !store || autoBusy) return;
+  autoBusy = true;
+  try { await autoUpdateRun(); } finally { autoBusy = false; }
+}
+async function autoUpdateRun() {
   const decide = () => updater.autoDecision({
     platform: process.platform, packaged: app.isPackaged, autoUpdate: store.settings.autoUpdate, info: updateInfo, failedVersion: autoFailed,
     calm: updater.calmMoment({
       runningAgents: engine.procs.runningAgents().length,
       scanning: !!engine.scanning,
-      windowInUse: !!(win && !win.isDestroyed() && win.isVisible() && win.isFocused()),
+      windowInUse: !!((win && !win.isDestroyed() && win.isVisible() && win.isFocused()) || (mini && !mini.isDestroyed() && mini.isVisible())),
       paused: !!engine.pausedAll,
     }),
   });
@@ -294,14 +299,21 @@ async function autoUpdateTick() {
   if (d === 'wait') { scheduleAutoUpdate(updater.RETRY_MS); return; }
   if (d !== 'go') return;
   const r = await installUpdate();
+  if (r && r.reason === 'busy') return;
   if (!r || r.ok === false) {
     autoFailed = v;
     engine.event({ key: 'upd.autoFailed', sev: 'watch', watcher: 'gate', params: { v } });
   }
 }
 
+let installing = false;
 async function installUpdate() {
   if (!updateInfo || updateInfo.status !== 'newer') return { ok: false };
+  if (installing) return { ok: false, reason: 'busy' };
+  installing = true;
+  try { return await installUpdateNow(); } finally { installing = false; }
+}
+async function installUpdateNow() {
   // Only the installed Windows app updates itself; otherwise open the download page.
   if (process.platform === 'win32' && app.isPackaged) {
     const r = await updater.install(updateInfo);
@@ -310,6 +322,27 @@ async function installUpdate() {
   }
   if (updateInfo.page && /^https:\/\/github\.com\//.test(updateInfo.page)) shell.openExternal(updateInfo.page);
   return { ok: true, page: true };
+}
+
+// ---------- live view: a light push once a second, only while the window shows it ----------
+let liveTimer = null;
+let liveSince = 0;
+function setLiveWatching(on, since) {
+  clearInterval(liveTimer);
+  liveTimer = null;
+  if (!engine) return;
+  if (!on) { engine.setLiveWatching(false); return; }
+  liveSince = Number.isFinite(since) && since > 0 ? Math.floor(since) : 0;
+  const tick = () => {
+    const visible = !!(win && !win.isDestroyed() && win.isVisible() && !win.isMinimized());
+    engine.setLiveWatching(visible);
+    if (!visible) return;
+    const v = engine.liveView(liveSince);
+    liveSince = v.seq;
+    win.webContents.send('agathos:live', v);
+  };
+  tick();
+  liveTimer = setInterval(tick, 1000);
 }
 
 // ---------- IPC: a short, fixed list of calls ----------
@@ -396,6 +429,7 @@ function wireIpc() {
     engine.applySchedule();
     return store.settings;
   });
+  h('liveWatch', (on, since) => { setLiveWatching(on === true, Number(since) || 0); return true; });
   h('reveal', (p) => { if (typeof p === 'string' && path.isAbsolute(p)) shell.showItemInFolder(p); return true; });
 }
 

@@ -43,6 +43,8 @@ contextBridge.exposeInMainWorld('agathos', {
   checkUpdate: call('checkUpdate'),
   installUpdate: call('installUpdate'),
   closeMini: call('closeMini'),
+  liveWatch: call('liveWatch'),
+  onLive: (fn) => { const h = (_e, v) => fn(v); ipcRenderer.on('agathos:live', h); return () => ipcRenderer.removeListener('agathos:live', h); },
   onUpdate: (fn) => { const h = (_e, snap) => fn(snap); ipcRenderer.on('agathos:update', h); return () => ipcRenderer.removeListener('agathos:update', h); },
   onNavigate: (fn) => ipcRenderer.on('agathos:navigate', (_e, view) => fn(view)),
 });

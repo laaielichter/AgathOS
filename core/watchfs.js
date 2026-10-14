@@ -7,11 +7,12 @@ const path = require('path');
 const U = require('./util');
 
 class FileWatch {
-  constructor({ onConfigChange, onMassDelete, onInstructionChange, threshold = 40, windowMs = 10000 }) {
+  constructor({ onConfigChange, onMassDelete, onInstructionChange, onActivity, threshold = 40, windowMs = 10000 }) {
     this.watchers = [];
     this.onConfigChange = onConfigChange;
     this.onMassDelete = onMassDelete;
     this.onInstructionChange = onInstructionChange;
+    this.onActivity = onActivity;           // (folder, deleted) for the live chart; names only
     this.threshold = threshold;
     this.windowMs = windowMs;
     this.deletes = new Map();   // top folder -> [timestamps]
@@ -56,7 +57,9 @@ class FileWatch {
           if (/^(claude|agents|gemini)\.md$|^\.cursorrules$|^\.mcp\.json$|^skill\.md$/.test(base)) {
             this.debounced(full, () => this.onInstructionChange && this.onInstructionChange(full));
           }
-          if (type === 'rename' && !U.exists(full)) this.countDelete(root, rel);
+          const gone = type === 'rename' && !U.exists(full);
+          if (this.onActivity) { try { this.onActivity(/[\\/]/.test(rel) ? path.join(root, rel.split(/[\\/]/)[0]) : root, gone); } catch (_) {} }
+          if (gone) this.countDelete(root, rel);
         });
         w.on('error', () => {});
         this.watchers.push(w);

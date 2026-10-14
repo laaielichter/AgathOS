@@ -40,9 +40,19 @@ const AGENTS = [
     dirs: ['%USERPROFILE%\\.openclaw'] },
   { id: 'amazon-q', name: 'Amazon Q CLI', kind: 'cli', root: true,
     match: (n, c) => n === 'q.exe' || n === 'qchat.exe' || /\bq(\.exe)? chat\b/.test(c), dirs: ['%USERPROFILE%\\.aws\\amazonq'] },
-  { id: 'grok', name: 'Grok CLI / Grok Build', kind: 'cli', root: true,
-    match: (n, c, exe) => n === 'grok.exe' || /[\\/]\.grok[\\/]bin[\\/]/.test(exe) || /grok-dev|@vibe-kit[\\/]grok-cli|grok-cli[\\/]dist/.test(c),
-    dirs: ['%USERPROFILE%\\.grok'], version: ['grok', ['--version']] },
+  // Grok Bot (xAI, built with Cursor): a desktop app where AI teammates ("Bots") do their work, mostly on their own cloud computer.
+  // The app is Electron: one program name for the window and its helpers. Mac: "Grok Bot.app"; settings in Application Support/Grok Bot.
+  { id: 'grok-bot', name: 'Grok Bot', kind: 'desktop', root: true, helpers: true, cloud: true,
+    match: (n, c, exe) => /^grok[ _-]?bot\.exe$/.test(n) || /grok bot\.app\/contents\/macos\/[^/]+$/.test(exe),
+    dirs: ['%APPDATA%\\Grok Bot', '%APPDATA%\\com.anysphere.sand'] },
+  // Grok Build (xAI). Windows: grok.exe (and agent.exe, the same program) in ~/.grok/bin. Mac and Linux: "grok" and "agent"
+  // are links to ~/.grok/downloads/grok-<system>, and the system then shows the real file name (or, with Homebrew,
+  // grok-<version>-macos-aarch64). The older community "Grok CLI" runs on Node. grove*.exe next to grok.exe are helpers, not the agent.
+  { id: 'grok', name: 'Grok Build', kind: 'cli', root: true, helpers: true,
+    match: (n, c, exe) => n === 'grok.exe' || /^grok-([\d.]+-)?(macos|linux|windows)-/.test(n) ||
+      /[\\/]\.grok[\\/](bin[\\/](grok|agent)(\.exe)?$|downloads[\\/]grok-)/.test(exe) ||
+      (!/grok bot/.test(c) && /^"?([^\s"]*[\\/])?grok(\.exe)?"?(\s|$)/.test(c)) || /grok-dev|@vibe-kit[\\/]grok-cli|grok-cli[\\/]dist/.test(c),
+    dirs: ['%GROK_HOME%'], version: ['grok', ['--version']], transcripts: 'grok' },
   { id: 'kiro-cli', name: 'Kiro CLI', kind: 'cli', root: true,
     match: (n) => n === 'kiro-cli.exe' || n === 'kiro-cli-chat.exe', dirs: [] },
   { id: 'amp', name: 'Amp', kind: 'cli', root: true,
@@ -136,6 +146,7 @@ const MCP_CONFIGS = [
   { app: 'Continue', path: '%USERPROFILE%\\.continue\\config.json', format: 'json' },
   { app: 'Antigravity', path: '%USERPROFILE%\\.gemini\\antigravity\\mcp_config.json', format: 'json' },
   { app: 'LM Studio', path: '%USERPROFILE%\\.lmstudio\\mcp.json', format: 'json' },
+  { app: 'Grok Build', path: '%GROK_HOME%\\config.toml', format: 'toml' },
   { app: 'Grok CLI', path: '%USERPROFILE%\\.grok\\user-settings.json', format: 'json' },
   { app: 'Kiro', path: '%USERPROFILE%\\.kiro\\settings\\mcp.json', format: 'json' },
   { app: 'Amp', path: '%USERPROFILE%\\.config\\amp\\settings.json', format: 'json' },
@@ -162,11 +173,16 @@ const RISKY_CONFIG_KEYS = [
   { re: /"autoAccept"\s*:\s*true/, key: 'autoAccept' },
   { re: /"yolo"\s*:\s*true/i, key: 'yolo' },
   { re: /"alwaysAllow"\s*:\s*\[\s*"[^"]/, key: 'alwaysAllow' },
+  // Grok Build (~/.grok/config.toml). A project file may only add MCP servers, plugins and [permission] rules, so these two are for the user file.
+  { re: /^\s*permission_mode\s*=\s*["']always-approve["']/m, key: 'permission_mode = "always-approve"', userOnly: true },
+  { re: /^\s*yolo\s*=\s*true\b/im, key: 'yolo = true', userOnly: true },
+  // A [permission] rule that allows every shell command: { action = "allow", tool = "bash" } without a pattern (or with pattern = "*").
+  { re: /\{(?=[^{}]*\baction\s*=\s*["']allow["'])(?=[^{}]*\btool\s*=\s*["']bash["'])(?![^{}]*\bpattern\s*=\s*["'](?!\*+["']))[^{}]*\}/i, key: '[permission] allow bash' },
 ];
 
 // Environment overrides that send an agent's traffic (and API key) elsewhere.
 const BASE_URL_VARS = ['ANTHROPIC_BASE_URL', 'OPENAI_BASE_URL', 'OPENAI_API_BASE', 'GOOGLE_GEMINI_BASE_URL', 'GEMINI_BASE_URL', 'XAI_BASE_URL',
-  'GROQ_BASE_URL', 'OPENROUTER_BASE_URL', 'MISTRAL_BASE_URL', 'DEEPSEEK_BASE_URL', 'TOGETHER_BASE_URL', 'AZURE_OPENAI_ENDPOINT'];
+  'GROK_XAI_API_BASE_URL', 'GROK_MODELS_BASE_URL', 'GROQ_BASE_URL', 'OPENROUTER_BASE_URL', 'MISTRAL_BASE_URL', 'DEEPSEEK_BASE_URL', 'TOGETHER_BASE_URL', 'AZURE_OPENAI_ENDPOINT'];
 // Official API hosts of the big AI providers (a base URL pointing elsewhere is suspicious).
 const AI_PROVIDER_HOSTS = ['anthropic.com', 'openai.com', 'googleapis.com', 'azure.com', 'openai.azure.com', 'amazonaws.com', 'x.ai', 'grok.com',
   'groq.com', 'openrouter.ai', 'mistral.ai', 'deepseek.com', 'together.xyz', 'together.ai', 'perplexity.ai', 'cohere.ai', 'cohere.com',
@@ -176,11 +192,12 @@ const OFFICIAL_HOSTS = new RegExp(`(^|\\.)(${AI_PROVIDER_HOSTS.map((h) => h.repl
 
 // ---------- Instruction files (read by agents as orders) ----------
 const INSTRUCTION_FILES = new Set(['claude.md', 'agents.md', 'gemini.md', 'qwen.md', '.cursorrules', '.windsurfrules',
-  '.clinerules', 'copilot-instructions.md', 'skill.md', 'conventions.md', '.goosehints', 'agent.md']);
+  '.clinerules', 'copilot-instructions.md', 'skill.md', 'conventions.md', '.goosehints', 'agent.md', 'claude.local.md']);
 const INSTRUCTION_DIR_HINTS = [/[\\/]\.cursor[\\/]rules[\\/]/i, /[\\/]\.clinerules[\\/]/i, /[\\/]\.roo[\\/]rules/i,
-  /[\\/]\.claude[\\/](commands|agents|skills)[\\/]/i, /[\\/]\.github[\\/]instructions[\\/]/i];
+  /[\\/]\.claude[\\/](commands|agents|skills)[\\/]/i, /[\\/]\.github[\\/]instructions[\\/]/i,
+  /[\\/]\.grok[\\/](rules|skills|commands|agents)[\\/]/i];
 const SKILL_DIRS = ['%USERPROFILE%\\.claude\\skills', '%USERPROFILE%\\.openclaw\\skills', '%USERPROFILE%\\.agents\\skills',
-  '%USERPROFILE%\\.codex\\skills', '%USERPROFILE%\\.claude\\plugins'];
+  '%USERPROFILE%\\.codex\\skills', '%USERPROFILE%\\.claude\\plugins', '%GROK_HOME%\\skills', '%GROK_HOME%\\plugins'];
 
 // ---------- Local AI servers ----------
 const AI_PORTS = {
@@ -208,7 +225,7 @@ const MIN_VERSIONS = {
 // Dangerous start flags. These turned AI CLIs into tools for the Nx malware.
 const DANGEROUS_FLAGS = ['--dangerously-skip-permissions', '--yolo', '--trust-all-tools', '--dangerously-bypass-approvals-and-sandbox',
   '--full-auto', '--no-confirm', '--yes-always', '--auto-approve', '--allow-all-tools', '--approval-mode yolo', '--approval-mode=yolo',
-  '--dangerously-allow-all', '--skip-permissions-unsafe', '--trust-tools', '--accept-all', '--auto-accept', '--no-ask'];
+  '--dangerously-allow-all', '--skip-permissions-unsafe', '--trust-tools', '--accept-all', '--auto-accept', '--no-ask', '--always-approve'];
 
 // Sensitive locations: an agent reading these is "touching private data".
 const SENSITIVE_PATHS = [
