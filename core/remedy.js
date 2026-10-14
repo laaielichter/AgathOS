@@ -316,7 +316,7 @@ function detectIndent(text) {
   return m ? m[1] : 2;
 }
 function parseStrict(text) {
-  try { return JSON.parse(text.replace(/^﻿/, '')); } catch (_) { return undefined; }
+  try { return JSON.parse(text.replace(/^\uFEFF/, '')); } catch (_) { return undefined; }
 }
 
 const JSON_CONTAINERS = [['mcpServers'], ['servers'], ['amp.mcpServers'], ['context_servers'], ['mcp', 'servers'], ['mcp'], ['mcp.servers']];
@@ -402,12 +402,12 @@ function cutTomlServer(text, name) {
 }
 
 // ---------- files ----------
-const STRIP = /[​-‍⁠-⁤᠎­‪-‮⁦-⁩]|[\u{E0000}-\u{E007F}]/gu;
+const STRIP = /[\u200B-\u200D\u2060-\u2064\u180E\u00AD\u202A-\u202E\u2066-\u2069]|[\u{E0000}-\u{E007F}]/gu;
 function cleanFile(storeDir, file) {
   if (!file || !path.isAbsolute(file)) return { ok: false, error: 'path' };
   const text = fs.readFileSync(file, 'utf8');
-  const bom = text.charCodeAt(0) === 0xfeff ? '﻿' : '';
-  const cleaned = bom + text.slice(bom.length).replace(STRIP, '').replace(/﻿/g, '');
+  const bom = text.charCodeAt(0) === 0xfeff ? '\uFEFF' : '';
+  const cleaned = bom + text.slice(bom.length).replace(STRIP, '').replace(/\uFEFF/g, '');
   if (cleaned === text) return { ok: false, error: 'nothing to clean' };
   const backup = backupCopy(storeDir, file);
   fs.writeFileSync(file, cleaned);

@@ -84,8 +84,8 @@ class Reader {
 const readAt = zip.readAt;
 
 // ---------- showing what is found ----------
-const ZW = /[​-‍⁠-⁤﻿᠎­]/gu;
-const BIDI = /[‪-‮⁦-⁩]/gu;
+const ZW = /[\u200B-\u200D\u2060-\u2064\uFEFF\u180E\u00AD]/gu;
+const BIDI = /[\u202A-\u202E\u2066-\u2069]/gu;
 const TAG = /[\u{E0000}-\u{E007F}]/gu;
 const mark = (ch) => `‹U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}›`;
 // Text of a file for the window: invisible characters are made visible, control characters are dots, long text is cut.
