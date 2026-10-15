@@ -1,0 +1,21 @@
+name: Something does not work
+description: A bug, a wrong warning or a screen that looks wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System and AgathOS version
+      placeholder: Windows 11 or macOS 15, AgathOS 0.13.0
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Screenshot or steps to repeat it (no real keys or private files)
