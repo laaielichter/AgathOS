@@ -106,7 +106,7 @@
     'an.generic.risk': 'Não é certo que seja perigoso, mas vale uma olhada.',
     'an.generic.todo': 'Veja se você reconhece. Aprove ou ignore se estiver tudo bem.',
 
-    'wel.title': 'Bem-vindo ao AgathOS', 'wel.sub': 'O daemon do bem para os seus agentes de IA locais. Configure uma vez; você pode mudar tudo depois em Configurações.',
+    'wel.title': 'Bem-vindo ao AgathOS', 'wel.sub': 'O guardião do bem para os seus agentes de IA locais. Configure uma vez; você pode mudar tudo depois em Configurações.',
     'wel.lang': 'Idioma', 'wel.mode': 'Visualização', 'wel.modeAdv': 'Todos os detalhes: notas, processos, previsões. Recomendado.', 'wel.modeSimple': 'Só o que você precisa saber, em palavras simples.',
     'wel.live': 'Verificação ao vivo', 'wel.liveDesc': 'Vigia agentes, servidores MCP, arquivos e portas em segundo plano.',
     'wel.startup': 'Iniciar com o Windows', 'wel.startupDesc': 'Inicia discretamente na bandeja do sistema.',

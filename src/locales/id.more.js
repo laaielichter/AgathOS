@@ -106,7 +106,7 @@
     'an.generic.risk': 'Belum pasti berbahaya, tetapi layak dilihat.',
     'an.generic.todo': 'Periksa apakah Anda mengenalinya. Setujui atau abaikan jika memang wajar.',
 
-    'wel.title': 'Selamat datang di AgathOS', 'wel.sub': 'Daemon baik untuk agen AI lokal Anda. Atur sekali; semuanya bisa diubah nanti di Pengaturan.',
+    'wel.title': 'Selamat datang di AgathOS', 'wel.sub': 'Penjaga yang baik untuk agen AI lokal Anda. Atur sekali; semuanya bisa diubah nanti di Pengaturan.',
     'wel.lang': 'Bahasa', 'wel.mode': 'Tampilan', 'wel.modeAdv': 'Setiap detail: skor, proses, prediksi. Disarankan.', 'wel.modeSimple': 'Hanya yang perlu Anda ketahui, dengan kata-kata sederhana.',
     'wel.live': 'Pemindai langsung', 'wel.liveDesc': 'Mengawasi agen, server MCP, berkas, dan port di latar belakang.',
     'wel.startup': 'Mulai bersama Windows', 'wel.startupDesc': 'Mulai diam-diam di baki sistem.',

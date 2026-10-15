@@ -106,7 +106,7 @@
     'an.generic.risk': '위험하다고 확실하지는 않지만 살펴볼 만합니다.',
     'an.generic.todo': '아는 것인지 확인하세요. 괜찮다면 승인하거나 무시하세요.',
 
-    'wel.title': 'AgathOS에 오신 것을 환영합니다', 'wel.sub': '로컬 AI 에이전트를 위한 착한 데몬. 한 번만 설정하면 되고, 나중에 설정에서 모두 바꿀 수 있습니다.',
+    'wel.title': 'AgathOS에 오신 것을 환영합니다', 'wel.sub': '로컬 AI 에이전트를 위한 든든한 수호자. 한 번만 설정하면 되고, 나중에 설정에서 모두 바꿀 수 있습니다.',
     'wel.lang': '언어', 'wel.mode': '보기', 'wel.modeAdv': '모든 세부 정보: 점수, 프로세스, 예측. 추천.', 'wel.modeSimple': '꼭 알아야 할 것만 쉬운 말로.',
     'wel.live': '실시간 검사', 'wel.liveDesc': '에이전트, MCP 서버, 파일, 포트를 백그라운드에서 감시합니다.',
     'wel.startup': 'Windows와 함께 시작', 'wel.startupDesc': '시스템 트레이에서 조용히 시작합니다.',

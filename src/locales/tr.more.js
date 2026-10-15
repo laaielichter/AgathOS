@@ -158,7 +158,7 @@
     "an.generic.risk": "Tehlikeli olduğu kesin değil, ama bakmaya değer.",
     "an.generic.todo": "Tanıyıp tanımadığını kontrol et. Sorun yoksa onayla ya da yoksay.",
     "wel.title": "AgathOS’a hoş geldin",
-    "wel.sub": "Yerel yapay zekâ ajanların için iyi daemon. Bir kez kur; her şeyi sonra Ayarlar’dan değiştirebilirsin.",
+    "wel.sub": "Yerel yapay zekâ ajanların için iyi bir koruyucu. Bir kez kur; her şeyi sonra Ayarlar’dan değiştirebilirsin.",
     "wel.lang": "Dil",
     "wel.mode": "Görünüm",
     "wel.modeAdv": "Her ayrıntı: puanlar, süreçler, tahminler. Önerilir.",

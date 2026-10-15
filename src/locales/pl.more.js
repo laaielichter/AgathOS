@@ -158,7 +158,7 @@
     "an.generic.risk": "Nie ma pewności, że jest to niebezpieczne, ale warto na to spojrzeć.",
     "an.generic.todo": "Sprawdź, czy to rozpoznajesz. Jeśli jest w porządku, zatwierdź lub zignoruj.",
     "wel.title": "Witaj w AgathOS",
-    "wel.sub": "Dobry demon dla Twoich lokalnych agentów AI. Skonfiguruj go raz; wszystko możesz później zmienić w Ustawieniach.",
+    "wel.sub": "Dobry strażnik dla Twoich lokalnych agentów AI. Skonfiguruj go raz; wszystko możesz później zmienić w Ustawieniach.",
     "wel.lang": "Język",
     "wel.mode": "Widok",
     "wel.modeAdv": "Każdy szczegół: oceny, procesy, przewidywania. Zalecane.",

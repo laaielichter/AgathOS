@@ -106,7 +106,7 @@
     'an.generic.risk': 'Het is niet zeker dat het gevaarlijk is, maar het is het nakijken waard.',
     'an.generic.todo': 'Check of je het herkent. Is het in orde? Keur het goed of negeer het.',
 
-    'wel.title': 'Welkom bij AgathOS', 'wel.sub': 'De goede daemon voor je lokale AI-agents. Stel het één keer in; alles kun je later aanpassen bij Instellingen.',
+    'wel.title': 'Welkom bij AgathOS', 'wel.sub': 'De goede bewaker voor je lokale AI-agents. Stel het één keer in; alles kun je later aanpassen bij Instellingen.',
     'wel.lang': 'Taal', 'wel.mode': 'Weergave', 'wel.modeAdv': 'Alle details: scores, processen, voorspellingen. Aanbevolen.', 'wel.modeSimple': 'Alleen wat je moet weten, in gewone woorden.',
     'wel.live': 'Live scanner', 'wel.liveDesc': 'Bewaakt agents, MCP-servers, bestanden en poorten op de achtergrond.',
     'wel.startup': 'Starten met Windows', 'wel.startupDesc': 'Start stil in het systeemvak.',
