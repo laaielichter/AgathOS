@@ -106,7 +106,7 @@
     'an.generic.risk': 'Ce n’est pas forcément dangereux, mais cela vaut le coup d’œil.',
     'an.generic.todo': 'Vérifiez si vous le reconnaissez. Approuvez-le ou ignorez-le si tout va bien.',
 
-    'wel.title': 'Bienvenue dans AgathOS', 'wel.sub': 'Le bon démon pour vos agents d’IA locaux. Configurez-le une fois ; vous pourrez tout changer plus tard dans Réglages.',
+    'wel.title': 'Bienvenue dans AgathOS', 'wel.sub': 'Le bon gardien pour vos agents d’IA locaux. Configurez-le une fois ; vous pourrez tout changer plus tard dans Réglages.',
     'wel.lang': 'Langue', 'wel.mode': 'Affichage', 'wel.modeAdv': 'Tous les détails : scores, processus, prédictions. Recommandé.', 'wel.modeSimple': 'Seulement l’essentiel, en mots simples.',
     'wel.live': 'Analyse en direct', 'wel.liveDesc': 'Surveille les agents, les serveurs MCP, les fichiers et les ports en arrière-plan.',
     'wel.startup': 'Démarrer avec Windows', 'wel.startupDesc': 'Démarre discrètement dans la zone de notification.',

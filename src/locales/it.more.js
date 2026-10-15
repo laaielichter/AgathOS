@@ -158,7 +158,7 @@
     "an.generic.risk": "Non è certo che sia pericoloso, ma vale la pena dargli un’occhiata.",
     "an.generic.todo": "Controlla se lo riconosci. Approvalo o ignoralo se va bene.",
     "wel.title": "Benvenuto in AgathOS",
-    "wel.sub": "Il buon demone per i tuoi agenti IA locali. Configuralo una volta; potrai cambiare tutto più tardi in Impostazioni.",
+    "wel.sub": "Il buon custode per i tuoi agenti IA locali. Configuralo una volta; potrai cambiare tutto più tardi in Impostazioni.",
     "wel.lang": "Lingua",
     "wel.mode": "Vista",
     "wel.modeAdv": "Ogni dettaglio: punteggi, processi, previsioni. Consigliata.",

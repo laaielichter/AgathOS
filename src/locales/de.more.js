@@ -106,7 +106,7 @@
     'an.generic.risk': 'Es ist nicht sicher, dass es gefährlich ist, aber es lohnt einen Blick.',
     'an.generic.todo': 'Prüfe, ob du es kennst. Gib es frei oder ignoriere es, wenn alles in Ordnung ist.',
 
-    'wel.title': 'Willkommen bei AgathOS', 'wel.sub': 'Der gute Daemon für deine lokalen KI-Agenten. Einmal einrichten; alles lässt sich später in den Einstellungen ändern.',
+    'wel.title': 'Willkommen bei AgathOS', 'wel.sub': 'Der gute Wächter für deine lokalen KI-Agenten. Einmal einrichten; alles lässt sich später in den Einstellungen ändern.',
     'wel.lang': 'Sprache', 'wel.mode': 'Ansicht', 'wel.modeAdv': 'Jedes Detail: Werte, Prozesse, Vorhersagen. Empfohlen.', 'wel.modeSimple': 'Nur was du wissen musst, in einfachen Worten.',
     'wel.live': 'Live-Scanner', 'wel.liveDesc': 'Überwacht Agenten, MCP-Server, Dateien und Ports im Hintergrund.',
     'wel.startup': 'Mit Windows starten', 'wel.startupDesc': 'Startet leise im Infobereich.',

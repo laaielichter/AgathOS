@@ -106,7 +106,7 @@
     'an.generic.risk': '不一定有危险，但值得看一看。',
     'an.generic.todo': '检查你是否认识它。如果没问题，就批准或忽略它。',
 
-    'wel.title': '欢迎使用 AgathOS', 'wel.sub': '守护你本地 AI 智能体的好守护进程。只需设置一次；之后可以在“设置”中随时更改。',
+    'wel.title': '欢迎使用 AgathOS', 'wel.sub': '你本地 AI 智能体的好守卫。只需设置一次；之后可以在“设置”中随时更改。',
     'wel.lang': '语言', 'wel.mode': '视图', 'wel.modeAdv': '所有细节：分数、进程、预测。推荐。', 'wel.modeSimple': '只显示你需要知道的内容，用简单的话说明。',
     'wel.live': '实时扫描', 'wel.liveDesc': '在后台监视智能体、MCP 服务器、文件和端口。',
     'wel.startup': '随 Windows 启动', 'wel.startupDesc': '在系统托盘中安静启动。',

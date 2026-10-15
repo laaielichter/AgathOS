@@ -106,7 +106,7 @@
     'an.generic.risk': 'It is not certain that it is dangerous, but it is worth a look.',
     'an.generic.todo': 'Check whether you recognise it. Approve or ignore it if it is fine.',
 
-    'wel.title': 'Welcome to AgathOS', 'wel.sub': 'The good daemon for your local AI agents. Set it up once; you can change everything later in Settings.',
+    'wel.title': 'Welcome to AgathOS', 'wel.sub': 'The good guardian for your local AI agents. Set it up once; you can change everything later in Settings.',
     'wel.lang': 'Language', 'wel.mode': 'View', 'wel.modeAdv': 'Every detail: scores, processes, predictions. Recommended.', 'wel.modeSimple': 'Only what you need to know, in plain words.',
     'wel.live': 'Live scanner', 'wel.liveDesc': 'Watches agents, MCP servers, files and ports in the background.',
     'wel.startup': 'Start with Windows', 'wel.startupDesc': 'Starts quietly in the system tray.',

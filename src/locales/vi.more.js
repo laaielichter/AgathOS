@@ -158,7 +158,7 @@
     "an.generic.risk": "Chưa chắc là nguy hiểm, nhưng đáng xem qua.",
     "an.generic.todo": "Kiểm tra xem bạn có nhận ra nó không. Nếu ổn thì hãy duyệt hoặc bỏ qua.",
     "wel.title": "Chào mừng đến với AgathOS",
-    "wel.sub": "Vị thần hộ mệnh tốt lành cho các tác nhân AI cục bộ của bạn. Thiết lập một lần; sau này bạn có thể đổi mọi thứ trong Cài đặt.",
+    "wel.sub": "Người bảo vệ tốt cho các tác nhân AI cục bộ của bạn. Thiết lập một lần; sau này bạn có thể đổi mọi thứ trong Cài đặt.",
     "wel.lang": "Ngôn ngữ",
     "wel.mode": "Chế độ xem",
     "wel.modeAdv": "Mọi chi tiết: điểm số, tiến trình, dự đoán. Khuyến nghị.",

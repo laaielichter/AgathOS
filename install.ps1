@@ -50,7 +50,7 @@ foreach ($lnk in $desktop, $startMenu) {
   $s.Arguments = '"' + $dst + '"'
   $s.WorkingDirectory = $dst
   $s.IconLocation = "$ico,0"
-  $s.Description = 'AgathOS - the good daemon for your local AI agents'
+  $s.Description = 'AgathOS - the good guardian for your local AI agents'
   $s.Save()
 }
 

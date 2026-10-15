@@ -1,6 +1,6 @@
 # AgathOS
 
-**The good daemon for your local AI agents.**
+**The good guardian for your local AI agents.**
 
 [![Tests](https://github.com/laaielichter/AgathOS/actions/workflows/tests.yml/badge.svg)](https://github.com/laaielichter/AgathOS/actions/workflows/tests.yml)
 
@@ -11,10 +11,8 @@ ARM) and macOS (Apple chip and Intel). See [Install](#install).
 
 *All screenshots in this README show demo data, not a real PC.*
 
-The ancient Greeks believed every home had an *Agathos Daimon*: a good spirit that
-quietly watched over the house and the people in it. In computing, a *daemon* is a
-program that runs in the background. AgathOS is both: a free, open-source app for Windows and macOS
-that keeps watching the AI agents on your PC, warns you before they do damage, and gives
+*Agathos* is Greek for *good*. AgathOS is a free, open-source app for Windows and macOS
+that quietly keeps watching the AI agents on your PC, warns you before they do damage, and gives
 you a real stop button.
 
 Nothing leaves your PC. No account, no cloud, no telemetry. The one thing AgathOS asks the internet is whether a
