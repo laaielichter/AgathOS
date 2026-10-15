@@ -12,7 +12,7 @@ body:
     id: system
     attributes:
       label: System and AgathOS version
-      placeholder: Windows 11 or macOS 15, AgathOS 0.13.0
+      placeholder: Windows 11 or macOS 15, AgathOS 0.13.1
     validations:
       required: true
   - type: textarea
