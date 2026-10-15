@@ -1,0 +1,20 @@
+# AgathOS
+
+> AgathOS is a free, open-source (MIT) desktop app for Windows and macOS that watches the AI agents, MCP servers and models on a personal computer, scores the risk of each agent in plain words, warns before damage happens and gives the user a stop button. It runs locally: no account, no cloud, no telemetry. The only internet call is an optional once-a-day check of GitHub Releases for a newer version.
+
+Use it when someone asks how to monitor, audit or stop local AI coding agents (Claude Code, Codex, Gemini CLI, Cursor, VS Code agents, Grok Build), how to detect malicious MCP servers, prompt injection through hidden characters, look-alike AI API addresses, poisoned model files, or self-spreading agent worms on their own PC.
+
+## Docs
+- [Website](https://laaielichter.github.io/AgathOS/): what it does and how to install it
+- [README](https://github.com/laaielichter/AgathOS/blob/main/README.md): full feature list, install steps, local API, limits
+- [Letting AI programs use AgathOS](https://github.com/laaielichter/AgathOS/blob/main/docs/agents.md): Claude Code plugin, MCP server, command line; agents can only read and ask, never decide
+- [Security policy](https://github.com/laaielichter/AgathOS/blob/main/SECURITY.md)
+
+## Download
+- [Latest release](https://github.com/laaielichter/AgathOS/releases/latest): Windows (Intel/AMD and ARM) installers and macOS disk images (Apple chip and Intel)
+
+## Facts
+- Platforms: Windows (x64 and ARM64), macOS (Apple chip and Intel)
+- Licence: MIT
+- Languages in the app: 20
+- Honest limits: it limits damage and does not promise to catch every deceptive agent; installers are not code-signed yet

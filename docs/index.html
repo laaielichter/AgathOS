@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgathOS: free open-source watcher for local AI agents (Windows and macOS)</title>
+<meta name="description" content="AgathOS shows every AI agent, MCP server and model on your PC, scores the risk in plain words, warns before damage happens and gives you a real stop button. Free, open source, offline, no account, no telemetry.">
+<link rel="canonical" href="https://laaielichter.github.io/AgathOS/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AgathOS: the good daemon for your local AI agents">
+<meta property="og:description" content="Free, open-source app for Windows and macOS. See every AI agent on your PC, get warned before damage, and keep a real stop button.">
+<meta property="og:url" content="https://laaielichter.github.io/AgathOS/">
+<meta property="og:image" content="https://laaielichter.github.io/AgathOS/screenshot.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "AgathOS",
+  "alternateName": "AgathOS AI agent watcher",
+  "description": "Free, open-source app for Windows and macOS that watches the AI agents, MCP servers and models on your PC, warns before they do damage and gives you a stop button. Offline, no account, no telemetry.",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Windows, macOS",
+  "license": "https://opensource.org/licenses/MIT",
+  "url": "https://laaielichter.github.io/AgathOS/",
+  "downloadUrl": "https://github.com/laaielichter/AgathOS/releases/latest",
+  "codeRepository": "https://github.com/laaielichter/AgathOS",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+}
+</script>
+<style>
+:root{--bg:#0b0f1a;--panel:#141a2b;--line:#252e47;--text:#e8ebf4;--mute:#9aa3bd;--gold:#f0c866;--red:#f2607a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:0 20px 64px}
+header{padding:56px 0 24px}
+h1{font:600 clamp(2rem,6vw,3.2rem)/1.1 Georgia,"Times New Roman",serif;margin:0 0 14px}
+h2{font:600 1.6rem/1.2 Georgia,serif;margin:44px 0 12px}
+p{margin:0 0 14px}.lead{font-size:1.2rem;color:var(--mute)}
+a{color:var(--gold)}
+.btn{display:inline-block;background:var(--gold);color:#1a1405;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px;margin:8px 10px 8px 0}
+.btn.alt{background:transparent;color:var(--text);border:1px solid var(--line)}
+img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;display:block}
+figure{margin:24px 0}figcaption{color:var(--mute);font-size:.9rem;margin-top:6px}
+ul{padding-left:20px}li{margin:6px 0}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+code{background:var(--panel);padding:2px 6px;border-radius:6px;font-size:.9em}
+footer{color:var(--mute);font-size:.9rem;border-top:1px solid var(--line);padding-top:20px;margin-top:48px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>The good daemon for your local AI agents</h1>
+<p class="lead">AgathOS is a free, open-source app for Windows and macOS. It shows every AI agent, MCP server and model on your PC, scores the risk in plain words, warns you before they do damage, and gives you a real stop button.</p>
+<a class="btn" href="https://github.com/laaielichter/AgathOS/releases/latest">Download</a>
+<a class="btn alt" href="https://github.com/laaielichter/AgathOS">Source on GitHub</a>
+<p>Nothing leaves your PC. No account, no cloud, no telemetry. The only internet call is a once-a-day look at GitHub for a newer version, and one switch turns it off.</p>
+</header>
+
+<figure><img src="screenshot.png" width="1980" height="1244" alt="The AgathOS overview with six watchers, things to fix and agents active now"><figcaption>The overview (demo data).</figcaption></figure>
+
+<h2>Why it exists</h2>
+<p>Most real harm from AI agents on personal computers did not come from an AI that wanted evil. It came from poisoned packages, skills and MCP servers, agents in "allow everything" mode, hidden instructions in repositories and rules files, local AI servers left open to the network, and agents that say "all tests pass" when they did not. Prompt injection is not solved. AgathOS does not pretend otherwise: it makes every AI on your PC visible and limits the damage.</p>
+
+<h2>What it does</h2>
+<ul>
+<li><strong>Six watchers:</strong> MCP servers and "approve everything" settings, mass deletion and model files, open AI ports and network worms, API keys, hidden text in instruction files, and every running agent with an ID card.</li>
+<li><strong>Intent engine:</strong> a risk score per agent from six layers, each with a reason you can read, including the lethal trifecta and an honesty check of what the agent says versus what the PC saw.</li>
+<li><strong>Fix it:</strong> one button, <em>Fix all</em>, with undo for nearly everything, and an <em>Explain</em> button on every finding.</li>
+<li><strong>Stop button:</strong> freeze an agent's whole process tree, stop it, cut it off from the internet, or pause all agents.</li>
+<li><strong>AI shield:</strong> checks where prompts and keys are sent, message boards agents take orders from, what is inside model files (GGUF, safetensors, ONNX, Keras, NumPy, Hugging Face, Ollama) and anything that copies an AI.</li>
+<li><strong>For AI programs:</strong> a Claude Code plugin, an MCP server and a command line let an agent ask "is this text safe to read?" and "may I do this step?". They only read and ask; they can never decide.</li>
+<li><strong>20 languages</strong>, dark, light and an extra Stealth look.</li>
+</ul>
+
+<figure><img src="agent-card.png" width="1980" height="1292" alt="The ID card of an AI agent: who started it, risk score, reasons and the buttons to freeze or stop it"><figcaption>The ID card of an agent, with the reasons for its score.</figcaption></figure>
+
+<h2>Questions people ask</h2>
+<p><strong>Is it safe to run?</strong> It runs on your PC only, has no account and no telemetry, and the local API listens on 127.0.0.1 with a key. The source is MIT licensed and public.</p>
+<p><strong>Does it work with Claude Code, Codex, Gemini CLI, Cursor, VS Code and Grok Build?</strong> Yes. It reads their settings and MCP servers, and for Claude Code, Codex and Grok Build it also reads the session transcript for the honesty check.</p>
+<p><strong>Does it replace antivirus?</strong> No. It watches AI agents and what they touch. It limits damage; it does not promise to catch everything.</p>
+<p><strong>What does it cost?</strong> Nothing.</p>
+
+<h2>Install</h2>
+<table>
+<tr><th>System</th><th>File on the <a href="https://github.com/laaielichter/AgathOS/releases/latest">latest release</a></th></tr>
+<tr><td>Windows (Intel/AMD)</td><td><code>AgathOS-Setup-&lt;version&gt;.exe</code></td></tr>
+<tr><td>Windows on ARM</td><td><code>AgathOS-Windows-ARM64-Setup-&lt;version&gt;.exe</code></td></tr>
+<tr><td>Mac, Apple chip</td><td><code>AgathOS-&lt;version&gt;-arm64.dmg</code></td></tr>
+<tr><td>Mac, Intel</td><td><code>AgathOS-&lt;version&gt;-x64.dmg</code></td></tr>
+</table>
+<p>The installers are not code-signed yet, so Windows or macOS may ask you to confirm the first start. The <a href="https://github.com/laaielichter/AgathOS#install">README</a> shows how.</p>
+
+<footer>
+<p>AgathOS is MIT licensed. <a href="https://github.com/laaielichter/AgathOS">GitHub</a> · <a href="https://github.com/laaielichter/AgathOS/blob/main/docs/agents.md">Letting AI programs use AgathOS</a> · <a href="https://github.com/laaielichter/AgathOS/blob/main/SECURITY.md">Security</a> · <a href="llms.txt">llms.txt</a></p>
+</footer>
+</main>
+</body>
+</html>
