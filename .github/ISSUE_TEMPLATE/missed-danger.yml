@@ -1,0 +1,15 @@
+name: AgathOS missed a danger
+description: An attack, file or setting that should have been flagged
+labels: [detection]
+body:
+  - type: textarea
+    id: danger
+    attributes:
+      label: What should have been flagged, and why is it dangerous?
+      description: Describe it. Do not paste real keys or private files.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System and AgathOS version
