@@ -3,7 +3,43 @@
   "productName": "AgathOS",
   "version": "0.13.1",
   "description": "The good guardian for your local AI agents. Finds rogue agents, poisoned MCP servers and hidden instructions on Windows and macOS.",
+  "keywords": [
+    "ai",
+    "ai-agents",
+    "agent-security",
+    "mcp",
+    "prompt-injection",
+    "llm",
+    "security",
+    "claude-code",
+    "codex",
+    "cursor",
+    "windows",
+    "macos"
+  ],
+  "homepage": "https://github.com/laaielichter/AgathOS#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laaielichter/AgathOS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/laaielichter/AgathOS/issues"
+  },
   "main": "main.js",
+  "bin": {
+    "agathos": "bin/agathos.js"
+  },
+  "files": [
+    "bin/",
+    "core/",
+    "src/i18n.js",
+    "src/locales/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "license": "MIT",
   "author": "AgathOS contributors",
   "scripts": {
