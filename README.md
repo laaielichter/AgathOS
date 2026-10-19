@@ -246,7 +246,7 @@ the PC and nothing is sent anywhere. Switch it off in Settings.
 
 **For AI programs (plugin).** Any AI program can use AgathOS, not only watch from outside. A plugin for Claude
 Code (`/plugin marketplace add laaielichter/AgathOS`), an MCP server for every other program that speaks MCP (Codex,
-Gemini CLI, Cursor, VS Code, Claude Desktop and more), a command line and the local API let a program ask: *is this
+Gemini CLI, Cursor, VS Code, Claude Desktop and more), a command line (`npx agathos-os`) and the local API let a program ask: *is this
 text safe to read?*, *is this file?*, *may I do this step?* and, with the app running, *what is wrong on this PC?*
 The program only reads and asks. It never decides: no key, not even the owner key, can pause, resume, approve, release or
 change anything, so what an AI program hears from AgathOS is advice that it can follow or ignore, and a program that
@@ -315,6 +315,19 @@ to `%LOCALAPPDATA%\Programs\AgathOS`, adds shortcuts with the AgathOS icon to th
 the Start menu, and registers an uninstaller under Settings > Apps.
 
 **Just try it.** Double-click `start.bat` to run it from this folder.
+
+**Command line (npm).** The checks also come as a small package on
+[npm](https://www.npmjs.com/package/agathos-os), for scripts, build servers and AI programs. It needs Node.js 18 or newer
+and works on Windows, macOS and Linux, without the app:
+
+```
+npx agathos-os check-text README.md
+npx agathos-os check-action Bash '{"command":"ls"}'
+npm install -g agathos-os     # then just: agathos check-file PATH
+```
+
+Exit code 0 is calm, 1 is watch, 2 is alarm. With the app running and a key from Settings > Agent access
+(`AGATHOS_TOKEN`), `agathos status`, `agents` and `findings` ask the app; `agathos mcp` is the MCP server.
 
 **Windows on ARM** (Snapdragon laptops). Run `AgathOS-Windows-ARM64-Setup-<version>.exe`. It is built and tried out on a real
 ARM Windows machine. The Intel installer runs there too, but slower. The updater picks the right one for your chip.
