@@ -50,7 +50,7 @@
     "dist:mac": "npx --yes electron-builder@26 --mac dmg --arm64 --x64"
   },
   "devDependencies": {
-    "electron": "^44.0.0"
+    "electron": "^45.0.0"
   },
   "agathos": {
     "updateRepo": "laaielichter/AgathOS"
