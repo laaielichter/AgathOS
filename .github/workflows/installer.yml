@@ -28,7 +28,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: node test/run-tests.js
       - run: npx --yes electron-builder@26 --win nsis --x64 --publish never
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: AgathOS-Windows
           path: dist/*.exe
@@ -61,7 +61,7 @@ jobs:
           f="$(ls dist/AgathOS-Setup-*.exe | head -1)"
           mv "$f" "dist/AgathOS-Windows-ARM64-Setup-${f#dist/AgathOS-Setup-}"
           ls dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: AgathOS-Windows-ARM64
           path: dist/AgathOS-Windows-ARM64-Setup-*.exe
@@ -82,7 +82,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: node test/run-tests.js
       - run: npx --yes electron-builder@26 --mac dmg --arm64 --x64 --publish never
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: AgathOS-macOS
           path: dist/*.dmg
