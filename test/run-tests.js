@@ -181,6 +181,19 @@ ok(fsr.files.some((f) => f.path.endsWith('AGENTS.md') && f.state === 'alarm'), '
 ok(fsr.files.some((f) => f.kind === 'env' && f.reasons.some((r) => r.key === 'file.secret')), '.env secret found');
 ok(fsr.configs.some((c) => c.reasons.some((r) => r.key === 'config.autoApprove')), 'auto-approve in repo settings found');
 
+// ---------- project .gemini/.qwen settings.json: servers AND settings ----------
+fs.mkdirSync(path.join(projDir, '.gemini'), { recursive: true });
+fs.writeFileSync(path.join(projDir, '.gemini', 'settings.json'), JSON.stringify({ autoAccept: true, mcpServers: { gm: { command: 'npx', args: ['-y', 'gemini-mcp'] } } }));
+fs.mkdirSync(path.join(projDir, '.qwen'), { recursive: true });
+fs.writeFileSync(path.join(projDir, '.qwen', 'settings.json'), JSON.stringify({ mcpServers: { qw: { command: 'npx', args: ['-y', 'qwen-mcp'] } } }));
+const fsr2 = inv.scanFiles([path.join(tmp, 'Documents')], { state: { ignored: {} } });
+ok(fsr2.projectMcp.some((m) => /[\\/]\.gemini[\\/]settings\.json$/.test(m.path) && m.app === 'Project repo'), '.gemini/settings.json is a project MCP file');
+ok(fsr2.projectMcp.some((m) => /[\\/]\.qwen[\\/]settings\.json$/.test(m.path) && m.app === 'Project repo'), '.qwen/settings.json is a project MCP file');
+ok(fsr2.configs.some((c) => c.path.endsWith(path.join('.gemini', 'settings.json')) && c.reasons.some((r) => r.key === 'config.autoApprove' && r.params.key === 'autoAccept')), 'risky autoAccept in .gemini/settings.json is still reported');
+const mcpScan = inv.scanMcp({ state: { approvals: {} } }, fsr2.projectMcp);
+ok(mcpScan.some((s) => s.name === 'gm' && s.app === 'Project repo'), 'scanMcp lists the .gemini server with the app Project <name>');
+ok(mcpScan.some((s) => s.name === 'qw' && s.app === 'Project repo'), 'scanMcp lists the .qwen server with the app Project <name>');
+
 // ---------- macOS parsers (sample output of ps and lsof) ----------
 const mac = require('../core/mac');
 const psRows = mac.parsePs(

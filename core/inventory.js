@@ -268,7 +268,8 @@ function isInstructionFile(full, name) {
 // Project-level MCP files: .cursor/mcp.json, .vscode/mcp.json, .kiro/settings/mcp.json, .grok/settings.json, .gemini/settings.json …
 function isProjectMcp(f) {
   return /[\\/]\.(cursor|vscode|kiro[\\/]settings|roo|trae|windsurf|factory|kimi)[\\/]mcp\.json$/i.test(f) ||
-    /[\\/]\.grok[\\/](settings\.json|config\.toml)$/i.test(f) || /[\\/](opencode|crush)\.json$/i.test(f);
+    /[\\/]\.grok[\\/](settings\.json|config\.toml)$/i.test(f) ||
+    /[\\/]\.(gemini|qwen)[\\/]settings\.json$/i.test(f) || /[\\/](opencode|crush)\.json$/i.test(f);
 }
 const projectMcpFormat = (f) => (/\.toml$/i.test(f) ? 'toml' : 'json');
 function projectName(f) {
@@ -322,7 +323,7 @@ function* scanFilesSteps(roots, store) {
       filter: (full, name) => {
         const n = name.toLowerCase();
         return isInstructionFile(full, name) || /^\.env(\..+)?$/.test(n) || n === '.mcp.json' || isProjectMcp(full) ||
-          (/[\\/]\.(claude|vscode|cursor|gemini|codex|grok)[\\/]/i.test(full) && /\.(json|toml)$/.test(n)) || links.PROJECT_FILE.test(full);
+          (/[\\/]\.(claude|vscode|cursor|gemini|qwen|codex|grok)[\\/]/i.test(full) && /\.(json|toml)$/.test(n)) || links.PROJECT_FILE.test(full);
       },
     });
     for (const f of found) {
@@ -335,7 +336,8 @@ function* scanFilesSteps(roots, store) {
       const isMcpFile = n === '.mcp.json' || isProjectMcp(f);
       if (isMcpFile) projectMcp.push({ app: `Project ${projectName(f)}`, path: f, format: projectMcpFormat(f) });
       // A project .grok/config.toml holds servers and also [permission] rules: it gets both checks.
-      if (isMcpFile && !/[\\/]\.grok[\\/]config\.toml$/i.test(f)) continue;
+      // .gemini/settings.json and .qwen/settings.json hold servers AND settings the same way.
+      if (isMcpFile && !/[\\/]\.grok[\\/]config\.toml$/i.test(f) && !/[\\/]\.(gemini|qwen)[\\/]settings\.json$/i.test(f)) continue;
       if (/\.(json|toml)$/.test(n) && !isInstructionFile(f, path.basename(f))) {
         const r = scanConfigText(f, U.readText(f) || '', 'Project');
         if (r) configs.push({ id: U.sha256(f.toLowerCase()).slice(0, 16), ...r });
