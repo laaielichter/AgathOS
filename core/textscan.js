@@ -57,7 +57,7 @@ function snippet(text, index, len) {
 // ---------- Secrets ----------
 // Order matters: specific prefixes first, so a key gets the right provider name.
 const SECRET_PATTERNS = [
-  { kind: 'Anthropic', re: /\bsk-ant-(?:api|admin)\d{2}-[A-Za-z0-9_-]{20,}/g },
+  { kind: 'Anthropic', re: /\bsk-ant-(?:api|admin|oat)\d{2}-[A-Za-z0-9_-]{20,}/g },
   { kind: 'OpenRouter', re: /\bsk-or-v1-[a-f0-9]{48,}/g },
   { kind: 'xAI (Grok)', re: /\bxai-[A-Za-z0-9]{40,}/g },
   { kind: 'Groq', re: /\bgsk_[A-Za-z0-9]{40,}/g },

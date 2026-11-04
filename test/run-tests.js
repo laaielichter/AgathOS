@@ -41,7 +41,9 @@ ok(r1.sev === 'alarm' && r1.reasons.some((r) => r.key === 'file.hiddenTags' && /
 ok(r1.reasons.some((r) => r.key === 'file.injectionPhrase'), 'decoded tag text is checked for attack phrases');
 ok(T.scanText('a' + '\u200b\u200c'.repeat(6) + 'b').sev === 'alarm', 'zero-width run is an alarm');
 ok(T.scanText('\ufeff# Title\nplain text').sev === 'calm', 'a BOM at the start is normal');
-ok(T.scanText('KEY=sk-ant-api03-' + 'a'.repeat(40)).reasons.some((r) => r.key === 'file.secret'), 'Anthropic key is found');
+ok(T.scanText('KEY=sk-ant-api03-' + 'a'.repeat(40)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'Anthropic'), 'Anthropic key is named Anthropic');
+ok(T.scanText('CLAUDE_CODE_OAUTH_TOKEN=sk-ant-' + 'oat01-' + 'a'.repeat(60)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'Anthropic'), 'Claude Code OAuth token is named Anthropic');
+ok(T.scanText('OPENAI_API_KEY=sk-' + 'b'.repeat(48)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'OpenAI / DeepSeek'), 'OpenAI key keeps its name');
 ok(T.scanText('abc \u202e cba').reasons.some((r) => r.key === 'file.bidi'), 'bidi override is found');
 
 // ---------- classify ----------
