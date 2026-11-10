@@ -76,9 +76,17 @@ const SECRET_PATTERNS = [
   { kind: 'Stripe', re: /\b(?:sk|rk)_live_[A-Za-z0-9]{20,}/g },
   { kind: 'GitLab', re: /\bglpat-[A-Za-z0-9_-]{20,}/g },
   { kind: 'npm', re: /\bnpm_[A-Za-z0-9]{36}\b/g },
+  { kind: 'SendGrid', re: /\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b/g },
+  { kind: 'DigitalOcean', re: /\bdo[por]_v1_[a-f0-9]{64}\b/g },
+  { kind: 'Databricks', re: /\bdapi[a-f0-9]{32}\b/g },
+  { kind: 'PyPI', re: /\bpypi-[A-Za-z0-9_-]{70,}\b/g },
+  { kind: 'Tavily', re: /\btvly-[A-Za-z0-9]{32,}\b/g },
+  { kind: 'Supabase', re: /\bsbp_(?:oauth_|v0_)?[a-f0-9]{40}\b/g },
+  { kind: 'Pinecone', re: /\bpcsk_[A-Za-z0-9_]{40,}\b/g },
   { kind: 'Private key', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY( BLOCK)?-----/g },
   { kind: 'Telegram bot', re: /\b\d{8,10}:AA[A-Za-z0-9_-]{33}\b/g },
   { kind: 'Discord webhook', re: /https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+/g },
+  { kind: 'Slack webhook', re: /https:\/\/hooks\.slack\.com\/services\/T[A-Za-z0-9]{8,}\/B[A-Za-z0-9]{8,}\/[A-Za-z0-9]{20,}/g },
 ];
 
 // Providers without a recognisable key prefix are found by their variable name.
