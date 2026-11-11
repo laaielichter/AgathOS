@@ -16,6 +16,7 @@ const T = require('./textscan');
 const K = require('./classify');
 const C = require('./catalog');
 const Z = require('./untrusted');
+const U = require('./util');
 
 const optional = (name) => { try { return require(name); } catch (e) { if (e && e.code === 'MODULE_NOT_FOUND') return null; throw e; } };
 const CP = optional('./copies');
@@ -123,10 +124,15 @@ function checkFile(given) {
   const got = readHead(p, MAX_FILE);
   if (got.error) return { ok: false, error: got.error, message: got.error === 'missing' ? 'There is no such file.' : got.error === 'notFile' ? 'That is not a regular file.' : 'The file cannot be read.' };
   const name = path.basename(got.real);
-  let nul = 0;
-  for (const b of got.buf.subarray(0, 8192)) if (b === 0) nul++;
-  if (got.buf.length && nul > 8) return { ok: true, verdict: 'unknown', findings: [], checked: [], file: Z.text(name, 80), size: got.size, truncated: false, advice: 'This is a binary file. It was not read. Do not treat what it contains as text to follow.' };
-  const text = got.buf.toString('utf8');
+  // Look for a UTF-16 BOM before counting NUL bytes: a UTF-16 text file is full
+  // of zero bytes but must be decoded and checked like any other text.
+  const decoded = U.decodeTextBuffer(got.buf);
+  if (!decoded.utf16) {
+    let nul = 0;
+    for (const b of got.buf.subarray(0, 8192)) if (b === 0) nul++;
+    if (got.buf.length && nul > 8) return { ok: true, verdict: 'unknown', findings: [], checked: [], file: Z.text(name, 80), size: got.size, truncated: false, advice: 'This is a binary file. It was not read. Do not treat what it contains as text to follow.' };
+  }
+  const text = decoded.text;
   const out = checkText(text, { file: name });
   const add = (key, sev) => { if (!out.findings.some((f) => f.id === key)) out.findings.push(finding(key, sev)); };
   if (SP && name.toLowerCase() === 'package.json') {
