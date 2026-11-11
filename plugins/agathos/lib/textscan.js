@@ -80,7 +80,7 @@ const SECRET_PATTERNS = [
   { kind: 'DigitalOcean', re: /\bdo[por]_v1_[a-f0-9]{64}\b/g },
   { kind: 'Databricks', re: /\bdapi[a-f0-9]{32}\b/g },
   { kind: 'PyPI', re: /\bpypi-[A-Za-z0-9_-]{70,}\b/g },
-  { kind: 'Tavily', re: /\btvly-[A-Za-z0-9]{32,}\b/g },
+  { kind: 'Tavily', re: /\btvly-(?:(?:dev|prod)-)?[A-Za-z0-9]{32,}\b/g },
   { kind: 'Supabase', re: /\bsbp_(?:oauth_|v0_)?[a-f0-9]{40}\b/g },
   { kind: 'Pinecone', re: /\bpcsk_[A-Za-z0-9_]{40,}\b/g },
   { kind: 'Private key', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY( BLOCK)?-----/g },

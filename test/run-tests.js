@@ -51,6 +51,7 @@ ok(T.scanText('DATABRICKS_TOKEN=dapi' + 'a'.repeat(32)).reasons.some((r) => r.pa
 ok(T.scanText('TWINE_PASSWORD=pypi-AgEIcHlwaS5vcmc' + 'a'.repeat(60)).reasons.some((r) => r.params.kinds === 'PyPI'), 'PyPI token is named PyPI');
 ok(T.scanText('SLACK_WEBHOOK=https://hooks.slack.com/services/T01234567/B01234567/' + 'a'.repeat(24)).reasons.some((r) => r.params.kinds === 'Slack webhook'), 'Slack webhook is named Slack webhook');
 ok(T.scanText('TAVILY_API_KEY=tvly-' + 'a'.repeat(32)).reasons.some((r) => r.params.kinds === 'Tavily'), 'Tavily key is named Tavily');
+ok(['tvly-dev-', 'tvly-prod-'].every((p) => T.scanText('TAVILY_API_KEY=' + p + 'a'.repeat(32)).reasons.some((r) => r.params.kinds === 'Tavily')), 'a Tavily key with a dev or prod part is named Tavily');
 ok(['sbp_', 'sbp_oauth_', 'sbp_v0_'].every((p) => T.scanText('SUPABASE_ACCESS_TOKEN=' + p + 'a'.repeat(40)).reasons.some((r) => r.params.kinds === 'Supabase')), 'every Supabase access token prefix is named Supabase');
 ok(T.scanText('PINECONE_API_KEY=pcsk_2go2xm_' + 'A'.repeat(63)).reasons.some((r) => r.params.kinds === 'Pinecone'), 'Pinecone key is named Pinecone');
 ok(T.scanText('The docs mention the SG. prefix, dapi and pypi- in prose.').sev === 'calm', 'a bare prefix in prose is not a secret');
