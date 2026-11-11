@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Names eight more key formats** in scans: SendGrid, DigitalOcean, Databricks, PyPI, Slack webhook, Tavily, Supabase and Pinecone keys. Thanks to @tnalbant! (#33, #39)
+- **A download is refused only when a program runs it.** `curl ... | sha256sum`, `| shasum` and `| node-jq` are no longer refused as "runs downloaded code", and `| sudo bash`, `bash <(curl ...)`, `eval "$(curl ...)"`, `| zsh`, `| ruby` and `tee f | sh` now are. Thanks to @tnalbant! (#31, #32, #43)
 
 ## 0.13.1 — the good guardian
 
