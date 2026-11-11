@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Names eight more key formats** in scans: SendGrid, DigitalOcean, Databricks, PyPI, Slack webhook, Tavily, Supabase and Pinecone keys. Thanks to @tnalbant! (#33, #39)
+
 ## 0.13.1 — the good guardian
 
 - **The good guardian:** the new tagline and welcome text, in all 20 languages. The word "daemon" is gone from the app, the README and the website.
