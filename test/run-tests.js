@@ -44,6 +44,17 @@ ok(T.scanText('\ufeff# Title\nplain text').sev === 'calm', 'a BOM at the start i
 ok(T.scanText('KEY=sk-ant-api03-' + 'a'.repeat(40)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'Anthropic'), 'Anthropic key is named Anthropic');
 ok(T.scanText('CLAUDE_CODE_OAUTH_TOKEN=sk-ant-' + 'oat01-' + 'a'.repeat(60)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'Anthropic'), 'Claude Code OAuth token is named Anthropic');
 ok(T.scanText('OPENAI_API_KEY=sk-' + 'b'.repeat(48)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'OpenAI / DeepSeek'), 'OpenAI key keeps its name');
+ok(T.scanText('SENDGRID_API_KEY=SG.' + 'a'.repeat(22) + '.' + 'b'.repeat(43)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'SendGrid'), 'SendGrid key is named SendGrid');
+ok(T.scanText('SENDGRID_API_KEY=SG.' + 'a'.repeat(22) + '.' + 'b'.repeat(42) + '-').reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'SendGrid'), 'a SendGrid key that ends in a hyphen is named SendGrid');
+ok(['dop_v1_', 'doo_v1_', 'dor_v1_'].every((p) => T.scanText('DO_TOKEN=' + p + 'a'.repeat(64)).reasons.some((r) => r.params.kinds === 'DigitalOcean')), 'every DigitalOcean token prefix is named DigitalOcean');
+ok(T.scanText('DATABRICKS_TOKEN=dapi' + 'a'.repeat(32)).reasons.some((r) => r.params.kinds === 'Databricks'), 'Databricks token is named Databricks');
+ok(T.scanText('TWINE_PASSWORD=pypi-AgEIcHlwaS5vcmc' + 'a'.repeat(60)).reasons.some((r) => r.params.kinds === 'PyPI'), 'PyPI token is named PyPI');
+ok(T.scanText('SLACK_WEBHOOK=https://hooks.slack.com/services/T01234567/B01234567/' + 'a'.repeat(24)).reasons.some((r) => r.params.kinds === 'Slack webhook'), 'Slack webhook is named Slack webhook');
+ok(T.scanText('TAVILY_API_KEY=tvly-' + 'a'.repeat(32)).reasons.some((r) => r.params.kinds === 'Tavily'), 'Tavily key is named Tavily');
+ok(['tvly-dev-', 'tvly-prod-'].every((p) => T.scanText('TAVILY_API_KEY=' + p + 'a'.repeat(32)).reasons.some((r) => r.params.kinds === 'Tavily')), 'a Tavily key with a dev or prod part is named Tavily');
+ok(['sbp_', 'sbp_oauth_', 'sbp_v0_'].every((p) => T.scanText('SUPABASE_ACCESS_TOKEN=' + p + 'a'.repeat(40)).reasons.some((r) => r.params.kinds === 'Supabase')), 'every Supabase access token prefix is named Supabase');
+ok(T.scanText('PINECONE_API_KEY=pcsk_2go2xm_' + 'A'.repeat(63)).reasons.some((r) => r.params.kinds === 'Pinecone'), 'Pinecone key is named Pinecone');
+ok(T.scanText('The docs mention the SG. prefix, dapi, pypi-, sbp_value, pcsk_ and tvly- in prose.').sev === 'calm', 'a bare prefix in prose is not a secret');
 ok(T.scanText('abc \u202e cba').reasons.some((r) => r.key === 'file.bidi'), 'bidi override is found');
 
 // ---------- classify ----------
