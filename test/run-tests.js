@@ -45,6 +45,7 @@ ok(T.scanText('KEY=sk-ant-api03-' + 'a'.repeat(40)).reasons.some((r) => r.key ==
 ok(T.scanText('CLAUDE_CODE_OAUTH_TOKEN=sk-ant-' + 'oat01-' + 'a'.repeat(60)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'Anthropic'), 'Claude Code OAuth token is named Anthropic');
 ok(T.scanText('OPENAI_API_KEY=sk-' + 'b'.repeat(48)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'OpenAI / DeepSeek'), 'OpenAI key keeps its name');
 ok(T.scanText('SENDGRID_API_KEY=SG.' + 'a'.repeat(22) + '.' + 'b'.repeat(43)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'SendGrid'), 'SendGrid key is named SendGrid');
+ok(T.scanText('SENDGRID_API_KEY=SG.' + 'a'.repeat(22) + '.' + 'b'.repeat(42) + '-').reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'SendGrid'), 'a SendGrid key that ends in a hyphen is named SendGrid');
 ok(['dop_v1_', 'doo_v1_', 'dor_v1_'].every((p) => T.scanText('DO_TOKEN=' + p + 'a'.repeat(64)).reasons.some((r) => r.params.kinds === 'DigitalOcean')), 'every DigitalOcean token prefix is named DigitalOcean');
 ok(T.scanText('DATABRICKS_TOKEN=dapi' + 'a'.repeat(32)).reasons.some((r) => r.params.kinds === 'Databricks'), 'Databricks token is named Databricks');
 ok(T.scanText('TWINE_PASSWORD=pypi-AgEIcHlwaS5vcmc' + 'a'.repeat(60)).reasons.some((r) => r.params.kinds === 'PyPI'), 'PyPI token is named PyPI');

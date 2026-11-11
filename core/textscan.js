@@ -76,7 +76,7 @@ const SECRET_PATTERNS = [
   { kind: 'Stripe', re: /\b(?:sk|rk)_live_[A-Za-z0-9]{20,}/g },
   { kind: 'GitLab', re: /\bglpat-[A-Za-z0-9_-]{20,}/g },
   { kind: 'npm', re: /\bnpm_[A-Za-z0-9]{36}\b/g },
-  { kind: 'SendGrid', re: /\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b/g },
+  { kind: 'SendGrid', re: /\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/g },
   { kind: 'DigitalOcean', re: /\bdo[por]_v1_[a-f0-9]{64}\b/g },
   { kind: 'Databricks', re: /\bdapi[a-f0-9]{32}\b/g },
   { kind: 'PyPI', re: /\bpypi-[A-Za-z0-9_-]{70,}\b/g },
