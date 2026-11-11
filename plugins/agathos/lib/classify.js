@@ -10,7 +10,8 @@ function sensitivePath(text) {
 function classifyCommand(cmd) {
   const c = String(cmd || '');
   for (const r of C.COMMAND_RULES) {
-    if (r.re.test(c)) {
+    // A rule is a regular expression, or a function where one expression cannot say it (#31, #32).
+    if (r.test ? r.test(c) : r.re.test(c)) {
       // Reading secrets through a plain command (type, cat, Get-Content) counts as private access.
       if ((r.action === 'EXEC_SHELL' || r.action === 'ENUMERATE') && sensitivePath(c)) return 'READ_SENSITIVE';
       return r.action;

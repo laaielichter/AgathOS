@@ -253,13 +253,39 @@ const SELF_COPY_RE = new RegExp(`${COPY_TOOL}[^\\n]*(?:${AGENT_HOME}|${AGENT_PRO
 const MODEL_REF_RE = new RegExp(MODEL_REF, 'i');
 const AGENT_HOME_RE = new RegExp(`${AGENT_HOME}|${AGENT_PROGRAM}`, 'i');
 
+// Fetch-and-run: the download is fine on its own, handing it to a program is not.
+// Covered: a pipe whose target is an interpreter, also behind sudo/env/command/exec/doas and after
+// another stage such as `tee`; a fetch inside <(...), $(...) or backticks that is the argument of an
+// interpreter, eval, source or `.`; and the Windows spellings below. The interpreter's name has to end
+// where it starts, so `| sha256sum`, `| shasum`, `| node-jq` and `| tee file` stay reads (#31).
+// Left out on purpose: `curl -o i.sh && bash i.sh` (two steps on one line, nothing says they belong
+// together) and `base64 -d | sh`, which runs something it did not download (#32).
+const FETCH_TOOL = String.raw`(?:curl|wget|iwr|invoke-webrequest|irm|invoke-restmethod)`;
+const INTERPRETER = String.raw`(?:sh|bash|zsh|dash|ash|ksh|fish|pwsh|powershell|python[0-9.]*|node|nodejs|ruby|perl|php|deno|bun|lua|iex|invoke-expression)`;
+const RUN_AS = String.raw`(?:sudo|doas|env|command|exec|nohup|nice|time|xargs)`;
+const FETCH_RE = new RegExp(String.raw`\b${FETCH_TOOL}\b`, 'i');
+const PIPE_TO_INTERPRETER_RE = new RegExp(String.raw`\|\s*(?:${RUN_AS}\s+(?:-\S+\s+)*)*${INTERPRETER}(?![\w.-])`, 'i');
+const SUBSTITUTION_TO_INTERPRETER_RE = new RegExp(
+  String.raw`(?:\b${INTERPRETER}|\beval|\bsource|(?:^|[\s;&|])\.)\s+(?:-\S+\s+)*["']?(?:<\(|\$\(|\x60)[^\n]{0,400}?\b${FETCH_TOOL}\b`,
+  'i'
+);
+
+// Does this command line fetch something and run it? (#31, #32)
+function runsFetchedCode(cmd) {
+  const c = String(cmd || '');
+  // Spellings that fetch and start in one tool, without a pipe to read.
+  if (/iex\s*\(\s*(new-object\s+net\.webclient|iwr|irm)|certutil\s+.*-urlcache|bitsadmin\s+\/transfer|mshta\s+http|rundll32\s+.*http|powershell\s+.*-enc(odedcommand)?\s/i.test(c)) return true;
+  if (!FETCH_RE.test(c)) return false;
+  return PIPE_TO_INTERPRETER_RE.test(c) || SUBSTITUTION_TO_INTERPRETER_RE.test(c);
+}
+
 // Classify one command line into an action from the alphabet.
 // Order matters: the first match wins, most severe first.
 const COMMAND_RULES = [
   { action: 'DISABLE_SECURITY', re: /set-mppreference\s+-disable|add-mppreference\s+-exclusion|netsh\s+advfirewall\s+set\s+\w+\s+state\s+off|bcdedit|vssadmin\s+delete|wbadmin\s+delete|reg\s+add\s+.*\\windows defender/i },
   { action: 'DELETE_MANY', re: /\brmdir\s+\/s|\brd\s+\/s|\bdel\s+(\/[a-z]\s+)*\/s|remove-item\b.*-recurse|\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r|format(\.com)?\s+[a-z]:|cipher\s+\/w|shred\b|diskpart|git\s+clean\s+-[a-z]*f[a-z]*d|git\s+reset\s+--hard|terraform\s+destroy|drop\s+(database|table)/i },
   { action: 'PERSISTENCE', re: /schtasks\s+\/create|reg\s+add\s+.*\\currentversion\\run|new-itemproperty\s+.*\\currentversion\\run|register-scheduledtask|\\start menu\\programs\\startup|sc\.exe\s+create|new-service\b/i },
-  { action: 'EXEC_DOWNLOADED', re: /(iwr|invoke-webrequest|irm|invoke-restmethod|curl|wget)\b[^|]*\|\s*(iex|invoke-expression|bash|sh|python|node)|iex\s*\(\s*(new-object\s+net\.webclient|iwr|irm)|certutil\s+.*-urlcache|bitsadmin\s+\/transfer|mshta\s+http|rundll32\s+.*http|powershell\s+.*-enc(odedcommand)?\s/i },
+  { action: 'EXEC_DOWNLOADED', test: runsFetchedCode },
   { action: 'CREDENTIAL_ACCESS', re: /cmdkey\s+\/list|vaultcmd|mimikatz|lsass|get-storedcredential|trufflehog|gitleaks|findstr\s+.*(password|api_key|secret)|select-string\s+.*(password|api_key|secret)|dpapi|\bsekurlsa\b/i },
   { action: 'GIT_PUSH', re: /git\s+push\b/i },
   { action: 'EXFIL', re: /(curl|wget)\s+.*(-d|--data|-F|--upload-file|-T)\s|invoke-(webrequest|restmethod)\s+.*-method\s+(post|put)|\bscp\s|\brclone\s|\bs?ftp\s|\bnc(\.exe)?\s+-|\bncat\s|send-mailmessage|discord(app)?\.com\/api\/webhooks|api\.telegram\.org|webhook\.site|pastebin|transfer\.sh|ngrok/i },
