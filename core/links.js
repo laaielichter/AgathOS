@@ -59,12 +59,22 @@ const AGENT_PROVIDER = {
 const LOCAL_SERVERS = new Set(['ollama', 'lmstudio', 'gpt4all', 'jan', 'llamacpp', 'koboldcpp', 'msty', 'anythingllm']);
 
 // Words an attacker puts in an address to look like a provider.
+// OFFICIAL has 54 provider names; BRANDS is the smaller set the homoglyph and
+// one-letter-typo checks watch. Only names of six letters or more that are not
+// ordinary words belong here. Left out for now: x, z, hf, ai21 (too short);
+// llama, lambda, hyperbolic, parasail, featherless, chutes, jina, kimi,
+// kluster (ordinary words or too close to one, so they would fire on everyday
+// hosts such as lambda.example.com and llama.example.org); minimaxi (covered by
+// minimax); githubcopilot (already an official host in the `fine` list).
 const BRANDS = ['anthropic', 'claude', 'openai', 'chatgpt', 'gemini', 'mistral', 'deepseek', 'huggingface', 'ollama', 'openrouter', 'perplexity',
-  'cohere', 'copilot', 'cursor', 'together', 'fireworks', 'cerebras', 'moonshot', 'replicate', 'nvidia', 'windsurf', 'codeium', 'groq', 'grok', 'codex'];
+  'cohere', 'copilot', 'cursor', 'together', 'fireworks', 'cerebras', 'moonshot', 'replicate', 'nvidia', 'windsurf', 'codeium', 'groq', 'grok', 'codex',
+  'sambanova', 'novita', 'deepinfra', 'siliconflow', 'minimax'];
 const BRAND_NAME = { anthropic: 'Anthropic', claude: 'Anthropic', openai: 'OpenAI', chatgpt: 'OpenAI', gemini: 'Google Gemini', mistral: 'Mistral', deepseek: 'DeepSeek',
   huggingface: 'Hugging Face', ollama: 'Ollama', openrouter: 'OpenRouter', perplexity: 'Perplexity', cohere: 'Cohere', copilot: 'GitHub Copilot', cursor: 'Cursor',
   together: 'Together', fireworks: 'Fireworks', cerebras: 'Cerebras', moonshot: 'Moonshot', replicate: 'Replicate', nvidia: 'NVIDIA', windsurf: 'Windsurf',
-  codeium: 'Windsurf', groq: 'Groq', grok: 'xAI', codex: 'OpenAI' };
+  codeium: 'Windsurf', groq: 'Groq', grok: 'xAI', codex: 'OpenAI',
+  sambanova: 'SambaNova', novita: 'Novita', deepinfra: 'DeepInfra',
+  siliconflow: 'SiliconFlow', minimax: 'MiniMax' };
 
 // Machines that anyone on the internet can reach through a tunnel to somebody's computer.
 const TUNNEL = /(^|\.)(ngrok(-free)?\.(io|app|dev|com)|trycloudflare\.com|loca\.lt|localtunnel\.me|serveo\.net|pinggy\.(io|link)|lhr\.life|localhost\.run|tunnelto\.dev|devtunnels\.ms|playit\.gg|zrok\.io|bore\.pub|telebit\.(cloud|io)|lt\.vc|burrow\.io|expose\.dev|sharedwithexpose\.com|portmap\.io|ngrok-free\.dev)$/i;

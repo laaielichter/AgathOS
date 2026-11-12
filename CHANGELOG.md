@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Look-alike addresses for five more providers are caught:** SambaNova, Novita, DeepInfra, SiliconFlow and MiniMax are now in the brand list the homoglyph and typo checks watch, so `samban0va.ai` and friends are `lookalike` instead of merely `unknown`. Thanks to @17302513901yh-lang! (#34)
+
 - **Names eight more key formats** in scans: SendGrid, DigitalOcean, Databricks, PyPI, Slack webhook, Tavily, Supabase and Pinecone keys. Thanks to @tnalbant! (#33, #39)
 - **A download is refused only when a program runs it.** `curl ... | sha256sum`, `| shasum` and `| node-jq` are no longer refused as "runs downloaded code", and `| sudo bash`, `bash <(curl ...)`, `eval "$(curl ...)"`, `| zsh`, `| ruby` and `tee f | sh` now are. Thanks to @tnalbant! (#31, #32, #43)
 
