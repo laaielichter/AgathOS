@@ -60,6 +60,19 @@ function decodeTextBuffer(buf) {
   return { text: buf.toString('utf8'), utf16: false };
 }
 
+// A BOM is not proof that a file is UTF-16 text: a UTF-32LE file starts with
+// FF FE 00 00, takes the UTF-16LE path and decodes to a NUL between every
+// letter. More than 8 NULs in the first 8192 characters means these bytes were
+// never really read as text. Shared by checkFile and check-text FILE so both
+// answer "unknown" instead of claiming a binary file is calm.
+function hasBinaryNuls(text) {
+  const s = typeof text === 'string' ? text : '';
+  const n = Math.min(s.length, 8192);
+  let nul = 0;
+  for (let i = 0; i < n; i++) if (s.charCodeAt(i) === 0) nul++;
+  return nul > 8;
+}
+
 function readHead(p, n) {
   try {
     const fd = fs.openSync(p, 'r');
@@ -190,6 +203,6 @@ const ps = new Proxy({}, { get: (_t, key) => { const real = shell().ps; const v 
 const psq = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 
 module.exports = {
-  IS_WIN, IS_MAC, HOME, APPDATA, LOCALAPPDATA, sha256, exists, statSafe, readText, readHead, decodeTextBuffer, readJsonLoose,
+  IS_WIN, IS_MAC, HOME, APPDATA, LOCALAPPDATA, sha256, exists, statSafe, readText, readHead, decodeTextBuffer, hasBinaryNuls, readJsonLoose,
   stripJsonComments, walk, walkSteps, run, runCooperative, expand, grokHome, shortPath, exclusive, execFileText, ps, psq, SKIP_DIRS,
 };
