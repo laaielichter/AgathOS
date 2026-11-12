@@ -12,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const Client = require('../core/client');
+const U = require('../core/util');
 
 const VERSION = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).version; } catch (_) { return '0.0.0'; } })();
 
@@ -80,7 +81,7 @@ async function main(argv) {
   if (cmd === 'check-text') {
     const from = args[1];
     let text;
-    try { text = from && from !== '-' ? fs.readFileSync(from, 'utf8') : await readStdin(); } catch (_) { r = { ok: false, error: 'file', message: 'That file cannot be read.' }; }
+    try { text = from && from !== '-' ? U.decodeTextBuffer(fs.readFileSync(from)).text : await readStdin(); } catch (_) { r = { ok: false, error: 'file', message: 'That file cannot be read.' }; }
     if (!r) r = await c.checkText(text, from && from !== '-' ? path.basename(from) : '');
   } else if (cmd === 'check-file') {
     r = args[1] ? await c.checkFile(args[1].startsWith('~') ? args[1] : path.resolve(args[1])) : { ok: false, error: 'path', message: 'Give the path of a file.' };

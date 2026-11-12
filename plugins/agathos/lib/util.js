@@ -41,6 +41,38 @@ function readText(p, max = 2 * 1024 * 1024) {
   }
 }
 
+// Text saved as UTF-16 starts with a byte order mark and is full of zero bytes:
+// reading it as utf8 gives garbage, and counting NULs first calls it binary.
+// Decode both BOM forms here so checkFile and check-text FILE agree. The BOM is
+// stripped, so textscan never counts it as a hidden character. A file with no
+// BOM is returned as plain utf8 and keeps the caller's binary/NUL handling.
+function decodeTextBuffer(buf) {
+  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) {
+    return { text: buf.subarray(2).toString('utf16le'), utf16: 'le' };
+  }
+  if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) {
+    const swapped = Buffer.from(buf.subarray(2));
+    for (let i = 0; i + 1 < swapped.length; i += 2) {
+      const a = swapped[i]; swapped[i] = swapped[i + 1]; swapped[i + 1] = a;
+    }
+    return { text: swapped.toString('utf16le'), utf16: 'be' };
+  }
+  return { text: buf.toString('utf8'), utf16: false };
+}
+
+// A BOM is not proof that a file is UTF-16 text: a UTF-32LE file starts with
+// FF FE 00 00, takes the UTF-16LE path and decodes to a NUL between every
+// letter. More than 8 NULs in the first 8192 characters means these bytes were
+// never really read as text. Shared by checkFile and check-text FILE so both
+// answer "unknown" instead of claiming a binary file is calm.
+function hasBinaryNuls(text) {
+  const s = typeof text === 'string' ? text : '';
+  const n = Math.min(s.length, 8192);
+  let nul = 0;
+  for (let i = 0; i < n; i++) if (s.charCodeAt(i) === 0) nul++;
+  return nul > 8;
+}
+
 function readHead(p, n) {
   try {
     const fd = fs.openSync(p, 'r');
@@ -171,6 +203,6 @@ const ps = new Proxy({}, { get: (_t, key) => { const real = shell().ps; const v 
 const psq = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 
 module.exports = {
-  IS_WIN, IS_MAC, HOME, APPDATA, LOCALAPPDATA, sha256, exists, statSafe, readText, readHead, readJsonLoose,
+  IS_WIN, IS_MAC, HOME, APPDATA, LOCALAPPDATA, sha256, exists, statSafe, readText, readHead, decodeTextBuffer, hasBinaryNuls, readJsonLoose,
   stripJsonComments, walk, walkSteps, run, runCooperative, expand, grokHome, shortPath, exclusive, execFileText, ps, psq, SKIP_DIRS,
 };
