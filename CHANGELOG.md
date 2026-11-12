@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **UTF-16 text files are read, not called binary:** a file saved as UTF-16 with a byte order mark (what PowerShell 5.1 writes with `>`) is now decoded before it is checked, by `check-file` and by `check-text FILE`, so an instruction hidden in it is found. A UTF-32 file or a file full of zero bytes stays `unknown` (binary, not read). Thanks to @17302513901yh-lang! (#30, #40)
 - **Names eight more key formats** in scans: SendGrid, DigitalOcean, Databricks, PyPI, Slack webhook, Tavily, Supabase and Pinecone keys. Thanks to @tnalbant! (#33, #39)
 - **A download is refused only when a program runs it.** `curl ... | sha256sum`, `| shasum` and `| node-jq` are no longer refused as "runs downloaded code", and `| sudo bash`, `bash <(curl ...)`, `eval "$(curl ...)"`, `| zsh`, `| ruby` and `tee f | sh` now are. Thanks to @tnalbant! (#31, #32, #43)
 
