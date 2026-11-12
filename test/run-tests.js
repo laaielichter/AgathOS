@@ -1196,6 +1196,9 @@ const linkTests = async (eng) => {
     ['api.openai.com.evil.example', 'embed', 'OpenAI'], ['api.anthropic.com-login.example', 'embed', 'Anthropic'],
     ['0penai.com', 'homoglyph', 'OpenAI'], ['rnistral.ai', 'homoglyph', 'Mistral'], ['anthrop1c.com', 'homoglyph', 'Anthropic'],
     ['anthroplc.com', 'typo', 'Anthropic'], ['openal.com', 'typo', 'OpenAI'],
+    ['samban0va.ai', 'homoglyph', 'SambaNova'], ['n0vita.ai', 'homoglyph', 'Novita'],
+    ['api.d3epinfra.com', 'homoglyph', 'DeepInfra'],
+    ['api.siliconfiow.com', 'typo', 'SiliconFlow'], ['api.minimaxx.io', 'typo', 'MiniMax'],
     ['claude-api.example', 'brand', 'Anthropic'], ['openai-proxy.example.com', 'brand', 'OpenAI'], ['anthropic.co', 'brand', 'Anthropic'],
   ];
   const wrongLook = looks.filter(([h, why, brand]) => { const c = cls(h); return c.cls !== 'lookalike' || c.why !== why || c.brand !== brand; }).map(([h, why]) => `${h}: ${JSON.stringify(cls(h))}, wanted ${why}`);
@@ -1204,7 +1207,7 @@ const linkTests = async (eng) => {
   ok(cyr && /^xn--/.test(cyr.host) && cls(cyr.host).why === 'homoglyph' && cls(cyr.host).brand === 'OpenAI', 'links: openai with a Cyrillic "a" is a look-alike, even though the browser writes it differently');
   const idn = parse('https://münchen.example/v1');
   ok(idn && cls(idn.host).cls === 'lookalike' && cls(idn.host).why === 'idn', 'links: letters from another alphabet in an unknown address are noted');
-  const fine = ['api.openai.com', 'platform.openai.com', 'docs.anthropic.com', 'api.mistral.ai', 'api.x.ai', 'huggingface.co', 'ollama.com', 'cursor.sh', 'github.com', 'registry.npmjs.org', 'pypi.org', 'api.deepseek.com', 'api.together.xyz', 'api.githubcopilot.com'];
+  const fine = ['api.openai.com', 'platform.openai.com', 'docs.anthropic.com', 'api.mistral.ai', 'api.x.ai', 'huggingface.co', 'ollama.com', 'cursor.sh', 'github.com', 'registry.npmjs.org', 'pypi.org', 'api.deepseek.com', 'api.together.xyz', 'api.githubcopilot.com', 'sambanova.ai', 'api.novita.ai', 'api.deepinfra.com', 'api.minimax.io', 'lambda.example.com', 'llama.example.org'];
   ok(fine.every((h) => cls(h).cls !== 'lookalike'), 'links: real providers and everyday sites are not taken for look-alikes');
   ok(L.registrable('a.b.example.co.uk') === 'example.co.uk' && L.registrable('x.example.com') === 'example.com' && L.editDistance('openai', 'openal') === 1, 'links: the registrable part of a name and the distance between two names are right');
 
