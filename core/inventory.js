@@ -10,6 +10,13 @@ const links = require('./links');
 const boards = require('./boards');
 const copies = require('./copies');
 
+// A temp / download folder in a command line. JSON configs may write a
+// Windows path with either kind of slash, while macOS uses /tmp, /var/folders
+// and /private/var/folders. Whole path components only: a project folder such
+// as /Users/me/projects/tmpl is not a temp folder.
+const ODD_PATH_RE = /(?:^|[\\/\s"'])(?:(?:temp|tmp|downloads)(?=[\\/\s"']|$)|(?:private[\\/]var[\\/]folders|var[\\/]folders)(?=[\\/\s"']|$))/i;
+const hasOddPath = (text) => ODD_PATH_RE.test(String(text || ''));
+
 // ---------- MCP configs ----------
 function tomlVal(v) {
   try { return JSON.parse(v); } catch (_) {}
@@ -147,7 +154,7 @@ function analyseServer(name, def, app, file, store) {
     // A tunnel, a site that only collects what is sent to it, or a name that pretends to be a provider.
     if (!(store.settings && store.settings.linkCheck === false)) for (const r of links.hostReasons(String(host).toLowerCase())) { reasons.push(r); bump(r.sev); }
   }
-  if (/\\(temp|tmp|downloads)\\/i.test(joined)) { reasons.push({ key: 'mcp.oddPath', params: {}, sev: 'watch' }); bump('watch'); }
+  if (hasOddPath(joined)) { reasons.push({ key: 'mcp.oddPath', params: {}, sev: 'watch' }); bump('watch'); }
   if (/(curl|wget|iwr|irm)[^|]*\|\s*(bash|sh|iex|powershell)|-enc(odedcommand)?\s/i.test(joined)) {
     reasons.push({ key: 'mcp.shellPipe', params: {}, sev: 'alarm' }); bump('alarm');
   }

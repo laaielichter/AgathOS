@@ -268,6 +268,20 @@ ok(gh && gh.reasons.some((r) => r.key === 'mcp.inlineSecret') && !gh.reasons.som
 const approvals = { [gh.id]: { hash: 'different' } };
 ok(inv.scanMcp({ state: { approvals } }).find((s) => s.name === 'gh').reasons.some((r) => r.key === 'mcp.changed'), 'changed definition after approval is an alarm (rug pull)');
 
+// ---------- MCP servers running from a temp / download folder (#17) ----------
+{
+  const odd = (def) => inv.analyseServer('x', def, 'Test', 'f', { state: { approvals: {} }, settings: {} })
+    .reasons.some((r) => r.key === 'mcp.oddPath');
+  ok(odd({ command: '/Users/me/Downloads/x/server.sh' }), 'mcp.oddPath: macOS Downloads path');
+  ok(odd({ command: 'node', args: ['/tmp/x/index.js'] }), 'mcp.oddPath: macOS /tmp in an argument');
+  ok(odd({ command: '/private/var/folders/ab/T/x/run' }), 'mcp.oddPath: macOS /private/var/folders');
+  ok(odd({ command: '/var/folders/ab/T/x/run' }), 'mcp.oddPath: macOS /var/folders');
+  ok(odd({ command: 'C:/Users/me/Downloads/x.exe' }), 'mcp.oddPath: Windows path with forward slashes');
+  ok(odd({ command: String.raw`C:\Users\me\AppData\Local\Temp\x.exe` }), 'mcp.oddPath: Windows backslash path still caught');
+  ok(!odd({ command: '/Users/me/projects/tmpl/server.js' }), 'mcp.oddPath: a project folder named tmpl is not a temp folder');
+  ok(!odd({ command: '/Users/me/tools/mcp/server.js' }), 'mcp.oddPath: an ordinary path is not flagged');
+}
+
 // ---------- file scan in a project ----------
 const projDir = path.join(tmp, 'Documents', 'repo');
 fs.mkdirSync(path.join(projDir, '.vscode'), { recursive: true });
