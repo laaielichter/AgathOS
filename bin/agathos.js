@@ -50,6 +50,9 @@ function human(r) {
   const lines = [];
   if (r.decision) lines.push(`${r.decision}${r.reason ? ': ' + r.reason : ''}`);
   if (r.verdict) lines.push(`${r.verdict}${r.file ? '  ' + r.file : ''}`);
+  // A cut answer must never look like a complete one in plain output either;
+  // `advice` below says how much was actually checked.
+  if (r.truncated) lines.push('truncated: yes');
   for (const f of r.findings || []) lines.push(`  ${f.severity === 'alarm' ? '!' : '-'} ${f.what}`);
   if (r.advice) lines.push(r.advice);
   if (r.checked && r.checked.length) lines.push(`checked: ${r.checked.join(', ')}`);

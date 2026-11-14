@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A long file no longer looks calm when only its start was checked:** `check-file` and `check-text` now say how many characters or MB were actually scanned, in the plain output, the JSON and the MCP tools, and a cut answer is `watch` instead of `calm` — a clean prefix is not a clean file. Short files are unchanged. Thanks to @17302513901yh-lang! (#29, #52)
 - **An MCP server running from a temp or download folder is noticed on a Mac too:** the `mcp.oddPath` check now accepts both kinds of path separator and knows `/tmp`, `/var/folders` and `/private/var/folders`, so `/Users/me/Downloads/x/server.sh`, `node /tmp/x/index.js` and `C:/Users/me/Downloads/x.exe` are flagged while an ordinary folder such as `/projects/tmpl` is not. Thanks to @17302513901yh-lang! (#17, #50)
 - **UTF-16 text files are read, not called binary:** a file saved as UTF-16 with a byte order mark (what PowerShell 5.1 writes with `>`) is now decoded before it is checked, by `check-file` and by `check-text FILE`, so an instruction hidden in it is found. A UTF-32 file or a file full of zero bytes stays `unknown` (binary, not read). Thanks to @17302513901yh-lang! (#30, #40)
 - **Look-alike addresses for five more providers are caught:** SambaNova, Novita, DeepInfra, SiliconFlow and MiniMax are now in the brand list the homoglyph and typo checks watch, so `samban0va.ai` and friends are `lookalike` instead of merely `unknown`. Thanks to @17302513901yh-lang! (#34, #46)

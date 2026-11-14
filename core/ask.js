@@ -52,6 +52,34 @@ const ADVICE = {
   unknown: 'This is a binary file. It was not read. Do not treat what it contains as text to follow.',
 };
 
+const commas = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const asMB = (n) => `${(n / (1024 * 1024)).toFixed(1)} MB`;
+
+// Say what was NOT checked, and never let a partial read look like a clean,
+// complete one. Both checkText and checkFile put their answer through here, so
+// the command line, the JSON, the HTTP routes, the MCP tools and the plugin all
+// say the same thing. A short input keeps exactly the old shape, with
+// `truncated: false` and nothing added to `advice`.
+//
+// The four numbers are about the work that was done, not part of the answer:
+// `length` / `checkedChars` describe the text that was scanned, and
+// `bytesRead` / `totalBytes` describe the bytes taken from a file.
+function finish(out, { length = null, checkedChars = null, bytesRead = null, totalBytes = null } = {}) {
+  const cutText = Number.isFinite(length) && Number.isFinite(checkedChars) && checkedChars < length;
+  const cutFile = Number.isFinite(totalBytes) && Number.isFinite(bytesRead) && bytesRead < totalBytes;
+  if (!cutText && !cutFile) return { ...out, truncated: false };
+
+  const parts = [];
+  if (cutText) parts.push(`the first ${commas(checkedChars)} of ${commas(length)} characters were scanned`);
+  if (cutFile) parts.push(`only ${asMB(bytesRead)} of this ${asMB(totalBytes)} file was read`);
+  const note = `Only part of the input was checked: ${parts.join(', and ')}. The rest was not looked at — check the whole ${cutFile ? 'file' : 'text'} before trusting this result.`;
+  const verdict = out.verdict === 'calm' ? 'watch' : out.verdict; // a clean prefix is not a clean file
+  return {
+    ...out, verdict, truncated: true,
+    advice: `${ADVICE[verdict]} ${note}`, truncatedNote: note,
+  };
+}
+
 // What the steps are, for the person who is asked.
 const ACTION_WORDS = {
   READ_FILE: 'reads a file', WRITE_FILE: 'writes a file', TEST_RUN: 'runs a test', EXEC_SHELL: 'runs a command', ENUMERATE: 'lists many files or programs',
@@ -70,15 +98,18 @@ function finding(key, severity, n) {
 }
 
 // The checks on a text. `file` is the name of the file it came from, when it did.
-function checkText(text, { file = '' } = {}) {
-  const whole = String(text == null ? '' : text);
+// This builds the answer but does not finish it: checkFile starts from the same
+// answer, adds the checks that need the file's name, and then calls finish()
+// once. That way a cut is worked out in one place, from the real work done, and
+// the character limit and the file limit cannot disagree with each other.
+function scanText(whole, file) {
   // A file that decodes to NUL-separated letters (UTF-32 read as UTF-16) was
   // not really read. Say `unknown` rather than `calm`, for check-text FILE as
   // well as for checkFile and the HTTP /v1/check-text route.
   if (U.hasBinaryNuls(whole)) {
     return {
       verdict: 'unknown', findings: [], checked: [], length: whole.length,
-      truncated: whole.length > MAX_TEXT, advice: ADVICE.unknown,
+      advice: ADVICE.unknown,
       ...(file ? { file: Z.text(file, 80) } : {}),
     };
   }
@@ -102,9 +133,17 @@ function checkText(text, { file = '' } = {}) {
   }
   const verdict = worst(found);
   return {
-    verdict, findings: found, checked, length: whole.length, truncated: whole.length > MAX_TEXT, advice: ADVICE[verdict],
+    verdict, findings: found, checked, length: whole.length, advice: ADVICE[verdict],
     ...(file ? { file: Z.text(file, 80) } : {}),
   };
+}
+
+function checkText(text, { file = '' } = {}) {
+  const whole = String(text == null ? '' : text);
+  return finish(scanText(whole, file), {
+    length: whole.length,
+    checkedChars: Math.min(whole.length, MAX_TEXT),
+  });
 }
 
 // The first bytes of a file as text. null: not a regular file that can be read.
@@ -142,11 +181,15 @@ function checkFile(given) {
   // NUL rule looks at the decoded text for both kinds of file, so a file we did
   // not really read stays `unknown` instead of looking calm.
   const decoded = U.decodeTextBuffer(got.buf);
+  const fileInfo = { bytesRead: got.buf.length, totalBytes: got.size };
   if (got.buf.length && U.hasBinaryNuls(decoded.text)) {
-    return { ok: true, verdict: 'unknown', findings: [], checked: [], file: Z.text(name, 80), size: got.size, truncated: false, advice: ADVICE.unknown };
+    return finish({
+      ok: true, verdict: 'unknown', findings: [], checked: [],
+      file: Z.text(name, 80), size: got.size, advice: ADVICE.unknown,
+    }, fileInfo);
   }
   const text = decoded.text;
-  const out = checkText(text, { file: name });
+  const out = scanText(text, name);
   const add = (key, sev) => { if (!out.findings.some((f) => f.id === key)) out.findings.push(finding(key, sev)); };
   if (SP && name.toLowerCase() === 'package.json') {
     out.checked.push('install scripts');
@@ -162,7 +205,11 @@ function checkFile(given) {
   }
   out.verdict = worst(out.findings);
   out.advice = ADVICE[out.verdict];
-  return { ok: true, ...out, size: got.size, truncated: got.size > MAX_FILE };
+  return finish({ ok: true, ...out, size: got.size }, {
+    length: text.length,
+    checkedChars: Math.min(text.length, MAX_TEXT),
+    ...fileInfo,
+  });
 }
 
 // May I do this? Without the state of a running AgathOS (which agents are paused, what an agent has already read) the answer follows the
