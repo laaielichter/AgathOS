@@ -140,7 +140,10 @@ function analyseServer(name, def, app, file, store) {
       reasons.push({ key: 'mcp.unpinned', params: { pkg: pkg.name }, sev: 'watch' }); bump('watch');
     }
   }
-  const joined = [command, ...args, url, ...Object.values(env).map(String), ...Object.values(headers).map(String)].join(' ');
+  // Give findSecrets() the NAME=value pairs, not just the values: providers
+  // without a recognisable prefix (Mistral, Cohere, …) are found by their name (#55).
+  const envPairs = Object.entries(env).map(([key, value]) => `${key}=${String(value)}`);
+  const joined = [command, ...args, url, ...envPairs, ...Object.values(headers).map(String)].join(' ');
   // An MCP server that is itself an agent: the program that calls it hands part of its work to another AI.
   const agentServer = links.agentMcpReason([command, ...args].join(' '));
   if (agentServer) { reasons.push(agentServer); bump('watch'); }
