@@ -42,6 +42,18 @@ ok(r1.reasons.some((r) => r.key === 'file.injectionPhrase'), 'decoded tag text i
 ok(T.scanText('a' + '\u200b\u200c'.repeat(6) + 'b').sev === 'alarm', 'zero-width run is an alarm');
 ok(T.scanText('\ufeff# Title\nplain text').sev === 'calm', 'a BOM at the start is normal');
 ok(T.scanText('KEY=sk-ant-api03-' + 'a'.repeat(40)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'Anthropic'), 'Anthropic key is named Anthropic');
+// A named key in JSON has quotes around the name, so the closing quote used to
+// arrive before the ":" that NAMED_KEY expected (#55). Made-up values only.
+{
+  const value = 'abcdefghij' + '0123456789' + 'ABCDEFGHIJ';
+  const named = (text) => T.findSecrets(text).filter((s) => s.kind === 'Mistral').length;
+  ok(named('MISTRAL_API_KEY=' + value) === 1, 'named key: .env form still gives one finding');
+  ok(named('MISTRAL_API_KEY: ' + value) === 1, 'named key: YAML form still gives one finding');
+  ok(named('MISTRAL_API_KEY = "' + value + '"') === 1, 'named key: quoted value still gives one finding');
+  ok(named('{"env": {"MISTRAL_API_KEY": "' + value + '"}}') === 1, 'named key: quoted JSON name is found');
+  ok(named("{'MISTRAL_API_KEY': '" + value + "'}") === 1, 'named key: quoted single-quote name is found');
+  ok(T.findSecrets('"OPENAI_API_KEY": "your-key-here-your-key-here"').length === 0, 'named key: placeholder under a quoted name is still skipped');
+}
 ok(T.scanText('CLAUDE_CODE_OAUTH_TOKEN=sk-ant-' + 'oat01-' + 'a'.repeat(60)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'Anthropic'), 'Claude Code OAuth token is named Anthropic');
 ok(T.scanText('OPENAI_API_KEY=sk-' + 'b'.repeat(48)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'OpenAI / DeepSeek'), 'OpenAI key keeps its name');
 ok(T.scanText('SENDGRID_API_KEY=SG.' + 'a'.repeat(22) + '.' + 'b'.repeat(43)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'SendGrid'), 'SendGrid key is named SendGrid');
@@ -265,6 +277,18 @@ const mail = servers.find((s) => s.name === 'mail');
 const gh = servers.find((s) => s.name === 'gh');
 ok(mail && mail.state === 'alarm' && mail.reasons.some((r) => r.key === 'mcp.malicious'), 'known malicious MCP package is an alarm');
 ok(gh && gh.reasons.some((r) => r.key === 'mcp.inlineSecret') && !gh.reasons.some((r) => r.key === 'mcp.unpinned'), 'inline token found, pinned version accepted');
+// The Gatekeeper sees the env NAME too, so a Mistral key (no recognisable prefix)
+// is caught in an MCP config even though its value looks like ordinary text (#55).
+{
+  const value = 'abcdefghij' + '0123456789' + 'ABCDEFGHIJ';
+  const named = inv.analyseServer('mistral', { command: 'npx', args: ['-y', 'some-search-mcp@1.2.3'],
+    env: { MISTRAL_API_KEY: value } }, 'Test', 'f', { state: { approvals: {} }, settings: {} });
+  ok(named.reasons.some((r) => r.key === 'mcp.inlineSecret' && /Mistral/.test(r.params.kinds)),
+    'Gatekeeper finds a named key in an MCP env block');
+  const placeholder = inv.analyseServer('mistral', { command: 'npx', args: ['-y', 'some-search-mcp@1.2.3'],
+    env: { OPENAI_API_KEY: 'your-key-here-your-key-here' } }, 'Test', 'f', { state: { approvals: {} }, settings: {} });
+  ok(!placeholder.reasons.some((r) => r.key === 'mcp.inlineSecret'), 'Gatekeeper still skips a placeholder');
+}
 const approvals = { [gh.id]: { hash: 'different' } };
 ok(inv.scanMcp({ state: { approvals } }).find((s) => s.name === 'gh').reasons.some((r) => r.key === 'mcp.changed'), 'changed definition after approval is an alarm (rug pull)');
 
