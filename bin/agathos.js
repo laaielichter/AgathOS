@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const Client = require('../core/client');
 const U = require('../core/util');
+const { isShellTool } = require('../core/classify');
 
 const VERSION = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).version; } catch (_) { return '0.0.0'; } })();
 
@@ -89,9 +90,16 @@ async function main(argv) {
   } else if (cmd === 'check-file') {
     r = args[1] ? await c.checkFile(args[1].startsWith('~') ? args[1] : path.resolve(args[1])) : { ok: false, error: 'path', message: 'Give the path of a file.' };
   } else if (cmd === 'check-action') {
+    // The input is a JSON object. A string, a list or a number is refused, not replaced by {}:
+    // an empty command would be checked instead, and the answer would be a wrong `allow`.
     let input = {};
-    try { if (args[2]) input = JSON.parse(args[2]); } catch (_) { r = { ok: false, error: 'json', message: 'The input must be JSON.' }; }
-    if (!r) r = args[1] ? await c.checkAction(args[1], input && typeof input === 'object' ? input : {}, process.cwd()) : { ok: false, error: 'tool', message: 'Give the name of the tool.' };
+    const given = args[2] !== undefined;
+    try { if (given) input = JSON.parse(args[2]); } catch (_) { r = { ok: false, error: 'json', message: 'The input must be JSON.' }; }
+    if (!r && !args[1]) r = { ok: false, error: 'tool', message: 'Give the name of the tool.' };
+    if (!r && (!input || typeof input !== 'object' || Array.isArray(input))) r = { ok: false, error: 'json', message: `The input must be a JSON object, for example '{"command":"ls"}'.` };
+    // A shell tool with no command: nothing was checked, so it is not an `allow`.
+    if (!r && isShellTool(args[1]) && !String(input.command || input.cmd || '').trim()) r = { ok: false, error: 'command', message: `Give the command to check: agathos check-action ${String(args[1]).slice(0, 40)} '{"command":"..."}'` };
+    if (!r) r = await c.checkAction(args[1], input, process.cwd());
   } else if (cmd === 'status') r = await c.status();
   else if (cmd === 'agents') r = await c.agents();
   else if (cmd === 'findings') r = await c.findings(Number(args[1]) || undefined);
