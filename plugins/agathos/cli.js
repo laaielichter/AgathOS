@@ -72,6 +72,19 @@ function human(r) {
   return lines.join('\n');
 }
 
+// How many words a command uses after its name. `report` is deliberately absent:
+// the whole rest of the line is its sentence. Anything that starts with '-' and
+// is not a known option is a typo, not a file name; a lone '-' still means stdin.
+const MAX_ARGS = {
+  'check-text': 1, 'check-file': 1, 'check-action': 2,
+  status: 0, agents: 0, findings: 1,
+};
+const ARGS_HINT = {
+  'check-text': 'one file (or - for stdin)', 'check-file': 'one file',
+  'check-action': 'a tool name and one JSON input',
+  status: 'no arguments', agents: 'no arguments', findings: 'one number',
+};
+
 async function main(argv) {
   const flags = new Set(argv.filter((a) => a === '--json' || a === '--standalone'));
   const args = argv.filter((a) => a !== '--json' && a !== '--standalone');
@@ -79,6 +92,23 @@ async function main(argv) {
   if (!cmd || cmd === '-h' || cmd === '--help' || cmd === 'help') { console.log(HELP); return cmd ? 0 : 3; }
   if (cmd === '-v' || cmd === '--version') { console.log(VERSION); return 0; }
   if (cmd === 'mcp') { require('./lib/mcp').serve({ version: VERSION }); return null; }
+  if (Object.hasOwn(MAX_ARGS, cmd)) {
+    const rest = args.slice(1);
+    for (let i = 0; i < rest.length; i++) {
+      const a = rest[i];
+      // check-action's JSON input is the second word after the command and may
+      // itself start with '-' (for example the number -1).
+      if (cmd === 'check-action' && i === 1) continue;
+      if (typeof a === 'string' && a.startsWith('-') && a !== '-') {
+        console.error(`Unknown option: ${String(a).slice(0, 40)}\n\n${HELP}`);
+        return 3;
+      }
+    }
+    if (rest.length > MAX_ARGS[cmd]) {
+      console.error(`${cmd} takes ${ARGS_HINT[cmd]}.\n\n${HELP}`);
+      return 3;
+    }
+  }
   const env = flags.has('--standalone') ? { ...process.env, AGATHOS_TOKEN: '', AGATHOS_TOKEN_FILE: '' } : process.env;
   const c = Client.create(env);
   let r;
