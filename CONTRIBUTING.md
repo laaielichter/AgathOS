@@ -13,6 +13,7 @@ Thanks for helping. Small, clear changes are the easiest to review.
 2. Run `node test/run-tests.js`. Everything must pass before you open a pull request.
 3. New texts for the window go in all 20 languages.
 4. One change per pull request, described in plain English.
+5. Do not edit `CHANGELOG.md` in your pull request; the maintainer adds the entry, with credit to you, when it is merged. This keeps pull requests from conflicting with each other.
 
 ## Security problems
 Please do not open a public issue. See [SECURITY.md](SECURITY.md).
