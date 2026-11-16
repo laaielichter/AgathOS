@@ -102,6 +102,10 @@ node plugins/agathos/cli.js findings          # needs the app and a key
 The exit code says it: 0 calm or allow, 1 watch or ask, 2 alarm or deny, 3 it could not be done. `--json` prints JSON;
 `--standalone` does not ask a running AgathOS.
 
+A `file.secret` finding names the kinds of key that were found (for example `Anthropic, Mistral`) in its sentence and in
+a `kinds` array, so you know which provider to revoke at. Only the names from our own list of key patterns are shown:
+the keys themselves never appear in the answer, not even masked. Texts without keys are unchanged.
+
 ## The local API
 
 For anything else: `http://127.0.0.1:47612`, with `Authorization: Bearer <key>`. See the README, section *Local API*.

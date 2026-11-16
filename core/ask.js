@@ -32,7 +32,7 @@ const WORDS = {
   'file.hidden': 'Invisible characters ({n}) are hidden in this text.',
   'file.bidi': 'Characters that reverse the reading direction are used here, a way to disguise what the text says.',
   'file.injectionPhrase': 'A sentence tells an AI to ignore its rules or to do something else.',
-  'file.secret': 'Keys or passwords ({n}) are written in this text. They are not shown.',
+  'file.secret': 'Keys or passwords ({n}) are written in this text{kinds}. They are not shown.',
   'copy.r.self': 'Tells an AI to copy itself.',
   'copy.r.weights': 'Tells an AI to take its weights or model files along.',
   'copy.r.spread': 'Tells an AI to write this text into other files, messages or agents.',
@@ -92,9 +92,19 @@ const ACTION_WORDS = {
 const rank = { calm: 0, watch: 1, alarm: 2 };
 const worst = (list) => list.reduce((w, f) => (rank[f.severity] > rank[w] ? f.severity : w), 'calm');
 
-function finding(key, severity, n) {
-  const text = (WORDS[key] || key).replace('{n}', Number.isFinite(n) ? String(n) : 'some');
-  return { id: key, severity, what: text };
+// #56: the scanner knows which providers the keys belong to. Those names come
+// from our own SECRET_PATTERNS / NAMED_LABEL list, never from the text that was
+// read, so they are safe to show; the key itself (masked or not) never is.
+function finding(key, severity, n, params) {
+  const kinds = key === 'file.secret' && params && typeof params.kinds === 'string'
+    ? [...new Set(params.kinds.split(',').map((k) => k.trim()).filter(Boolean))]
+    : [];
+  const text = (WORDS[key] || key)
+    .replace('{n}', Number.isFinite(n) ? String(n) : 'some')
+    .replace('{kinds}', kinds.length ? `: ${kinds.join(', ')}` : '');
+  const out = { id: key, severity, what: text };
+  if (kinds.length) out.kinds = kinds;
+  return out;
 }
 
 // The checks on a text. `file` is the name of the file it came from, when it did.
@@ -116,11 +126,11 @@ function scanText(whole, file) {
   const s = whole.slice(0, MAX_TEXT);
   const found = [];
   const have = new Set();
-  const put = (key, sev, n) => { if (have.has(key)) return; have.add(key); found.push(finding(key, sev, n)); };
+  const put = (key, sev, n, params) => { if (have.has(key)) return; have.add(key); found.push(finding(key, sev, n, params)); };
   const checked = ['hidden characters', 'sentences that tell an AI to ignore its rules', 'keys and passwords'];
   let r = { reasons: [] };
   try { r = T.scanText(s); } catch (_) { /* a text that breaks a check is itself a reason to be careful */ put('file.injectionPhrase', 'watch'); }
-  for (const x of r.reasons) put(x.key, x.sev === 'alarm' ? 'alarm' : 'watch', x.params && typeof x.params.n === 'number' ? x.params.n : undefined);
+  for (const x of r.reasons) put(x.key, x.sev === 'alarm' ? 'alarm' : 'watch', x.params && typeof x.params.n === 'number' ? x.params.n : undefined, x.params);
   if (CP) {
     checked.push('orders to copy an AI');
     try {
