@@ -2,6 +2,55 @@
 // AgathOS - turn raw commands and tool calls into actions from the alphabet.
 const C = require('./catalog');
 
+// Decide whether a written path lies inside the working folder from the TEXT of
+// the two paths alone: nothing is read from disk and no links are followed (#61).
+// A plain string prefix check is wrong in both directions — `/home/me/proj2` starts
+// with `/home/me/proj`, and a relative `src/a.js` starts with no absolute cwd at
+// all. Both `\` and `/` are accepted regardless of the host OS, and `.` / `..`
+// are resolved lexically so a Windows path is understood on Linux and vice versa.
+function partsOf(text) {
+  const s = String(text || '').replace(/\\/g, '/');
+  const drive = /^([A-Za-z]:)(\/|$)/.exec(s);
+  const windows = !!drive || s.startsWith('//');
+  let prefix = '';
+  let rest = s;
+  if (drive) { prefix = drive[1].toLowerCase() + '/'; rest = s.slice(drive[1].length); }
+  else if (s.startsWith('//')) { prefix = '//'; rest = s.slice(2); }
+  else if (s.startsWith('/')) { prefix = '/'; rest = s.slice(1); }
+  const parts = [];
+  let escaped = false;
+  for (const segment of rest.split('/')) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') {
+      // `..` above the root of an absolute path stays at the root; in a relative
+      // path it climbs out of the working folder, which is a write outside (#61).
+      if (parts.length) parts.pop();
+      else if (!prefix) escaped = true;
+      continue;
+    }
+    parts.push(windows ? segment.toLowerCase() : segment);
+  }
+  return { prefix, parts, absolute: !!prefix, escaped, windows };
+}
+
+function insideProject(file, cwd) {
+  if (!cwd || !file) return true; // as today: without a working folder it is a plain write
+  const c = partsOf(cwd);
+  const f = partsOf(file);
+  // A relative path belongs to the working folder by definition, unless `..`
+  // climbs above it.
+  if (!f.absolute) return !f.escaped;
+  // A Windows path rooted at `\` has no drive letter of its own; read it as the
+  // drive of the working folder it is being compared with.
+  if (c.windows && !f.windows && f.prefix === '/') {
+    f.prefix = c.prefix;
+    f.parts = f.parts.map((x) => x.toLowerCase());
+  }
+  if (f.prefix !== c.prefix || f.parts.length < c.parts.length) return false;
+  // Compare segments, not characters: `/home/me/proj2` cannot match `/home/me/proj`.
+  return c.parts.every((segment, i) => f.parts[i] === segment);
+}
+
 function sensitivePath(text) {
   return C.SENSITIVE_PATHS.some((re) => re.test(text));
 }
@@ -53,7 +102,7 @@ function classifyTool(name, input, cwd) {
   }
   if (n === 'Write' || n === 'Edit' || n === 'MultiEdit' || n === 'NotebookEdit' || /write|edit|create_file|replace|patch/i.test(n)) {
     if (/mcp\.json|claude_desktop_config|settings(\.local)?\.json|config\.toml|\.cursorrules|claude\.md|agents\.md/i.test(file)) return 'MCP_CONFIG_CHANGE';
-    if (cwd && file && !String(file).toLowerCase().startsWith(String(cwd).toLowerCase())) return 'WRITE_OUTSIDE';
+    if (!insideProject(file, cwd)) return 'WRITE_OUTSIDE';
     return 'WRITE_FILE';
   }
   if (n === 'Glob' || n === 'Grep' || /list_dir|search_files|find_files|directory_tree/i.test(n)) {
@@ -69,4 +118,4 @@ function classifyTool(name, input, cwd) {
   return 'EXEC_SHELL';
 }
 
-module.exports = { classifyCommand, classifyTool, isShellTool, dangerousFlags, sensitivePath };
+module.exports = { classifyCommand, classifyTool, isShellTool, dangerousFlags, sensitivePath, insideProject };
