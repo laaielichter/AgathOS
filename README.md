@@ -3,6 +3,7 @@
 **The good guardian for your local AI agents.**
 
 [![Tests](https://github.com/laaielichter/AgathOS/actions/workflows/tests.yml/badge.svg)](https://github.com/laaielichter/AgathOS/actions/workflows/tests.yml)
+[![GitHub stars](https://img.shields.io/github/stars/laaielichter/AgathOS?style=social)](https://github.com/laaielichter/AgathOS/stargazers)
 
 **[Download the latest version](https://github.com/laaielichter/AgathOS/releases/latest)** for Windows (Intel/AMD and
 ARM) and macOS (Apple chip and Intel). See [Install](#install).
@@ -453,7 +454,11 @@ on your system.
 
 Found a weakness in AgathOS itself? Please report it privately, see [SECURITY.md](SECURITY.md).
 
-## Support
+## Support the project
+
+If AgathOS is useful to you, a ⭐ on [GitHub](https://github.com/laaielichter/AgathOS) helps other people find it.
+
+Thanks to everyone who has contributed: [@17302513901yh-lang](https://github.com/17302513901yh-lang) and [@tnalbant](https://github.com/tnalbant).
 
 AgathOS is free and open source. If it saves you or your agent time, a gift is welcome but never expected. SOL and
 any token on Solana (such as USDC) can be sent to:

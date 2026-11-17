@@ -1,6 +1,6 @@
 # Contributing to AgathOS
 
-Thanks for helping. Small, clear changes are the easiest to review.
+Thanks for helping. Small, clear changes are the easiest to review. Starring the repo is a simple way to keep it in your list and helps others find it, but it is never needed to get an issue, help or a review.
 
 ## Ways to help
 - **Try it and report.** Open an issue with what you saw, what you expected, your system (Windows or macOS and the version) and, if you can, a screenshot. Mac testers are especially welcome.
