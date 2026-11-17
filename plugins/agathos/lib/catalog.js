@@ -279,6 +279,40 @@ function runsFetchedCode(cmd) {
   return PIPE_TO_INTERPRETER_RE.test(c) || SUBSTITUTION_TO_INTERPRETER_RE.test(c);
 }
 
+// Does curl or wget send data out instead of just fetching it? (#57)
+// The old one-line rule was case-insensitive and needed a space after every
+// option, so -f (--fail) and -D (--dump-header) were refused as uploads while
+// --data-binary, --json, -d@file, -T.env and --upload-file=a.zip passed as
+// downloads. Here an option has to be a token of its own: long names may carry
+// their value after '=', short names may carry it attached (-d@file), and the
+// short letters are case-sensitive: -d/-F/-T send data, -D/-f/-t do not.
+const UPLOAD_LONG = new Set([
+  '--data', '--data-ascii', '--data-binary', '--data-raw', '--data-urlencode',
+  '--json', '--form', '--form-string', '--upload-file',
+  '--post-file', '--post-data', '--body-file', '--body-data',
+]);
+const UPLOAD_SHORT = new Set(['d', 'F', 'T']);
+const SEND_TOOL_RE = /\b(curl|wget)\b/i;
+function uploadsWithFetchTool(cmd) {
+  const c = String(cmd || '');
+  if (!SEND_TOOL_RE.test(c)) return false;
+  // One linear pass over whitespace-separated tokens: no regex that tries
+  // every split of a very long command line.
+  for (const token of c.split(/\s+/)) {
+    if (token.startsWith('--')) {
+      if (UPLOAD_LONG.has(token.split('=')[0])) return true;
+    } else if (token.startsWith('-') && token.length > 1) {
+      // curl bundles single-letter flags (-fsSL); an attached value starts
+      // at the first character that is not a flag letter (-d@file, -T.env).
+      const letters = (/^[a-z]+/i.exec(token.slice(1)) || [''])[0];
+      for (const ch of letters) if (UPLOAD_SHORT.has(ch)) return true;
+    }
+  }
+  return false;
+}
+// Everything else that sends data out, unchanged from the old EXFIL rule.
+const EXFIL_OTHER_RE = /invoke-(webrequest|restmethod)\s+.*-method\s+(post|put)|\bscp\s|\brclone\s|\bs?ftp\s|\bnc(\.exe)?\s+-|\bncat\s|send-mailmessage|discord(app)?\.com\/api\/webhooks|api\.telegram\.org|webhook\.site|pastebin|transfer\.sh|ngrok/i;
+
 // Classify one command line into an action from the alphabet.
 // Order matters: the first match wins, most severe first.
 const COMMAND_RULES = [
@@ -288,7 +322,11 @@ const COMMAND_RULES = [
   { action: 'EXEC_DOWNLOADED', test: runsFetchedCode },
   { action: 'CREDENTIAL_ACCESS', re: /cmdkey\s+\/list|vaultcmd|mimikatz|lsass|get-storedcredential|trufflehog|gitleaks|findstr\s+.*(password|api_key|secret)|select-string\s+.*(password|api_key|secret)|dpapi|\bsekurlsa\b/i },
   { action: 'GIT_PUSH', re: /git\s+push\b/i },
-  { action: 'EXFIL', re: /(curl|wget)\s+.*(-d|--data|-F|--upload-file|-T)\s|invoke-(webrequest|restmethod)\s+.*-method\s+(post|put)|\bscp\s|\brclone\s|\bs?ftp\s|\bnc(\.exe)?\s+-|\bncat\s|send-mailmessage|discord(app)?\.com\/api\/webhooks|api\.telegram\.org|webhook\.site|pastebin|transfer\.sh|ngrok/i },
+  // curl/wget upload options: -d, --data, --data-ascii, --data-binary,
+  // --data-raw, --data-urlencode, --json, -F, --form, --form-string, -T,
+  // --upload-file, and wget --post-file, --post-data, --body-file,
+  // --body-data (#57). Plus the other exfiltration shapes above.
+  { action: 'EXFIL', test: (c) => uploadsWithFetchTool(c) || EXFIL_OTHER_RE.test(c) },
   // Copies of AI itself: weights moved around, or the home folder of an agent taken along. (Sending them out over the network is EXFIL, above.)
   { action: 'SELF_COPY', re: SELF_COPY_RE },
   { action: 'COPY_MODEL', re: COPY_MODEL_RE },
