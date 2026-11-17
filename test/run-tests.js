@@ -69,6 +69,29 @@ ok(T.scanText('PINECONE_API_KEY=pcsk_2go2xm_' + 'A'.repeat(63)).reasons.some((r)
 ok(T.scanText('The docs mention the SG. prefix, dapi, pypi-, sbp_value, pcsk_ and tvly- in prose.').sev === 'calm', 'a bare prefix in prose is not a secret');
 ok(T.scanText('abc \u202e cba').reasons.some((r) => r.key === 'file.bidi'), 'bidi override is found');
 
+// #56: the answer names which providers the keys belong to. Made-up values only,
+// built the way the rest of this file builds them so no real-looking key is stored.
+{
+  const A = require('../core/ask');
+  const mistral = 'abcdefghij' + '0123456789' + 'ABCDEFGHIJ';
+  const anthropic = 'sk-ant-api03-' + 'a'.repeat(40);
+  const out = A.checkText(`MISTRAL_API_KEY=${mistral}\nANTHROPIC_API_KEY=${anthropic}\n`);
+  const secret = out.findings.find((f) => f.id === 'file.secret');
+  ok(!!secret && secret.what === 'Keys or passwords (2) are written in this text: Anthropic, Mistral. They are not shown.', 'file.secret names both providers in its sentence');
+  ok(!!secret && JSON.stringify(secret.kinds) === JSON.stringify(['Anthropic', 'Mistral']), 'file.secret has a kinds field with each provider once');
+  ok(!JSON.stringify(out).includes(mistral) && !JSON.stringify(out).includes(anthropic), 'no part of a key, masked or not, reaches the answer');
+  ok(!JSON.stringify(out).includes('{kinds}'), 'the placeholder never reaches the answer');
+  const plain = A.checkText('Remember the milk.');
+  ok(plain.verdict === 'calm' && plain.findings.length === 0, 'a text without keys and the other findings are unchanged');
+  const one = A.checkText('KEY=' + anthropic).findings.find((f) => f.id === 'file.secret');
+  ok(one.kinds.length === 1 && one.what.includes(': Anthropic.'), 'one key gives one kind, deduplicated');
+  ok(A.checkText('x\u202e' + 'y' + '\u202c').findings.every((f) => !f.what.includes('{kinds}')), 'other findings have no placeholder');
+  const p = path.join(tmp, 'two-keys.env');
+  fs.writeFileSync(p, `MISTRAL_API_KEY=${mistral}\nANTHROPIC_API_KEY=${anthropic}\n`);
+  const fileSecret = A.checkFile(p).findings.find((f) => f.id === 'file.secret');
+  ok(!!fileSecret && JSON.stringify(fileSecret.kinds) === JSON.stringify(['Anthropic', 'Mistral']), 'check-file names the kinds too');
+}
+
 // ---------- UTF-16 files ----------
 {
   const A = require('../core/ask');
