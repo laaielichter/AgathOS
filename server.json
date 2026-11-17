@@ -1,0 +1,52 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.laaielichter/agathos",
+  "title": "AgathOS",
+  "description": "Local watcher for AI agents: audits MCP servers, finds hidden prompt injection, checks risky steps.",
+  "websiteUrl": "https://laaielichter.github.io/AgathOS/",
+  "repository": {
+    "url": "https://github.com/laaielichter/AgathOS",
+    "source": "github"
+  },
+  "version": "0.13.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "agathos-os",
+      "version": "0.13.1",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "AGATHOS_TOKEN",
+          "description": "Agent access key from the AgathOS app (Settings > Agent access). Without it only the built-in checks run.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "AGATHOS_TOKEN_FILE",
+          "description": "File that holds the agent access key, instead of AGATHOS_TOKEN",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "filepath"
+        },
+        {
+          "name": "AGATHOS_PORT",
+          "description": "Port of the local AgathOS app API (default 47612)",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number"
+        }
+      ]
+    }
+  ]
+}
