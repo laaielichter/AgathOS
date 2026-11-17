@@ -1,0 +1,70 @@
+name: MCP Registry
+
+# Lists AgathOS in the official MCP Registry (registry.modelcontextprotocol.io).
+# Run it by hand after a new version is on npm: Actions > MCP Registry > Run workflow.
+# GitHub proves who owns the io.github.laaielichter namespace, so no login or token is needed.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Check that server.json matches package.json
+        run: |
+          node -e '
+            const s = require("./server.json"), p = require("./package.json");
+            const bad = [];
+            if (s.name !== p.mcpName) bad.push("name");
+            if (s.version !== p.version) bad.push("version");
+            if (s.packages[0].identifier !== p.name) bad.push("identifier");
+            if (s.packages[0].version !== p.version) bad.push("package version");
+            if (bad.length) { console.error("server.json does not match package.json: " + bad.join(", ")); process.exit(1); }
+            console.log("server.json matches package.json " + p.name + "@" + p.version);
+          '
+
+      - name: Check that this version is on npm
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          published=$(npm view "agathos-os@${version}" version 2>/dev/null || true)
+          if [ "${published}" != "${version}" ]; then
+            echo "agathos-os@${version} is not on npm yet. Run npm publish first."; exit 1
+          fi
+          echo "agathos-os@${version} is on npm"
+          name=$(node -p 'require("./server.json").name')
+          if [ "$(npm view "agathos-os@${version}" mcpName 2>/dev/null)" != "${name}" ]; then
+            echo "agathos-os@${version} on npm has no mcpName ${name}. Publish a version that has it first."; exit 1
+          fi
+
+      - name: Install MCP Registry publisher
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.0
+          MCP_PUBLISHER_SHA256_LINUX_AMD64: 1370446bbe74d562608e8005a6ccce02d146a661fbd78674e11cc70b9618d6cf
+        run: |
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          curl -fsSLo "${archive}" \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/${archive}"
+          echo "${MCP_PUBLISHER_SHA256_LINUX_AMD64}  ${archive}" | sha256sum --check --strict
+          tar xzf "${archive}" mcp-publisher
+          chmod +x mcp-publisher
+
+      - name: Validate server.json
+        run: ./mcp-publisher validate
+
+      - name: Log in with GitHub
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish
+        run: ./mcp-publisher publish
