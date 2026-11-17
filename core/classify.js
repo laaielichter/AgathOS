@@ -33,7 +33,18 @@ function partsOf(text) {
   return { prefix, parts, absolute: !!prefix, escaped, windows };
 }
 
+// A path that starts with `~` (or a shell spelling of the home folder) points
+// somewhere we cannot resolve from the text alone. MCP filesystem tools accept
+// those paths, and they are exactly the writes WRITE_OUTSIDE is there to weigh
+// heavily (#61). main treats them as outside; keep the same answer here.
+function homeReference(text) {
+  const s = String(text || '');
+  return /^~/.test(s) // ~, ~/…, ~\…, ~user/…
+      || /^(?:\$HOME|\$\{HOME\}|%USERPROFILE%)(?=$|[\\/])/i.test(s);
+}
+
 function insideProject(file, cwd) {
+  if (homeReference(file)) return false;
   if (!cwd || !file) return true; // as today: without a working folder it is a plain write
   const c = partsOf(cwd);
   const f = partsOf(file);

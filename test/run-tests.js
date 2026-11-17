@@ -237,6 +237,16 @@ ok(K.classifyTool('Edit', { file_path: 'C:/Users/a/.cursor/mcp.json' }) === 'MCP
     ['c:/users/me/proj/a.js', 'C:/Users/me/proj', 'WRITE_FILE'],
     ['\\Users\\me\\proj\\a.js', 'C:/Users/me/proj', 'WRITE_FILE'],
     ['C:\\Users\\me\\proj2\\a.js', 'C:\\Users\\me\\proj', 'WRITE_OUTSIDE'],
+    // A `~` path cannot be resolved from text alone; main treats it as outside,
+    // and WRITE_OUTSIDE is what protects writes like ~/.ssh/authorized_keys (#61).
+    ['~/.bashrc', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['~/.ssh/authorized_keys', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['~', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['~\\.bashrc', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['~other/notes.txt', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['$HOME/.bashrc', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['${HOME}/.bashrc', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['%USERPROFILE%\\.ssh\\a.txt', 'C:\\Users\\me\\proj', 'WRITE_OUTSIDE'],
   ];
   const wrong = rows.filter(([file, cwd, want]) =>
     K.classifyTool('Write', { file_path: file }, cwd) !== want)
