@@ -222,6 +222,32 @@ ok(K.classifyTool('WebFetch', { url: 'https://x' }) === 'READ_UNTRUSTED', 'WebFe
 ok(K.classifyTool('Read', { file_path: 'C:/Users/a/.aws/credentials' }) === 'READ_SENSITIVE', 'Read credentials is private');
 ok(K.classifyTool('Edit', { file_path: 'C:/Users/a/.cursor/mcp.json' }) === 'MCP_CONFIG_CHANGE', 'editing mcp.json is a config change');
 
+// ---------- agent settings and instruction files ask (#13) ----------
+{
+  const A = require('../core/ask');
+  const settings = [
+    '/Users/me/.claude.json',
+    '/Users/me/.codeium/windsurf/mcp_config.json',
+    'C:\\Users\\me\\.gemini\\antigravity\\mcp_config.json',
+    '/p/GEMINI.md',
+    '/p/QWEN.md',
+    '/p/.windsurfrules',
+    '/p/.clinerules',
+    '/p/.github/copilot-instructions.md',
+    '/p/SKILL.md',
+  ];
+  const wrong = settings.filter((f) => K.classifyTool('Edit', { file_path: f }) !== 'MCP_CONFIG_CHANGE'
+    || A.checkAction({ tool: 'Edit', input: { file_path: f } }).decision !== 'ask');
+  ok(wrong.length === 0, 'every file named in #13 is MCP_CONFIG_CHANGE and checkAction() asks: ' + wrong.join(' / '));
+  // A generic name only counts inside the folder the catalog names for that app.
+  ok(K.classifyTool('Edit', { file_path: '/Users/me/.continue/config.json' }) === 'MCP_CONFIG_CHANGE', 'a generic config.json in the catalog folder is a config change');
+  for (const f of ['/p/config.json', '/p/src/a.js']) {
+    const action = K.classifyTool('Edit', { file_path: f }, '/p');
+    ok(action === 'WRITE_FILE', `editing ${f} is still an ordinary write (${action})`);
+  }
+  ok(A.checkAction({ tool: 'Edit', input: { file_path: '/p/config.json' }, cwd: '/p' }).decision === 'allow', 'check-action still allows an ordinary project write');
+}
+
 // ---------- worm watch: network sweeps ----------
 {
   const W = require('../core/worm');
