@@ -13,6 +13,7 @@
 - **Names eight more key formats** in scans: SendGrid, DigitalOcean, Databricks, PyPI, Slack webhook, Tavily, Supabase and Pinecone keys. Thanks to @tnalbant! (#33, #39)
 - **A download is refused only when a program runs it.** `curl ... | sha256sum`, `| shasum` and `| node-jq` are no longer refused as "runs downloaded code", and `| sudo bash`, `bash <(curl ...)`, `eval "$(curl ...)"`, `| zsh`, `| ruby` and `tee f | sh` now are. Thanks to @tnalbant! (#31, #32, #43)
 - **Writes inside or outside the project are decided by path, not by text:** `src/a.js` and `./src/a.js` are an ordinary `WRITE_FILE`, while `/home/me/proj2/…`, `proj/../other/…` and `C:\Users\me\proj2\…` are `WRITE_OUTSIDE`. `\` and `/`, drive letters and `..` are read the same way on Windows, macOS and Linux, and a path that starts with `~`, `$HOME` or `%USERPROFILE%` stays `WRITE_OUTSIDE`. The plugin's `classify.js` copy is in step. Thanks to @17302513901yh-lang! (#61, #69)
+- **`check-action` recognises curl and wget upload options:** `curl -d@.env`, `curl -T file`, `curl --data-binary @file`, `wget --post-file=...` and the other upload spellings are now `EXFIL` and denied, where they were `NET_FETCH` and allowed. Downloads that use flags such as `-f` (`--fail`) or `-D` (`--dump-header`) are no longer refused as uploads. Thanks to @17302513901yh-lang! (#57, #73)
 
 ## 0.13.1 — the good guardian
 
