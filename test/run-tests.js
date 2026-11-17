@@ -221,6 +221,42 @@ ok(K.dangerousFlags('claude --dangerously-skip-permissions -p "x"').length === 1
 ok(K.classifyTool('WebFetch', { url: 'https://x' }) === 'READ_UNTRUSTED', 'WebFetch is untrusted input');
 ok(K.classifyTool('Read', { file_path: 'C:/Users/a/.aws/credentials' }) === 'READ_SENSITIVE', 'Read credentials is private');
 ok(K.classifyTool('Edit', { file_path: 'C:/Users/a/.cursor/mcp.json' }) === 'MCP_CONFIG_CHANGE', 'editing mcp.json is a config change');
+// #61: WRITE_FILE vs WRITE_OUTSIDE is decided by path containment, not a text
+// prefix. This table runs on Windows, macOS and Linux with the same answers.
+{
+  const rows = [
+    ['src/a.js', '/home/me/proj', 'WRITE_FILE'],
+    ['./src/a.js', '/home/me/proj', 'WRITE_FILE'],
+    ['/home/me/proj/src/a.js', '/home/me/proj', 'WRITE_FILE'],
+    ['/home/me/proj/src/a.js', '/home/me/proj/', 'WRITE_FILE'],
+    ['/home/me/proj2/src/a.js', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['/home/me/proj/../other/a.js', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['../other/a.js', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['/etc/hosts', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['C:\\Users\\me\\proj\\a.js', 'C:/Users/me/proj', 'WRITE_FILE'],
+    ['c:/users/me/proj/a.js', 'C:/Users/me/proj', 'WRITE_FILE'],
+    ['\\Users\\me\\proj\\a.js', 'C:/Users/me/proj', 'WRITE_FILE'],
+    ['C:\\Users\\me\\proj2\\a.js', 'C:\\Users\\me\\proj', 'WRITE_OUTSIDE'],
+    // A `~` path cannot be resolved from text alone; main treats it as outside,
+    // and WRITE_OUTSIDE is what protects writes like ~/.ssh/authorized_keys (#61).
+    ['~/.bashrc', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['~/.ssh/authorized_keys', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['~', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['~\\.bashrc', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['~other/notes.txt', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['$HOME/.bashrc', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['${HOME}/.bashrc', '/home/me/proj', 'WRITE_OUTSIDE'],
+    ['%USERPROFILE%\\.ssh\\a.txt', 'C:\\Users\\me\\proj', 'WRITE_OUTSIDE'],
+  ];
+  const wrong = rows.filter(([file, cwd, want]) =>
+    K.classifyTool('Write', { file_path: file }, cwd) !== want)
+    .map(([file, cwd, want]) => `${K.classifyTool('Write', { file_path: file }, cwd)} (wanted ${want}): ${file} in ${cwd}`);
+  ok(wrong.length === 0, 'a write inside/outside the project is classified by path: ' + wrong.join(' / '));
+  ok(K.classifyTool('Write', { file_path: 'src/a.js' }) === 'WRITE_FILE', 'without a working folder a write stays WRITE_FILE');
+  ok(K.classifyTool('Edit', { file_path: 'CLAUDE.md' }, '/home/me/proj') === 'MCP_CONFIG_CHANGE', 'the agent-settings check stays first');
+  ok(K.classifyTool('Write', { file_path: '/home/me/proj/a.js' }, '/home/me/proj') === 'WRITE_FILE', 'a path equal to the working folder is inside');
+  ok(K.insideProject('a/../b.js', '/home/me/proj') && !K.insideProject('a/../../b.js', '/home/me/proj'), 'a relative .. that climbs out is refused');
+}
 
 // ---------- worm watch: network sweeps ----------
 {
