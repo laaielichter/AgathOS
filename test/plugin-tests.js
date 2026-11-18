@@ -466,6 +466,27 @@ module.exports = async function pluginTests({ ok, tmp, eng }) {
   const neg54 = await runCli(['check-action', 'Bash', '-1']);
   ok(!/Unknown option/.test(neg54.out) && /must be a JSON object/.test(neg54.out), T + "check-action still takes a JSON input that starts with '-'");
   ok((await runCli(['check-file', '--standalone', aFile54])).code === 0 && (await runCli(['check-text', '--json', aFile54])).code === 0, T + '--standalone and --json work in any position');
+
+  // ---------- the plain (human) output of the command line (#58) ----------
+  // `human()` is exported but no test called it, so dropping the findings,
+  // the (running) mark or the report line would go unnoticed.
+  const { human } = require(path.join(top, 'bin', 'agathos.js'));
+  const statusText = human({ state: 'alarm', pausedAll: true, watchers: [{ id: 'mcp', state: 'alarm' }], running: [{ name: 'Codex', state: 'watch' }] });
+  ok(/^state: alarm \(agents are paused\)$/m.test(statusText) && /^  mcp: alarm$/m.test(statusText) && /^  running: Codex \(watch\)$/m.test(statusText), T + 'plain status keeps paused agents, watchers and running agents');
+  const findingsText = human({ total: 3, shown: 1, items: [{ state: 'alarm', kind: 'mcp', name: 'evil', where: '~/.cursor/mcp.json', reasons: [{ text: 'Runs from a download folder' }] }] });
+  ok(/^3 found, 1 shown$/m.test(findingsText) && /^alarm  mcp  evil  ~\/\.cursor\/mcp\.json$/m.test(findingsText) && /^    - Runs from a download folder$/m.test(findingsText), T + 'plain findings keeps the total, the shown count and the reasons');
+  const agentsText = human({ agents: [{ state: 'calm', name: 'Codex', running: true }, { state: 'watch', name: 'Gemini', running: false }] });
+  ok(/^calm  Codex  \(running\)$/m.test(agentsText) && /^watch  Gemini$/m.test(agentsText), T + 'plain agents marks the agent that is running');
+  ok(human({ received: true }) === 'The person will see your report in AgathOS.', T + 'plain report is one sentence');
+  ok(human({ ok: false, message: 'No key' }) === 'No key' && human({ ok: false, error: 'x' }) === 'x' && human({ ok: false }) === 'It could not be done.', T + 'plain failure uses the message, then the error, then a fallback');
+  const checkFileText = human({ verdict: 'alarm', findings: [{ severity: 'alarm', what: 'hidden text' }, { severity: 'watch', what: 'odd name' }], advice: 'Do not open it.', checked: ['encoding', 'secrets'] });
+  ok(/^  ! hidden text$/m.test(checkFileText) && /^  - odd name$/m.test(checkFileText) && /^Do not open it\.$/m.test(checkFileText) && /^checked: encoding, secrets$/m.test(checkFileText), T + 'plain check-file keeps the finding marks, the advice and the checked line');
+  const plainKeys = { AGATHOS_TOKEN: kfull.token, AGATHOS_PORT: String(sport) };
+  for (const args of [['agents'], ['findings', '1'], ['report', 'a', 'small', 'worry']]) {
+    const r = await runCli(args, { env: plainKeys });
+    ok(typeof r.code === 'number' && r.code !== 3, T + `plain ${args[0]} runs through the real CLI with a key and has an exit code`);
+    ok(!/^\s*\{/m.test(r.out), T + `plain ${args[0]} does not print JSON`);
+  }
   await new Promise((r) => srv.close(r));
 
   // ---------- shell commands are refused, tools with a scary name are asked about ----------
