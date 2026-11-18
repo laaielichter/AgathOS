@@ -66,6 +66,37 @@ function sensitivePath(text) {
   return C.SENSITIVE_PATHS.some((re) => re.test(text));
 }
 
+// Files that steer an AI program: instruction files and MCP config files. Both
+// lists already live in catalog.js, so derive the match from them instead of
+// keeping a second long regex (#13).
+//
+// The distinctive names (GEMINI.md, .clinerules, .claude.json,
+// mcp_config.json, ...) are enough on their own. The generic ones
+// (config.json, settings.json, mcp.json, config.toml) only count inside the
+// folder catalog.js names for that app: asking about every config.json in a
+// project would only be noise, as the issue points out for Continue.
+const GENERIC_CONFIG_NAMES = new Set([
+  'config.json', 'settings.json', 'mcp.json', 'config.toml', 'user-settings.json',
+]);
+const slashPath = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
+const AGENT_SETTING_NAMES = new Set([
+  ...C.INSTRUCTION_FILES,
+  ...C.MCP_CONFIGS.map(({ path }) => slashPath(path).split('/').pop())
+    .filter((name) => name && !GENERIC_CONFIG_NAMES.has(name)),
+]);
+// "%USERPROFILE%\\.codeium\\windsurf\\mcp_config.json" -> ".codeium/windsurf/mcp_config.json".
+// Dropping the environment prefix makes the same suffix work for a Windows path
+// (C:\Users\me\.codeium\...) and a POSIX one (/Users/me/.codeium/...).
+const AGENT_SETTING_SUFFIXES = [...new Set(C.MCP_CONFIGS.map(({ path }) => {
+  const p = slashPath(path).replace(/^%[a-z0-9_]+%\//, '');
+  return p.includes('/') ? p : '';
+}).filter(Boolean))];
+function agentSettingsFile(file) {
+  const p = slashPath(file);
+  if (AGENT_SETTING_NAMES.has(p.split('/').pop())) return true;
+  return AGENT_SETTING_SUFFIXES.some((s) => p === s || p.endsWith('/' + s));
+}
+
 // A shell command (from a process command line or an agent's Bash tool).
 function classifyCommand(cmd) {
   const c = String(cmd || '');
@@ -112,7 +143,8 @@ function classifyTool(name, input, cwd) {
     return 'READ_FILE';
   }
   if (n === 'Write' || n === 'Edit' || n === 'MultiEdit' || n === 'NotebookEdit' || /write|edit|create_file|replace|patch/i.test(n)) {
-    if (/mcp\.json|claude_desktop_config|settings(\.local)?\.json|config\.toml|\.cursorrules|claude\.md|agents\.md/i.test(file)) return 'MCP_CONFIG_CHANGE';
+    if (/mcp\.json|claude_desktop_config|settings(\.local)?\.json|config\.toml|\.cursorrules|claude\.md|agents\.md/i.test(file)
+        || agentSettingsFile(file)) return 'MCP_CONFIG_CHANGE';
     if (!insideProject(file, cwd)) return 'WRITE_OUTSIDE';
     return 'WRITE_FILE';
   }
