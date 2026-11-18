@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 // AgathOS - makes the copies of core/ files that the plugin carries (plugins/agathos/lib/) and puts the version of the program in the
-// manifest of the plugin. A plugin is installed on its own, without the rest of this repository, so it needs its own copies.
+// manifest of the plugin and in server.json (the MCP Registry entry). A plugin is installed on its own, without the rest of this
+// repository, so it needs its own copies.
 //   node scripts/sync-plugin.js            make the copies
 //   node scripts/sync-plugin.js --check    only say whether they are identical (exit 1 if not)
 const fs = require('fs');
@@ -13,6 +14,7 @@ const TO = path.join(ROOT, 'plugins', 'agathos', 'lib');
 const MANIFEST = path.join(ROOT, 'plugins', 'agathos', '.claude-plugin', 'plugin.json');
 const CLI_FROM = path.join(ROOT, 'bin', 'agathos.js');
 const CLI_TO = path.join(ROOT, 'plugins', 'agathos', 'cli.js');
+const SERVER = path.join(ROOT, 'server.json');
 
 // The command line tool of the plugin is bin/agathos.js, looking in lib/ for the files it needs and in the manifest for its version.
 function cliText() {
@@ -38,6 +40,13 @@ function differences() {
     const v = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
     if (JSON.parse(fs.readFileSync(MANIFEST, 'utf8')).version !== v) out.push('the version in plugin.json differs');
   } catch (_) { out.push('plugin.json cannot be read'); }
+  try {
+    const p = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+    const s = JSON.parse(fs.readFileSync(SERVER, 'utf8'));
+    if (s.name !== p.mcpName) out.push('the name in server.json differs from mcpName in package.json');
+    if (s.version !== p.version || s.packages[0].version !== p.version) out.push('the version in server.json differs');
+    if (s.packages[0].identifier !== p.name) out.push('the npm package in server.json differs');
+  } catch (_) { out.push('server.json cannot be read'); }
   return out;
 }
 
@@ -50,6 +59,8 @@ function sync() {
   if (m.version !== v) { m.version = v; fs.writeFileSync(MANIFEST, JSON.stringify(m, null, 2) + '\n'); }
   const market = path.join(ROOT, '.claude-plugin', 'marketplace.json');
   try { const k = JSON.parse(fs.readFileSync(market, 'utf8')); if (k.plugins && k.plugins[0] && k.plugins[0].version !== undefined) { k.plugins[0].version = v; fs.writeFileSync(market, JSON.stringify(k, null, 2) + '\n'); } } catch (_) { /* no marketplace file */ }
+  const s = JSON.parse(fs.readFileSync(SERVER, 'utf8'));
+  if (s.version !== v || s.packages[0].version !== v) { s.version = v; s.packages[0].version = v; fs.writeFileSync(SERVER, JSON.stringify(s, null, 2) + '\n'); }
 }
 
 if (require.main === module) {
