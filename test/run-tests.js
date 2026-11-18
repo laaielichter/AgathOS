@@ -41,6 +41,25 @@ ok(r1.sev === 'alarm' && r1.reasons.some((r) => r.key === 'file.hiddenTags' && /
 ok(r1.reasons.some((r) => r.key === 'file.injectionPhrase'), 'decoded tag text is checked for attack phrases');
 ok(T.scanText('a' + '\u200b\u200c'.repeat(6) + 'b').sev === 'alarm', 'zero-width run is an alarm');
 ok(T.scanText('\ufeff# Title\nplain text').sev === 'calm', 'a BOM at the start is normal');
+// Variation selectors show nothing: a run carries hidden data, one after an
+// emoji is normal. Escapes rather than literal characters so our own file
+// stays free of invisible characters (#14).
+{
+  const vsA = '\uFE00\uFE01\uFE02\uFE03';
+  const vsB = String.fromCodePoint(0xE0100, 0xE0101, 0xE0102, 0xE0103);
+  const emoji = 'I \u2764\uFE0F this';
+  const hiddenA = 'Rules.' + vsA;
+  const hiddenB = 'Rules.' + vsB;
+  const a = T.scanText(hiddenA);
+  const b = T.scanText(hiddenB);
+  ok(a.sev === 'alarm' && a.reasons.some((r) => r.key === 'file.hidden' && r.params.n === 4), 'a run of U+FE00-U+FE0F variation selectors is an alarm');
+  ok(b.sev === 'alarm' && b.reasons.some((r) => r.key === 'file.hidden' && r.params.n === 4), 'a run of U+E0100-U+E01EF variation selectors is an alarm');
+  ok(T.scanText(emoji).sev === 'calm' && !T.hiddenUnicode(emoji), 'a single variation selector after an emoji stays calm');
+  ok(T.scanText('Rules.\uFE00\uFE01\uFE02').sev === 'calm', 'a run shorter than the threshold stays calm');
+  ok(T.stripHidden(hiddenA) === 'Rules.' && T.stripHidden(hiddenB) === 'Rules.', 'stripHidden removes a run of variation selectors');
+  ok(T.stripHidden(emoji) === emoji && T.checkText(emoji).clean === emoji, 'stripHidden keeps the emoji with its single selector');
+  ok(T.checkText(hiddenA).clean === 'Rules.' && T.checkText(hiddenA).removed === 4, 'checkText says how many characters a run removed');
+}
 ok(T.scanText('KEY=sk-ant-api03-' + 'a'.repeat(40)).reasons.some((r) => r.key === 'file.secret' && r.params.kinds === 'Anthropic'), 'Anthropic key is named Anthropic');
 // A named key in JSON has quotes around the name, so the closing quote used to
 // arrive before the ":" that NAMED_KEY expected (#55). Made-up values only.
