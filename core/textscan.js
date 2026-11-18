@@ -9,12 +9,19 @@ const ZERO_WIDTH = /[\u200B-\u200D\u2060-\u2064\uFEFF\u180E\u00AD]/g;
 const BIDI = /[\u202A-\u202E\u2066-\u2069]/g;
 // Unicode "Tags" block U+E0000–U+E007F: invisible copies of ASCII. Models read them, people do not.
 const TAGS = /[\u{E0000}-\u{E007F}]/gu;
+// Variation selectors show nothing. One after an emoji is normal (U+2764 U+FE0F),
+// but a run of them can carry hidden data, one byte per selector (#14).
+const VARIATION_RUN = /(?:[\uFE00-\uFE0F]|[\u{E0100}-\u{E01EF}]){4,}/gu;
 
 function hiddenUnicode(text) {
   if (!text) return null;
   const zw = text.match(ZERO_WIDTH) || [];
   const bidi = text.match(BIDI) || [];
   const tags = text.match(TAGS) || [];
+  // Only a *run* counts: a single selector after an emoji must stay calm, and
+  // callers such as xray.js use the truthiness of this answer as a verdict.
+  const variationRuns = text.match(VARIATION_RUN) || [];
+  const variation = variationRuns.reduce((n, run) => n + [...run].length, 0);
   // A single BOM at the very start is normal.
   let zwCount = zw.length;
   if (text.charCodeAt(0) === 0xfeff) zwCount -= 1;
@@ -28,8 +35,8 @@ function hiddenUnicode(text) {
   }
   // Zero-width "binary" encodings: long runs of 200B/200C mean hidden data.
   const zwRun = /[\u200B\u200C\u200D]{8,}/.test(text);
-  if (zwCount <= 0 && !bidi.length && !tags.length) return null;
-  return { zeroWidth: Math.max(0, zwCount), bidi: bidi.length, tags: tags.length, decoded: decoded.trim().slice(0, 160), zwRun };
+  if (zwCount <= 0 && !bidi.length && !tags.length && !variation) return null;
+  return { zeroWidth: Math.max(0, zwCount), bidi: bidi.length, tags: tags.length, decoded: decoded.trim().slice(0, 160), zwRun, variation, vsRun: variation > 0 };
 }
 
 function injectionPhrases(text) {
@@ -134,6 +141,7 @@ function scanText(text) {
       bump(s);
     }
     if (h.bidi) { reasons.push({ key: 'file.bidi', params: { n: h.bidi }, sev: 'alarm' }); bump('alarm'); }
+    if (h.variation) { reasons.push({ key: 'file.hidden', params: { n: h.variation }, sev: 'alarm' }); bump('alarm'); }
   }
   for (const s of injectionPhrases(text)) {
     reasons.push({ key: 'file.injectionPhrase', params: { text: s }, sev: 'alarm' });
@@ -152,7 +160,8 @@ const STRIP = /[\u200B-\u200D\u2060-\u2064\u180E\u00AD\u202A-\u202E\u2066-\u2069
 function stripHidden(text) {
   const s = String(text || '');
   const bom = s.charCodeAt(0) === 0xfeff ? '\uFEFF' : '';
-  return bom + s.slice(bom.length).replace(STRIP, '').replace(/\uFEFF/g, '');
+  // Drop a run of variation selectors, but keep the single one after an emoji.
+  return bom + s.slice(bom.length).replace(VARIATION_RUN, '').replace(STRIP, '').replace(/\uFEFF/g, '');
 }
 
 // Everything the "Check text" page shows, for text you paste in.
