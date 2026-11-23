@@ -370,7 +370,10 @@ const HARD_FLOOR = {
 
 // Text in instruction files that reads like an attack.
 const INJECTION_PHRASES = [
-  /ignore (all |any )?(previous|prior|above) (instructions|rules)/i, /disregard (all |any )?(previous|prior) (instructions|rules)/i,
+  // Detached determiners ("the", "your", "all of the") and the "forget" verb
+  // used to slip past these two patterns (#20). Keep the tail anchored to
+  // instructions/rules so ordinary "previous versions" / "chapter 2" prose stays calm.
+  /(?:ignore|disregard|forget) (?:(?:all|any|the|your|all of the|all of|of the) )?(?:previous|prior|above) (?:instructions|rules)/i,
   /do not (tell|inform|mention (this )?to) the user/i, /don'?t (tell|mention|show) (this )?(to )?the user/i, /without (telling|asking|informing) the user/i,
   /the user (must|should) not (know|see)/i, /negeer (alle )?(vorige|eerdere) instructies/i, /zeg (dit )?niet tegen de gebruiker/i,
   /(curl|wget|iwr|invoke-webrequest)[^\n]{0,120}\|\s*(bash|sh|iex|powershell|python)/i, /send (the )?(contents|keys|secrets|credentials|\.env|ssh)/i,
