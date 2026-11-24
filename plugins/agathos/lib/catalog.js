@@ -225,8 +225,15 @@ const MIN_VERSIONS = {
 
 // ---------- Commands ----------
 // Dangerous start flags. These turned AI CLIs into tools for the Nx malware.
+// #16: some switches turn safety off with a value instead of on their own.
+// Only the "everything allowed" spellings are listed, so safe values (plan,
+// workspace-write, on-request) stay calm. Each long flag also has an `=` form,
+// following --approval-mode yolo / --approval-mode=yolo above.
 const DANGEROUS_FLAGS = ['--dangerously-skip-permissions', '--yolo', '--trust-all-tools', '--dangerously-bypass-approvals-and-sandbox',
   '--full-auto', '--no-confirm', '--yes-always', '--auto-approve', '--allow-all-tools', '--approval-mode yolo', '--approval-mode=yolo',
+  '--permission-mode bypasspermissions', '--permission-mode=bypasspermissions',
+  '--sandbox danger-full-access', '--sandbox=danger-full-access', '-s danger-full-access',
+  '--ask-for-approval never', '--ask-for-approval=never', '-a never',
   '--dangerously-allow-all', '--skip-permissions-unsafe', '--trust-tools', '--accept-all', '--auto-accept', '--no-ask', '--always-approve'];
 
 // Sensitive locations: an agent reading these is "touching private data".
