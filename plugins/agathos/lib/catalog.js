@@ -141,6 +141,8 @@ const MCP_CONFIGS = [
   { app: 'Cline', path: '%APPDATA%\\Code\\User\\globalStorage\\saoudrizwan.claude-dev\\settings\\cline_mcp_settings.json', format: 'json' },
   { app: 'Roo Code', path: '%APPDATA%\\Code\\User\\globalStorage\\rooveterinaryinc.roo-cline\\settings\\mcp_settings.json', format: 'json' },
   { app: 'Codex CLI', path: '%USERPROFILE%\\.codex\\config.toml', format: 'toml' },
+  { app: 'GitHub Copilot CLI', path: '%USERPROFILE%\\.copilot\\mcp-config.json', format: 'json' },
+  { app: 'Amazon Q CLI', path: '%USERPROFILE%\\.aws\\amazonq\\mcp.json', format: 'json' },
   { app: 'Gemini CLI', path: '%USERPROFILE%\\.gemini\\settings.json', format: 'json' },
   { app: 'Qwen Code', path: '%USERPROFILE%\\.qwen\\settings.json', format: 'json' },
   { app: 'Continue', path: '%USERPROFILE%\\.continue\\config.json', format: 'json' },
