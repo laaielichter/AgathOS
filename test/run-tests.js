@@ -528,6 +528,16 @@ ok(gh && gh.reasons.some((r) => r.key === 'mcp.inlineSecret') && !gh.reasons.som
 }
 const approvals = { [gh.id]: { hash: 'different' } };
 ok(inv.scanMcp({ state: { approvals } }).find((s) => s.name === 'gh').reasons.some((r) => r.key === 'mcp.changed'), 'changed definition after approval is an alarm (rug pull)');
+// GitHub Copilot CLI and Amazon Q CLI keep their MCP servers in their own files (#18).
+{
+  fs.mkdirSync(path.join(tmp, '.copilot'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, '.copilot', 'mcp-config.json'), JSON.stringify({ mcpServers: { cop: { command: 'npx', args: ['-y', 'copilot-mcp@1.2.3'] } } }));
+  fs.mkdirSync(path.join(tmp, '.aws', 'amazonq'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, '.aws', 'amazonq', 'mcp.json'), JSON.stringify({ mcpServers: { aq: { command: 'npx', args: ['-y', 'amazonq-mcp@1.2.3'] } } }));
+  const found = inv.scanMcp({ state: { approvals: {} } });
+  ok(found.some((s) => s.name === 'cop' && s.app === 'GitHub Copilot CLI'), 'scanMcp reads ~/.copilot/mcp-config.json with app GitHub Copilot CLI');
+  ok(found.some((s) => s.name === 'aq' && s.app === 'Amazon Q CLI'), 'scanMcp reads ~/.aws/amazonq/mcp.json with app Amazon Q CLI');
+}
 
 // ---------- MCP servers running from a temp / download folder (#17) ----------
 {
