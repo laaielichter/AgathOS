@@ -363,6 +363,15 @@ function* scanFilesSteps(roots, store) {
     const skillFiles = yield* U.walkSteps(d, { maxDepth: 5, maxFiles: 5000, filter: (full, n) => /\.(md|mdc|txt|sh|ps1|py|js|ts|json|ya?ml)$/i.test(n) });
     for (const f of skillFiles) { check(f, 'skill', boards.kindOf(f, true)); yield; }
   }
+  // Instruction files in an agent's home folder are read at the start of every
+  // session, in every project. Check them for hidden text, keys and attack
+  // phrases just like project instruction files. The engine already merges
+  // board and Copy Guard hits by file, so nothing is counted twice.
+  for (const g of boards.globalFiles()) {
+    if (g.kind !== 'instruction') continue;
+    check(g.path, 'instruction');
+    yield;
+  }
   return { files, configs, projectMcp, linkFiles, boardFiles, copyFiles };
 }
 const scanFiles = (roots, store) => U.run(scanFilesSteps(roots, store));
