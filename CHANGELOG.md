@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **docs/agents.md shows what the answers look like:** real `check-text`, `check-file` and `check-action` answers for a calm text, a made-up key, an alarm and an allowed, asked and refused step, in plain text and `--json`, with a table of every field and the exit codes. Thanks to @17302513901yh-lang! (#62, #90)
 - **Instruction files in an agent's home folder are checked too:** `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md` and the other global instruction files are now scanned like project instruction files, so hidden Tag text, attack phrases and keys planted there are reported, without counting a file twice. Thanks to @17302513901yh-lang! (#19, #87)
 - **GitHub Copilot CLI and Amazon Q CLI MCP servers are found:** `~/.copilot/mcp-config.json` and `~/.aws/amazonq/mcp.json` are now read, so their `mcpServers` are listed, checked and watched for changes, and an agent edit to either file counts as a change to agent settings. The plugin's `catalog.js` copy is in step. Thanks to @17302513901yh-lang! (#18, #85)
 - **Start flags that switch safety off with a value are flagged:** the process watcher now marks `claude --permission-mode bypassPermissions`, `codex --sandbox danger-full-access` (`-s danger-full-access`) and `codex --ask-for-approval never` (`-a never`), in the space and `=` spellings, as a dangerous flag. Safe values such as `--permission-mode plan`, `--sandbox workspace-write` and `--ask-for-approval on-request` stay calm. The plugin's `catalog.js` copy is in step. Thanks to @17302513901yh-lang! (#16, #83)
